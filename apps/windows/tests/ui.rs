@@ -514,13 +514,13 @@ fn the_preview_shows_the_pages_as_they_will_print() {
     h.background.run_all(&h.app);
     press(&h.app, "Print");
     let pages = preview_pages(&h.app);
-    // Its "Next step: run a Deep check" adds the third page.
-    assert_eq!(pages.len(), 3, "the dump's receipt is three pages");
+    // The footer shares the second page (the gaps between sections make room for it).
+    assert_eq!(pages.len(), 2, "the dump's receipt is two pages");
     let size = pages[0].size();
     // Portrait paper (A4 or Letter), drawn with ink on it.
     assert!(size.width > 300 && size.height as f32 / size.width as f32 > 1.25, "{size:?}");
     let label = h.app.window().get_preview_label().to_string();
-    assert!(label.starts_with("3 pages · "), "{label}");
+    assert!(label.starts_with("2 pages · "), "{label}");
     key(&h.app, slint::platform::Key::Escape);
     assert!(has(&h.app, "Share a link"), "Esc goes back to the receipt");
     assert!(preview_pages(&h.app).is_empty(), "the pages aren't kept");

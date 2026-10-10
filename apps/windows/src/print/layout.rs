@@ -484,20 +484,30 @@ fn split(b: Block, room: f32) -> Vec<Block> {
         .collect()
 }
 
-/// The receipt on pages of `size`: each page's ops in page coordinates (points from the top left),
-/// the header first.
-pub fn pages(m: &ReceiptModel, size: PageSize) -> Vec<Vec<Op>> {
-    let (page_w, page_h) = size.points();
-    let c = Col { x0: MARGIN, w: page_w - 2.0 * MARGIN };
-    let (top, bottom) = (MARGIN + HEADER, page_h - MARGIN);
+/// The blocks on pages, each at its y between `top` and `bottom`. Space between sections never starts
+/// a page. The last block is the footer: when it alone won't fit, the empty space between sections on
+/// that page is taken back first, so it isn't left on a page of its own.
+fn place(blocks: Vec<Block>, top: f32, bottom: f32) -> Vec<Vec<(f32, Block)>> {
     let mut laid: Vec<Vec<(f32, Block)>> = vec![Vec::new()];
     let mut y = top;
-    for b in blocks(&c, m).into_iter().flat_map(|b| split(b, bottom - top)) {
-        // Space between sections never starts a page.
-        if b.ops.is_empty() && (y + b.h > bottom || laid.last().expect("a page").is_empty()) {
+    let count = blocks.len();
+    for (i, b) in blocks.into_iter().enumerate() {
+        let page = laid.last_mut().expect("a page");
+        if b.ops.is_empty() && (y + b.h > bottom || page.is_empty()) {
             continue;
         }
-        if y + b.h > bottom && !laid.last().expect("a page").is_empty() {
+        if i + 1 == count && y + b.h > bottom && !page.is_empty() {
+            let gaps: f32 = page.iter().filter(|(_, b)| b.ops.is_empty()).map(|(_, b)| b.h).sum();
+            if y + b.h - gaps <= bottom {
+                page.retain(|(_, b)| !b.ops.is_empty());
+                y = top;
+                for (at, block) in page.iter_mut() {
+                    *at = y;
+                    y += block.h;
+                }
+            }
+        }
+        if y + b.h > bottom && !page.is_empty() {
             laid.push(Vec::new());
             y = top;
         }
@@ -505,6 +515,16 @@ pub fn pages(m: &ReceiptModel, size: PageSize) -> Vec<Vec<Op>> {
         laid.last_mut().expect("a page").push((y, b));
         y += h;
     }
+    laid
+}
+
+/// The receipt on pages of `size`: each page's ops in page coordinates (points from the top left),
+/// the header first.
+pub fn pages(m: &ReceiptModel, size: PageSize) -> Vec<Vec<Op>> {
+    let (page_w, page_h) = size.points();
+    let c = Col { x0: MARGIN, w: page_w - 2.0 * MARGIN };
+    let (top, bottom) = (MARGIN + HEADER, page_h - MARGIN);
+    let laid = place(blocks(&c, m).into_iter().flat_map(|b| split(b, bottom - top)).collect(), top, bottom);
     let of = laid.len();
     laid.into_iter()
         .enumerate()
@@ -862,9 +882,36 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn the_dump_receipt_prints_on_three_a4_pages() {
-        // Its "Next step: run a Deep check" adds the third page.
-        assert_eq!(pages(&dump_model(Locale::En), PageSize::A4).len(), 3);
+    fn the_dump_receipt_prints_on_two_a4_pages_with_the_footer_on_the_second() {
+        // Its "Next step: run a Deep check" made it just long enough to push the footer alone onto a
+        // third page; the gaps between sections now make room for it.
+        let pages = pages(&dump_model(Locale::En), PageSize::A4);
+        assert_eq!(pages.len(), 2);
+        assert!(pages[1].iter().any(|op| matches!(op, Op::Rotate { .. })), "the stamp is on page 2");
+    }
+
+    /// A block of `h` points with something on it (an empty one is space between sections).
+    fn ink(h: f32) -> Block {
+        Block { h, ops: vec![Op::Line { x1: 0.0, y1: 0.0, x2: 1.0, y2: 0.0, colour: INK, width: 1.0, dash: None }] }
+    }
+
+    fn gap() -> Block {
+        Block { h: 10.0, ops: vec![] }
+    }
+
+    #[test]
+    fn the_footer_takes_back_the_gaps_rather_than_sit_alone_on_a_page() {
+        // 87 to 791: three sections and their two gaps reach 736, and the 70 pt footer is 15 over.
+        let (top, bottom) = (87.0, 791.0);
+        let laid = place(vec![ink(479.0), gap(), ink(100.0), gap(), ink(50.0), ink(70.0)], top, bottom);
+        assert_eq!(laid.len(), 1, "the gaps (20 pt) make room for it");
+        let last = laid[0].last().unwrap();
+        assert!(last.0 + last.1.h <= bottom, "inside the margin: {}", last.0 + last.1.h);
+        assert_eq!(laid[0].iter().filter(|(_, b)| b.ops.is_empty()).count(), 0, "the gaps went");
+        // 25 over and only 20 pt of gaps: the footer takes a page of its own, and the gaps stay.
+        let laid = place(vec![ink(489.0), gap(), ink(100.0), gap(), ink(50.0), ink(70.0)], top, bottom);
+        assert_eq!(laid.len(), 2);
+        assert_eq!(laid[0].iter().filter(|(_, b)| b.ops.is_empty()).count(), 2);
     }
 
     #[test]

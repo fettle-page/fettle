@@ -231,6 +231,9 @@ mod tests {
         assert!(write_report(&link.join("fettle-deep-1-1.json"), &a_report()).is_err(), "a junction may point anywhere");
         assert!(!real.join("fettle-deep-1-1.json").exists());
         assert!(write_report(&real.join("fettle-deep-1-1.json"), &a_report()).is_ok());
+        // The junction goes with the test: tools that clean folders (git's worktree removal) stop at one.
+        std::fs::remove_dir(&link).unwrap();
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     #[test]

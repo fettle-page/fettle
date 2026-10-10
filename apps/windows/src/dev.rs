@@ -4,7 +4,8 @@
 //!   fettle --dev-shot <png> [--dev-wait <ms>] [--dev-check] [--dev-data <dir>]
 //!
 //! `--dev-check` starts a check at launch; `--dev-data` keeps settings and the last check in
-//! another folder than %LOCALAPPDATA%\Fettle.
+//! another folder than %LOCALAPPDATA%\Fettle; `--dev-report <json>` makes that check read a saved
+//! report instead of this PC (screenshots of a sample PC, never the one it runs on).
 //!
 //!   fettle --dev-fps <txt> [--dev-check] [--dev-data <dir>]
 //!   fettle --dev-fps-live - [--dev-check] [--dev-data <dir>]   (on screen; see measure_live)
@@ -23,6 +24,8 @@ pub struct DevArgs {
     pub data: Option<String>,
     /// A panel view to open at launch: settings, share, links or preview (after --dev-check).
     pub open: Option<String>,
+    /// A saved report the check reads instead of this PC.
+    pub report: Option<String>,
     /// Where to write the frame times of a scrolling run.
     pub fps: Option<String>,
     /// An on-screen scrolling run, never focused; Slint's
@@ -41,6 +44,7 @@ impl DevArgs {
                 "--dev-check" => out.check = true,
                 "--dev-data" => out.data = args.next(),
                 "--dev-open" => out.open = args.next(),
+                "--dev-report" => out.report = args.next(),
                 "--dev-fps" => out.fps = args.next(),
                 "--dev-fps-live" => out.fps_live = args.next(),
                 _ => {}
@@ -132,4 +136,55 @@ pub fn schedule_shot(window: &crate::AppWindow, path: String, wait_ms: u64) {
         let _ = window.hide();
         let _ = slint::quit_event_loop();
     });
+}
+
+/// A check that reads a saved report (`--dev-report`), stamped as this version's, as a real check would be.
+pub struct SavedReport(fettle_facts::Report);
+
+impl SavedReport {
+    pub fn load(path: &str) -> Result<SavedReport, String> {
+        let text = std::fs::read_to_string(path).map_err(|e| format!("{path}: {e}"))?;
+        let report: fettle_facts::Report = serde_json::from_str(&text).map_err(|e| format!("{path}: {e}"))?;
+        Ok(SavedReport(fettle_facts::Report { app_version: env!("CARGO_PKG_VERSION").into(), engine_version: Some(fettle_verdicts::ENGINE_VERSION.into()), ..report }))
+    }
+}
+
+impl crate::app::Scanner for SavedReport {
+    fn scan(&self, _on_source: &dyn Fn(&str)) -> fettle_facts::Report {
+        self.0.clone()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::app::Scanner;
+
+    fn args(list: &[&str]) -> DevArgs {
+        DevArgs::parse(list.iter().map(|s| s.to_string()))
+    }
+
+    #[test]
+    fn dev_report_names_a_saved_report_to_check_instead_of_this_pc() {
+        let a = args(&["--dev-report", "sample.json", "--dev-check", "--dev-shot", "out.png"]);
+        assert_eq!(a.report.as_deref(), Some("sample.json"));
+        assert!(a.check && a.hidden());
+        assert_eq!(args(&[]).report, None);
+    }
+
+    #[test]
+    fn a_saved_report_is_checked_as_if_this_version_made_it() {
+        let file = concat!(env!("CARGO_MANIFEST_DIR"), "/../../worker/test/fixtures/tired.json");
+        let saved = SavedReport::load(file).expect("the sample report");
+        let report = saved.scan(&|_| {});
+        assert_eq!(report.app_version, env!("CARGO_PKG_VERSION"));
+        assert_eq!(report.engine_version.as_deref(), Some(fettle_verdicts::ENGINE_VERSION));
+        assert!(report.facts.battery.is_some());
+    }
+
+    #[test]
+    fn a_missing_or_broken_report_is_an_error_not_a_blank_receipt() {
+        assert!(SavedReport::load("no-such-report.json").is_err());
+        assert!(SavedReport::load(concat!(env!("CARGO_MANIFEST_DIR"), "/Cargo.toml")).is_err());
+    }
 }

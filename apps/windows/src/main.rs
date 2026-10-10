@@ -47,6 +47,10 @@ fn run() -> Result<(), slint::PlatformError> {
     if let Some(dir) = &dev.data {
         deps.store = std::rc::Rc::new(fettle_windows::store::FileStore::new(dir.into()));
     }
+    if let Some(path) = &dev.report {
+        let saved = fettle_windows::dev::SavedReport::load(path).map_err(slint::PlatformError::Other)?;
+        deps.scanner = std::sync::Arc::new(saved);
+    }
     let app = Fettle::new(deps)?;
     tint_title_bar_when_ready(&app);
     // Started for a Deep check (or a development check): check straight away.

@@ -252,8 +252,36 @@ fn nvme_health(s: &Sources, device_id: &str) -> Option<NvmeHealth> {
         temperature_c: health.get("temperature_c").and_then(Value::as_i64).map(|t| t as i32),
         power_on_hours: u64_of(health, "power_on_hours"),
         media_errors: u64_of(health, "media_errors"),
-        ..Default::default()
+        critical_warning: u64_of(health, "critical_warning").map(|n| n.min(255) as u8),
+        available_spare_pct: u64_of(health, "available_spare_pct").map(|n| n.min(255) as u8),
+        available_spare_threshold_pct: u64_of(health, "available_spare_threshold_pct").map(|n| n.min(255) as u8),
     })
+}
+
+/// The SMART table for the disk Windows numbers `device_id`. A SMART row's InstanceName is the
+/// drive's PNPDeviceID plus "_<n>", and Win32_DiskDrive gives each PNPDeviceID its disk number. If
+/// those numbers aren't available, the model name decides only when no other disk shares it, so a
+/// twin never gets the other drive's data.
+fn smart_for<'a>(s: &Sources, smart: &'a [Value], device_id: &str, model: Option<&str>, models: &[Option<String>]) -> Option<&'a Value> {
+    if let Some(drives) = s.rows("disk_drives") {
+        let pnp = drives.iter().find(|d| d.get("Index").map(value_key).as_deref() == Some(device_id)).and_then(|d| str_of(d, "PNPDeviceID"))?;
+        let pnp = pnp.to_uppercase();
+        return smart.iter().find(|r| {
+            str_of(r, "InstanceName").is_some_and(|i| {
+                let i = i.to_uppercase();
+                i.strip_prefix(&pnp).and_then(|rest| rest.strip_prefix('_')).is_some_and(|n| !n.is_empty() && n.bytes().all(|b| b.is_ascii_digit()))
+            })
+        });
+    }
+    let model = model?;
+    if models.iter().filter(|m| m.as_deref() == Some(model)).count() != 1 {
+        return None;
+    }
+    let mut matching = smart.iter().filter(|r| str_of(r, "InstanceName").is_some_and(|i| smart_matches(i, model)));
+    match (matching.next(), matching.next()) {
+        (Some(row), None) => Some(row),
+        _ => None,
+    }
 }
 
 /// A JSON number or string as a lookup key ("0" and 0 match).
@@ -264,12 +292,13 @@ fn value_key(v: &Value) -> String {
 fn storage(s: &Sources) -> Section<Storage> {
     let Some(disks) = s.rows("physical_disks") else { return status(CheckStatus::Failed, s.error("physical_disks")) };
     let smart = s.rows("smart_predict_data").cloned().unwrap_or_default();
+    let models: Vec<Option<String>> = disks.iter().map(|d| text_of(d, "FriendlyName")).collect();
     let disks = disks
         .iter()
         .map(|d| {
             let model = text_of(d, "FriendlyName");
             let device_id = d.get("DeviceId").map(value_key).unwrap_or_default();
-            let smart_row = model.as_deref().and_then(|m| smart.iter().find(|r| str_of(r, "InstanceName").is_some_and(|i| smart_matches(i, m))));
+            let smart_row = smart_for(s, &smart, &device_id, model.as_deref(), &models);
             let smart = smart_row.and_then(|r| r.get("VendorSpecific")?.as_array().map(|b| b.iter().filter_map(|x| x.as_u64().map(|n| n as u8)).collect::<Vec<u8>>()));
             Disk {
                 bus: Some(bus(u64_of(d, "BusType"))),
@@ -578,6 +607,75 @@ mod tests {
         assert_eq!(sys.displays, vec![Display { name: Some("DELL".into()), width_cm: None, height_cm: None }, Display::default()]);
         let none = system(&Sources(&raw(&[("cpu", err("timed out after 4000 ms"))])));
         assert_eq!((none.check.status, none.check.detail.as_deref()), (CheckStatus::Failed, Some("timed out after 4000 ms")));
+    }
+
+    fn nvme_drive(n: u64, health: Value) -> Value {
+        json!({ "drive": n, "attempts": [{ "access": "none", "ok": true, "health": health }] })
+    }
+
+    // The drive's own verdict (critical-warning bits, spare below its threshold) is what the
+    // "drive reports a problem" rule reads: it must reach the report.
+    #[test]
+    fn an_nvme_drive_s_warning_flags_and_spare_reach_the_report() {
+        let health = json!({ "critical_warning": 4, "temperature_c": 41, "available_spare_pct": 3, "available_spare_threshold_pct": 10,
+            "percentage_used": 12, "power_on_hours": 900, "media_errors": 0 });
+        let r = raw(&[
+            ("physical_disks", rows(json!([{ "DeviceId": "0", "FriendlyName": "WDC PC SN730", "BusType": 17, "MediaType": 4, "Size": 1_000_000_000_000u64 }]))),
+            ("nvme_health", rows(json!([nvme_drive(0, health)]))),
+        ]);
+        let nvme = storage(&Sources(&r)).data.unwrap().disks[0].nvme.clone().unwrap();
+        assert_eq!((nvme.critical_warning, nvme.available_spare_pct, nvme.available_spare_threshold_pct), (Some(4), Some(3), Some(10)));
+        assert_eq!((nvme.percentage_used, nvme.media_errors, nvme.temperature_c), (Some(12), Some(0), Some(41)));
+    }
+
+    /// A SMART table whose reallocated-sector count (attribute 5) is `realloc`.
+    fn smart_bytes(realloc: u8) -> Value {
+        let mut b = vec![0u8; 362];
+        b[2..14].copy_from_slice(&[5, 0, 0, 100, 100, realloc, 0, 0, 0, 0, 0, 0]);
+        json!(b)
+    }
+    fn sata(id: &str) -> Value {
+        json!({ "DeviceId": id, "FriendlyName": "Samsung SSD 860 EVO 1TB", "BusType": 11, "MediaType": 4, "Size": 1_000_000_000_000u64 })
+    }
+    const TWIN_A: &str = r"SCSI\Disk&Ven_Samsung&Prod_SSD_860_EVO_1TB\4&2a7e3ef3&0&000000";
+    const TWIN_B: &str = r"SCSI\Disk&Ven_Samsung&Prod_SSD_860_EVO_1TB\4&2a7e3ef3&0&000100";
+
+    // Two drives of the same model: each gets its own SMART data, matched through Windows' disk
+    // number, never the first twin's.
+    #[test]
+    fn twin_drives_each_get_their_own_smart_data() {
+        let r = raw(&[
+            ("physical_disks", rows(json!([sata("0"), sata("1")]))),
+            ("smart_predict_data", rows(json!([
+                { "InstanceName": format!("{TWIN_A}_0"), "VendorSpecific": smart_bytes(0) },
+                { "InstanceName": format!("{TWIN_B}_0"), "VendorSpecific": smart_bytes(37) },
+            ]))),
+            ("disk_drives", rows(json!([
+                { "Index": 1, "PNPDeviceID": TWIN_B.to_uppercase() },
+                { "Index": 0, "PNPDeviceID": TWIN_A.to_uppercase() },
+            ]))),
+        ]);
+        let disks = storage(&Sources(&r)).data.unwrap().disks;
+        let realloc = |i: usize| disks[i].smart.as_ref().and_then(|m| m.reallocated_sectors);
+        assert_eq!((realloc(0), realloc(1)), (Some(0), Some(37)));
+    }
+
+    // Without the disk numbers, a model name only identifies a drive when no other drive shares it.
+    #[test]
+    fn without_disk_numbers_twins_get_no_smart_data_rather_than_the_wrong_one() {
+        let smart = rows(json!([
+            { "InstanceName": format!("{TWIN_A}_0"), "VendorSpecific": smart_bytes(0) },
+            { "InstanceName": format!("{TWIN_B}_0"), "VendorSpecific": smart_bytes(37) },
+        ]));
+        let twins = raw(&[("physical_disks", rows(json!([sata("0"), sata("1")]))), ("smart_predict_data", smart.clone()), ("disk_drives", err("timed out"))]);
+        assert!(storage(&Sources(&twins)).data.unwrap().disks.iter().all(|d| d.smart.is_none()));
+
+        let single = raw(&[
+            ("physical_disks", rows(json!([sata("0")]))),
+            ("smart_predict_data", rows(json!([{ "InstanceName": format!("{TWIN_A}_0"), "VendorSpecific": smart_bytes(2) }]))),
+        ]);
+        let disks = storage(&Sources(&single)).data.unwrap().disks;
+        assert_eq!(disks[0].smart.as_ref().and_then(|m| m.reallocated_sectors), Some(2));
     }
 
     #[test]

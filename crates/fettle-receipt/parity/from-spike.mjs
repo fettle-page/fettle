@@ -65,6 +65,26 @@ function smartMatches(instanceName, model) {
   return !!product && norm(model).includes(norm(product));
 }
 
+/**
+ * The SMART row for the disk Windows numbers `deviceId` (map.rs smart_for): a row's InstanceName is the
+ * drive's PNPDeviceID plus "_<n>", and Win32_DiskDrive numbers each PNPDeviceID. Without those numbers,
+ * the model decides only when no other disk shares it, so a twin never gets the other drive's data.
+ */
+function smartFor(s, smart, deviceId, model, models) {
+  const drives = rows(s.disk_drives);
+  if (drives) {
+    const pnp = drives.find((d) => String(d.Index) === deviceId)?.PNPDeviceID?.toUpperCase();
+    if (!pnp) return undefined;
+    return smart.find((r) => {
+      const name = (r.InstanceName ?? "").toUpperCase();
+      return name.startsWith(pnp) && /^_\d+$/.test(name.slice(pnp.length));
+    });
+  }
+  if (!model || models.filter((m) => m === model).length !== 1) return undefined;
+  const matching = smart.filter((r) => smartMatches(r.InstanceName, model));
+  return matching.length === 1 ? matching[0] : undefined;
+}
+
 function storage(s) {
   const disks = rows(s.physical_disks);
   if (!disks) return failed(s.physical_disks?.error);
@@ -74,13 +94,23 @@ function storage(s) {
     disks: disks.map((d) => {
       const model = d.FriendlyName;
       const nvme = nvmeByDrive.get(d.DeviceId);
-      const smartRow = smart.find((r) => smartMatches(r.InstanceName, model));
+      const smartRow = smartFor(s, smart, String(d.DeviceId), model, disks.map((x) => x.FriendlyName));
       return {
         model,
         bus: BUS[d.BusType] ?? "other",
         media: MEDIA[d.MediaType] ?? "unknown",
         size_bytes: d.Size,
-        nvme: nvme ? { percentage_used: nvme.percentage_used, temperature_c: nvme.temperature_c, power_on_hours: nvme.power_on_hours, media_errors: nvme.media_errors } : undefined,
+        nvme: nvme
+          ? {
+              percentage_used: nvme.percentage_used,
+              temperature_c: nvme.temperature_c,
+              power_on_hours: nvme.power_on_hours,
+              media_errors: nvme.media_errors,
+              critical_warning: nvme.critical_warning,
+              available_spare_pct: nvme.available_spare_pct,
+              available_spare_threshold_pct: nvme.available_spare_threshold_pct,
+            }
+          : undefined,
         smart: smartRow ? smartSummary(smartAttributes(smartRow.VendorSpecific)) : undefined,
       };
     }),

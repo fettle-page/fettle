@@ -46,6 +46,9 @@ pub const WMI_SOURCES: &[(&str, &str, &str)] = &[
     ("battery_cimv2", CIMV2, "SELECT Name FROM Win32_Battery"),
     // The raw ATA SMART attribute table (reallocated and pending sectors live here).
     ("smart_predict_data", WMI, "SELECT InstanceName, VendorSpecific FROM MSStorageDriver_FailurePredictData"),
+    // Which disk number each SMART row belongs to (its InstanceName is PNPDeviceID + "_0"), so two
+    // drives of the same model never share one row. Read only for matching; never in the report.
+    ("disk_drives", CIMV2, "SELECT Index, PNPDeviceID FROM Win32_DiskDrive"),
     ("battery_static", WMI, "SELECT DesignedCapacity FROM BatteryStaticData"),
     ("battery_full_capacity", WMI, "SELECT FullChargedCapacity FROM BatteryFullChargedCapacity"),
     ("battery_cycle_count", WMI, "SELECT CycleCount FROM BatteryCycleCount"),

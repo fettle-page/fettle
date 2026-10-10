@@ -136,6 +136,9 @@
           "media": "ssd",
           "model": "WDC PC SN520 SDAPMUW-256G-1101",
           "nvme": {
+            "available_spare_pct": 100,
+            "available_spare_threshold_pct": 10,
+            "critical_warning": 0,
             "media_errors": 0,
             "percentage_used": 1,
             "power_on_hours": 366,

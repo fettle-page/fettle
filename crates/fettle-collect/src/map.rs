@@ -300,12 +300,14 @@ fn storage(s: &Sources) -> Section<Storage> {
             let device_id = d.get("DeviceId").map(value_key).unwrap_or_default();
             let smart_row = smart_for(s, &smart, &device_id, model.as_deref(), &models);
             let smart = smart_row.and_then(|r| r.get("VendorSpecific")?.as_array().map(|b| b.iter().filter_map(|x| x.as_u64().map(|n| n as u8)).collect::<Vec<u8>>()));
+            let media = media(u64_of(d, "MediaType"));
             Disk {
                 bus: Some(bus(u64_of(d, "BusType"))),
-                media: Some(media(u64_of(d, "MediaType"))),
+                media: Some(media),
                 size_bytes: u64_of(d, "Size"),
                 nvme: nvme_health(s, &device_id),
-                smart: smart.map(|b| smart_summary(&smart_attributes(&b))),
+                // Wear attributes mean "% life used" only on SSDs (202 counts errors on some hard drives).
+                smart: smart.map(|b| smart_summary(&smart_attributes(&b))).map(|m| SmartSummary { life_used_pct: m.life_used_pct.filter(|_| media == Media::Ssd), ..m }),
                 model,
             }
         })
@@ -676,6 +678,23 @@ mod tests {
         ]);
         let disks = storage(&Sources(&single)).data.unwrap().disks;
         assert_eq!(disks[0].smart.as_ref().and_then(|m| m.reallocated_sectors), Some(2));
+    }
+
+    // SMART attribute 202 is "% life used" on SSDs but an error count on some hard drives, so wear is
+    // only read for SSDs.
+    #[test]
+    fn wear_is_read_only_for_ssds() {
+        let mut bytes = vec![0u8; 362];
+        bytes[2..14].copy_from_slice(&[202, 0, 0, 100, 100, 150, 0, 0, 0, 0, 0, 0]);
+        let disk = |media: u64| json!({ "DeviceId": "0", "FriendlyName": "Some Drive", "BusType": 11, "MediaType": media, "Size": 1 });
+        let smart = rows(json!([{ "InstanceName": r"SCSI\Disk&Ven_X&Prod_Some_Drive\4&1&0&000000_0", "VendorSpecific": bytes }]));
+        let wear = |media: u64| {
+            let r = raw(&[("physical_disks", rows(json!([disk(media)]))), ("smart_predict_data", smart.clone())]);
+            storage(&Sources(&r)).data.unwrap().disks[0].smart.as_ref().unwrap().life_used_pct
+        };
+        assert_eq!(wear(4), Some(150), "SSD");
+        assert_eq!(wear(3), None, "HDD");
+        assert_eq!(wear(0), None, "unknown media");
     }
 
     #[test]

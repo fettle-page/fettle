@@ -92,13 +92,15 @@ function storage(s) {
   const smart = rows(s.smart_predict_data) ?? [];
   return ok({
     disks: disks.map((d) => {
-      const model = d.FriendlyName;
+      // Trimmed, empty as missing, like map.rs text_of.
+      const model = d.FriendlyName?.trim() || undefined;
+      const media = MEDIA[d.MediaType] ?? "unknown";
       const nvme = nvmeByDrive.get(d.DeviceId);
-      const smartRow = smartFor(s, smart, String(d.DeviceId), model, disks.map((x) => x.FriendlyName));
+      const smartRow = smartFor(s, smart, String(d.DeviceId), model, disks.map((x) => x.FriendlyName?.trim() || undefined));
       return {
         model,
         bus: BUS[d.BusType] ?? "other",
-        media: MEDIA[d.MediaType] ?? "unknown",
+        media,
         size_bytes: d.Size,
         nvme: nvme
           ? {
@@ -111,7 +113,8 @@ function storage(s) {
               available_spare_threshold_pct: nvme.available_spare_threshold_pct,
             }
           : undefined,
-        smart: smartRow ? smartSummary(smartAttributes(smartRow.VendorSpecific)) : undefined,
+        // Wear attributes mean "% life used" only on SSDs (202 counts errors on some hard drives).
+        smart: smartRow ? { ...smartSummary(smartAttributes(smartRow.VendorSpecific)), ...(media === "ssd" ? {} : { life_used_pct: undefined }) } : undefined,
       };
     }),
     volumes: (rows(s.logical_disks) ?? []).map((v) => ({ letter: v.DeviceID, size_bytes: v.Size, free_bytes: v.FreeSpace })),

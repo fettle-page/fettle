@@ -1024,3 +1024,19 @@ fn auto_follows_windows_light_or_dark_setting() {
     press(&h.app, "Dark");
     assert!(theme.get_dark(), "Dark whatever Windows says");
 }
+
+#[test]
+fn opening_the_json_fold_moves_nothing_above_it() {
+    let (h, _) = share_harness();
+    press(&h.app, "Share a link");
+    let place = |label: &str| {
+        let e = ElementHandle::find_by_accessible_label(h.app.window(), label).next().unwrap_or_else(|| panic!("no {label:?}"));
+        (e.absolute_position().y, e.size().height)
+    };
+    let intro = "Anyone with the link can see the receipt on the left, exactly as it is. It never includes serial numbers, the PC's name or usernames.";
+    let before = [place(intro), place("7 days"), place("Lock it with a password"), place("Advanced: show the JSON that will be sent")];
+    press(&h.app, "Advanced: show the JSON that will be sent");
+    h.app.pump();
+    let after = [place(intro), place("7 days"), place("Lock it with a password"), place("Advanced: show the JSON that will be sent")];
+    assert_eq!(before, after, "the view kept its spacing above the fold");
+}

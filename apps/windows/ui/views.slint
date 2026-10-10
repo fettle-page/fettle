@@ -1,5 +1,6 @@
 // The side panel's views opened from the header or the dock: Share this receipt, My shared links.
 import { Theme, Copy } from "theme.slint";
+import { ScrollView } from "std-widgets.slint";
 import { Kicker, Button, Choice, Switch, Focusable } from "panels.slint";
 
 export struct LinkRow { id: string, url: string, until: string }
@@ -171,14 +172,25 @@ export component ShareView inherits VerticalLayout {
                     }
                 }
             }
+            // The JSON scrolls in its own box: laid out in the panel, its long wrapped text made
+            // the whole view taller and spread the parts above it apart.
             if root.show-json: Rectangle {
+                height: 260px;
                 border-radius: 5px;
                 border-width: 1px;
                 border-color: Theme.chrome-line;
                 background: Theme.chrome-card;
-                VerticalLayout {
-                    padding: 12px;
-                    Text {
+                json-scroll := ScrollView {
+                    x: 1px;
+                    y: 1px;
+                    width: parent.width - 2px;
+                    height: parent.height - 2px;
+                    content-width: self.visible-width;
+                    content-height: json-text.height + 24px;
+                    json-text := Text {
+                        x: 12px;
+                        y: 12px;
+                        width: json-scroll.visible-width - 24px;
                         text: root.json;
                         font-family: Theme.mono;
                         font-size: 11.5px;

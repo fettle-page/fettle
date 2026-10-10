@@ -1,17 +1,81 @@
-# Fettle
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/brand/fettle-wordmark-light.svg">
+    <img src="assets/brand/fettle-wordmark.svg" alt="fettle." width="240">
+  </picture>
+</p>
 
-A free, open-source check-up for Windows PCs. It reads what Windows already knows about the disks,
-battery, memory, Windows itself, startup apps and graphics, and prints it as a receipt you can
-actually read: a plain-words verdict on every line, with the numbers underneath.
+<p align="center"><b>A free, open-source check-up for Windows PCs, printed as a receipt you can actually read.</b></p>
 
-Fettle only reads. It doesn't clean, "boost" or change anything, and the app sends nothing on its
-own: the only automatic request is the update check, which can be turned off.
+<p align="center">
+  <a href="https://fettle.page/download">Download</a> ·
+  <a href="https://fettle.page">Website</a> ·
+  <a href="https://fettle.page/changelog">Changelog</a> ·
+  <a href="https://fettle.page/code-signing">Code signing policy</a> ·
+  <a href="https://fettle.page/privacy">Privacy</a>
+</p>
 
-**Status:** 1.0.0, the first release. The downloads aren't code-signed yet, so Windows may warn before it runs them; [the code signing page](https://fettle.page/code-signing) explains why and what comes next.
+<p align="center">
+  <a href="https://github.com/fettle-page/fettle/releases/latest"><img alt="Latest release" src="https://img.shields.io/github/v/release/fettle-page/fettle?label=release&color=1f6b45"></a>
+  <a href="https://github.com/fettle-page/fettle/actions/workflows/ci.yml"><img alt="CI" src="https://github.com/fettle-page/fettle/actions/workflows/ci.yml/badge.svg"></a>
+  <a href="LICENSE"><img alt="MIT licence" src="https://img.shields.io/badge/licence-MIT-1f6b45"></a>
+  <img alt="Windows 10 and 11" src="https://img.shields.io/badge/Windows-10%20%7C%2011-1f6b45">
+</p>
+
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="assets/screenshots/receipt-dark.png">
+    <img src="assets/screenshots/receipt-light.png" alt="Fettle's window: a receipt for a 2018 laptop that says 'Needs attention', with the next steps and a line for every part, and on the right the main verdict and the Share, Print, Save and Copy buttons.">
+  </picture>
+</p>
+
+Most people can't tell whether their PC is healthy. The tools that could tell them show raw
+numbers for people who already know what they mean. Fettle reads what Windows already knows and
+prints it as a receipt: a plain-words verdict on every line, the next steps at the top, and the
+numbers underneath for anyone who wants them.
+
+Fettle only reads. It doesn't clean, "boost" or change anything, needs no administrator rights,
+and sends nothing on its own except the update check, which you can turn off.
+
+## What it checks
+
+| | |
+|---|---|
+| **Storage** | Wear, errors, temperature and free space, on NVMe and SATA. The optional Deep check reads disk health that needs administrator rights. |
+| **Battery** | How much charge it still holds compared with new, and how many cycles it has done. |
+| **Memory** | Sticks, slots, speed, and whether a second stick would help. |
+| **Windows** | Edition, security updates, Windows 11 readiness, restarts. |
+| **Startup** | Everything that starts with Windows. |
+| **Graphics** | Your graphics card and how old its driver is. |
+
+If Fettle couldn't check something, the receipt says so, and says why.
+
+## What you can do with the receipt
+
+- **Print it, or save it as a PDF.** The preview shows the pages as they will print, on the paper Windows is set up for.
+- **Share it as a link** that lasts 7 days, 30 days or a year, with an optional password. You get a private link to delete it whenever you like. The link opens in any browser, and nobody needs Fettle to read it.
+- **Copy it** for a forum, Discord or Reddit, or **save the full report** as JSON.
+- Read it **in English or Italian**, with light, dark and OLED themes.
+
+<p align="center">
+  <img src="assets/screenshots/share.png" width="49%" alt="The Share view: choose how long the link lasts and add a password.">
+  <img src="assets/screenshots/preview.png" width="49%" alt="The print preview, showing the receipt's pages as they will print.">
+</p>
 
 ## Download
 
-Fettle runs on Windows 10 and 11. Get the installer or the portable zip from [fettle.page/download](https://fettle.page/download) or the [releases](https://github.com/fettle-page/fettle/releases). Each release lists the SHA-256 of its files in `SHA256SUMS.txt`, and is built by GitHub Actions from the tagged source (see [the code signing page](https://fettle.page/code-signing)).
+Fettle runs on Windows 10 and 11 (64-bit). Get it from [fettle.page/download](https://fettle.page/download) or the [releases](https://github.com/fettle-page/fettle/releases):
+
+- **Installer** (`Fettle-Setup-<version>.exe`): installs for your user by default, with no administrator prompt. Remove it from Windows Settings > Apps.
+- **Portable zip** (`Fettle-<version>-portable.zip`): nothing to install. It keeps its settings in the `Fettle data` folder beside `fettle.exe`, so a copy on a USB stick leaves nothing behind. Delete the folder to remove it.
+
+**About the Windows warning:** the downloads aren't code-signed yet, so SmartScreen may say "Windows protected your PC" the first time. Choose "More info", then "Run anyway". Every release is built by GitHub Actions from the tagged source, never on someone's own PC. Each release lists the SHA-256 of its files in `SHA256SUMS.txt`, and you can check where a download was built with the [GitHub CLI](https://cli.github.com/):
+
+```sh
+gh attestation verify Fettle-Setup-1.0.0.exe --repo fettle-page/fettle
+```
+
+The [code signing policy](https://fettle.page/code-signing) explains how releases are built and approved, and the plan to sign them through the SignPath Foundation.
 
 ## What's in this repo
 
@@ -73,4 +137,4 @@ Everything runs locally. The Worker uses local simulations of R2, rate limiting 
 
 ## Licence
 
-MIT (see `LICENSE`). The fonts are under the SIL Open Font License; their licence files are in `apps/web/public/fonts`. The Windows downloads carry `THIRD-PARTY-NOTICES.txt`, the licences of everything built into the app, written at packaging time by `apps/windows/packaging/notices.mjs`.
+MIT (see `LICENSE`). The Windows app's interface is built with [Slint](https://slint.dev), used under its royalty-free licence (it is also available under GPLv3); the About panel carries its credit. The fonts are under the SIL Open Font License; their licence files are in `apps/web/public/fonts`. The Windows downloads carry `THIRD-PARTY-NOTICES.txt`, the licences of everything built into the app, written at packaging time by `apps/windows/packaging/notices.mjs`.

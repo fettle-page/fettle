@@ -215,6 +215,8 @@ section.hero {
 .btn-ghost { color: var(--on-mat); box-shadow: inset 0 0 0 1.5px var(--t-ghost-ring); }
 .btn-ghost:active { translate: 0 2px; }
 .fine { margin: 18px 0 0; font: 500 12px/1.5 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--on-mat-faint); }
+/* The download count (filled in by the Worker): small print under the download links. */
+.dl-count { margin: 6px 0 0; font: 600 12px/1.4 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--color-ink-soft); }
 
 /* The desk: knife, live receipt, stamp */
 .desk { position: relative; justify-self: center; width: 100%; max-width: 400px; }

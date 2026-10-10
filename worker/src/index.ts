@@ -1,3 +1,4 @@
+import { DOWNLOAD_PAGES, withDownloadCount } from "./downloads.ts";
 import { apiError } from "./http.ts";
 import { createReport, deleteReport, getReport, unlockReport } from "./reports.ts";
 import { sharePage } from "./share.ts";
@@ -25,6 +26,7 @@ export default {
     const { pathname } = new URL(request.url);
     if (pathname === "/api" || pathname.startsWith("/api/")) return api(request, env, pathname);
     if (pathname === "/r" || pathname.startsWith("/r/")) return sharePage(request, env);
+    if (DOWNLOAD_PAGES.has(pathname)) return withDownloadCount(request, env);
     return env.ASSETS.fetch(request);
   },
 } satisfies ExportedHandler<Env>;

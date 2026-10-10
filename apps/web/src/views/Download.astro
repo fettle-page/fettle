@@ -1,4 +1,5 @@
 ---
+import DownloadCount from "../components/DownloadCount.astro";
 import Doc from "../components/Doc.astro";
 import { releases } from "../content/changelog.ts";
 import { pages } from "../i18n/pages.ts";
@@ -27,6 +28,7 @@ const intro = files ? c.introReady.replace("{version}", files.version) : c.intro
             <p class="download-more">
               <a href={files.portable}>{c.portable}</a> · <a href={files.checksums}>{c.checksums}</a> · <a href={files.all}>{c.allReleases}</a>
             </p>
+            <DownloadCount locale={locale} />
           </>
         ) : (
           <p class="download-cta"><span class="btn btn-primary is-waiting">{c.button}</span></p>

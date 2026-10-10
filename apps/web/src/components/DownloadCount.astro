@@ -1,0 +1,15 @@
+---
+// How many times Fettle was downloaded: an empty, hidden line the share Worker fills in with GitHub's
+// own total (worker/src/downloads.ts). Served without the Worker, or when GitHub doesn't answer, it
+// shows nothing.
+import type { Locale } from "../i18n/paths.ts";
+import { t } from "../i18n/strings.ts";
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+---
+
+<p class="dl-count" data-download-count data-locale={locale} data-one={t(locale, "downloads.one")} data-many={t(locale, "downloads.many")} hidden></p>

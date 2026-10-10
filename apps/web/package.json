@@ -8,7 +8,8 @@
     "./share-render": {
       "types": "./src/share/render-types.d.ts",
       "default": "./src/share/render.tsx"
-    }
+    },
+    "./release": "./src/release.ts"
   },
   "scripts": {
     "dev": "npm run build -w @fettle/brain && astro dev",

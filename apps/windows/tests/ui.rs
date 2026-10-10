@@ -158,8 +158,8 @@ fn checking_this_pc_shows_progress_then_the_receipt() {
     assert!(has(&h.app, "0 of 7 sections done"));
     assert!(!has(&h.app, "Check this PC"));
     h.background.run_all(&h.app);
-    assert!(has(&h.app, "In fine fettle."), "the receipt's summary");
-    assert!(has(&h.app, "Nothing to do right now."), "the answer in the panel");
+    assert!(has(&h.app, "Fine so far, but the disks still need a Deep check."), "the receipt's summary");
+    assert!(has(&h.app, "Run a Deep check to read the disks' health."), "the answer in the panel");
     assert!(has(&h.app, "Share a link"));
 }
 
@@ -172,7 +172,7 @@ fn the_last_check_comes_back_faded_at_the_next_launch() {
     assert!(FileStore::new(dir.clone()).load_last().is_some(), "remembered on this PC");
     drop(first);
     let again = harness_in(Locale::En, dir);
-    assert!(has(&again.app, "Last time: in fine fettle."));
+    assert!(has(&again.app, "Last time: fine so far, but the disks still need a Deep check."));
     assert!(has(&again.app, "Check again"));
     // Its label sits on the mat beside the paper, never over the receipt's lines.
     let label = ElementHandle::find_by_accessible_label(again.app.window(), "Last check · 3 days ago").next().expect("the label on the mat");
@@ -415,7 +415,7 @@ fn copy_puts_the_markdown_on_the_clipboard() {
     press(&e.h.app, "Copy");
     let text = e.clipboard.0.borrow().clone().expect("copied");
     assert!(text.starts_with("**Fettle** · "), "{text}");
-    assert!(text.contains("**In fine fettle.**"));
+    assert!(text.contains("**Fine so far, but the disks still need a Deep check.**"));
     assert_eq!(dock_status(&e.h.app), "Copied. Paste it where you're asking for help.");
 }
 
@@ -487,7 +487,7 @@ fn print_sends_the_receipt_to_the_printer() {
     assert!(printer.0.borrow().is_empty(), "the preview comes first");
     assert!(has(&h.app, "Anteprima di stampa"));
     press(&h.app, "Stampa…");
-    assert_eq!(*printer.0.borrow(), vec!["In gran forma.".to_string()], "the receipt, in the app's language");
+    assert_eq!(*printer.0.borrow(), vec!["Tutto a posto finora, ma per i dischi serve un Controllo approfondito.".to_string()], "the receipt, in the app's language");
 }
 
 fn preview_pages(app: &Fettle) -> Vec<slint::Image> {
@@ -497,7 +497,7 @@ fn preview_pages(app: &Fettle) -> Vec<slint::Image> {
 
 #[test]
 fn the_preview_uses_the_paper_windows_is_set_up_for() {
-    // Letter is shorter than A4, so the same receipt takes a page more.
+    // Letter is shorter than A4; this receipt comes to three pages on both.
     let h = harness_with(Locale::En, temp_dir(), |deps| deps.paper = Rc::new(|| PageSize::Letter));
     press(&h.app, "Check this PC");
     h.background.run_all(&h.app);
@@ -514,12 +514,13 @@ fn the_preview_shows_the_pages_as_they_will_print() {
     h.background.run_all(&h.app);
     press(&h.app, "Print");
     let pages = preview_pages(&h.app);
-    assert_eq!(pages.len(), 2, "the dump's receipt is two pages");
+    // Its "Next step: run a Deep check" adds the third page.
+    assert_eq!(pages.len(), 3, "the dump's receipt is three pages");
     let size = pages[0].size();
     // Portrait paper (A4 or Letter), drawn with ink on it.
     assert!(size.width > 300 && size.height as f32 / size.width as f32 > 1.25, "{size:?}");
     let label = h.app.window().get_preview_label().to_string();
-    assert!(label.starts_with("2 pages · "), "{label}");
+    assert!(label.starts_with("3 pages · "), "{label}");
     key(&h.app, slint::platform::Key::Escape);
     assert!(has(&h.app, "Share a link"), "Esc goes back to the receipt");
     assert!(preview_pages(&h.app).is_empty(), "the pages aren't kept");
@@ -660,7 +661,7 @@ fn a_declined_deep_check_keeps_the_quick_receipt_and_says_so() {
     assert_eq!(asked.load(Ordering::Relaxed), 1);
     assert_eq!(button.accessible_enabled(), Some(true));
     assert!(has(&h.app, "The Deep check was cancelled. This is still the quick check."));
-    assert!(has(&h.app, "In fine fettle."), "the quick receipt stays");
+    assert!(has(&h.app, "Fine so far, but the disks still need a Deep check."), "the quick receipt stays");
 }
 
 /// Works the first time, then breaks.
@@ -684,7 +685,7 @@ fn a_failed_re_check_keeps_the_receipt_and_says_so_above_it() {
     let _ = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| h.background.run_all(&h.app)));
     h.app.pump();
     assert!(has(&h.app, "The check couldn't finish. Try again."));
-    assert!(has(&h.app, "In fine fettle."), "the receipt stays");
+    assert!(has(&h.app, "Fine so far, but the disks still need a Deep check."), "the receipt stays");
     assert!(has(&h.app, "Share a link"), "and can still be shared");
 }
 

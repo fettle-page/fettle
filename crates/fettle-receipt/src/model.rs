@@ -98,7 +98,8 @@ pub fn build(report: &Report, receipt: &Receipt, locale: Locale, zone: Zone) -> 
     let key = receipt.summary.key.as_str();
     ReceiptModel {
         locale,
-        tone: key.strip_prefix("summary.").unwrap_or("partial").to_string(),
+        // Fine with unchecked disks still looks fine: what was checked is fine, and the top line says the rest.
+        tone: if key == "summary.fine_unchecked" { "fine" } else { key.strip_prefix("summary.").unwrap_or("partial") }.to_string(),
         summary: render(&MessageRef::key(key), locale),
         actions: receipt.summary.actions.iter().map(|a| render(a, locale)).collect(),
         machine: machine_rows(&report.facts, locale),

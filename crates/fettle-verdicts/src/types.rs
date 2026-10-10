@@ -110,8 +110,9 @@ pub struct SectionVerdict {
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "schema", derive(schemars::JsonSchema))]
 pub struct Summary {
-    /// summary.fine, summary.some, summary.attention or summary.partial.
-    #[cfg_attr(feature = "schema", schemars(extend("enum" = ["summary.fine", "summary.some", "summary.attention", "summary.partial"])))]
+    /// summary.fine, summary.fine_unchecked (fine, but the disks need a Deep check), summary.some,
+    /// summary.attention or summary.partial.
+    #[cfg_attr(feature = "schema", schemars(extend("enum" = ["summary.fine", "summary.fine_unchecked", "summary.some", "summary.attention", "summary.partial"])))]
     pub key: String,
     pub actions: Vec<MessageRef>,
 }

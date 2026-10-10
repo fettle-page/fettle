@@ -1,5 +1,7 @@
 {
   "summary.fine": "In gran forma.",
+  "summary.fine_unchecked": "Tutto a posto finora, ma per i dischi serve un Controllo approfondito.",
+  "summary.action.deep_check": "Avvia un Controllo approfondito per leggere lo stato dei dischi.",
   "summary.some": "Serve una sistemata.",
   "summary.attention": "Ha bisogno di attenzioni.",
   "summary.partial": "Fettle non è riuscito a controllare quasi nulla su questo PC.",

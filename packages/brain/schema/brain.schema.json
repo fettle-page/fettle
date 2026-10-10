@@ -204,9 +204,10 @@
             "type": "array"
           },
           "key": {
-            "description": "summary.fine, summary.some, summary.attention or summary.partial.",
+            "description": "summary.fine, summary.fine_unchecked (fine, but the disks need a Deep check), summary.some,\nsummary.attention or summary.partial.",
             "enum": [
               "summary.fine",
+              "summary.fine_unchecked",
               "summary.some",
               "summary.attention",
               "summary.partial"

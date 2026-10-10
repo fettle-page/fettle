@@ -862,8 +862,9 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn the_dump_receipt_fits_on_two_a4_pages() {
-        assert!(pages(&dump_model(Locale::En), PageSize::A4).len() <= 2);
+    fn the_dump_receipt_prints_on_three_a4_pages() {
+        // Its "Next step: run a Deep check" adds the third page.
+        assert_eq!(pages(&dump_model(Locale::En), PageSize::A4).len(), 3);
     }
 
     #[test]

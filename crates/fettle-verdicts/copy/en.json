@@ -1,5 +1,7 @@
 {
   "summary.fine": "In fine fettle.",
+  "summary.fine_unchecked": "Fine so far, but the disks still need a Deep check.",
+  "summary.action.deep_check": "Run a Deep check to read the disks' health.",
   "summary.some": "Needs a little fettling.",
   "summary.attention": "Needs attention.",
   "summary.partial": "Fettle couldn't check much on this PC.",

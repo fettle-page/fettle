@@ -36,6 +36,18 @@ describe("SharePage · report", () => {
     expect(screen.getByText("Questo link scade il 6 novembre 2026.")).toBeTruthy();
     expect(screen.getByText("Scontrino condiviso")).toBeTruthy();
   });
+
+  it("gives an Italian date the article its day needs", () => {
+    for (const [day, text] of [
+      ["2026-11-08", "Questo link scade l'8 novembre 2026."],
+      ["2026-11-11", "Questo link scade l'11 novembre 2026."],
+      ["2026-11-01", "Questo link scade il 1° novembre 2026."],
+    ] as const) {
+      render(<SharePage payload={{ kind: "report", id: ID, model: tiredModel("it"), expiresAt: `${day}T10:00:00.000Z` }} locale="it" />);
+      expect(screen.getByText(text)).toBeTruthy();
+      cleanup();
+    }
+  });
 });
 
 describe("SharePage · unreadable receipt", () => {

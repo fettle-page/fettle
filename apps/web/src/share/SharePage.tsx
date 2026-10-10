@@ -1,7 +1,7 @@
 import type { Locale, ReceiptModel } from "@fettle/brain";
 import { ReceiptView, stamp, Wordmark } from "@fettle/receipt-ui";
 import { Component, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
-import { longDate, shareText, type ShareKey } from "./copy.ts";
+import { dateParams, longDate, shareText, type ShareKey } from "./copy.ts";
 import { isDate, isModel, type SharePayload } from "./payload.ts";
 import { applyTheme, nextVisibleTheme, prefersDark, readTheme, safeStorage, STORAGE_KEY, type Theme } from "../scripts/theme.ts";
 
@@ -111,7 +111,7 @@ function Shared({ model, expiresAt, locale }: SharedProps) {
   return (
     <>
       <ReceiptView model={shown} />
-      <p className="note">{shareText("expires", locale, { date: longDate(expiresAt, locale, localTime ? null : "UTC") })}</p>
+      <p className="note">{shareText("expires", locale, dateParams(longDate(expiresAt, locale, localTime ? null : "UTC")))}</p>
     </>
   );
 }

@@ -33,7 +33,7 @@ export type ShareKey = keyof typeof en;
 
 const it: Record<ShareKey, string> = {
   label: "Scontrino condiviso",
-  expires: "Questo link scade il {date}.",
+  expires: "Questo link scade {il_date}.",
   "missing.title": "Questo scontrino non c'è.",
   "missing.body": "Potrebbe essere scaduto, oppure chi l'ha condiviso l'ha eliminato.",
   cta: "Controlla il tuo PC con Fettle",
@@ -64,6 +64,14 @@ const INTL_LOCALE: Record<Locale, string> = { en: "en-GB", it: "it-IT" };
 
 export function shareText(key: ShareKey, locale: Locale, params: Record<string, string> = {}): string {
   return catalogs[locale][key].replace(/\{(\w+)\}/g, (_, name: string) => params[name] ?? `{${name}}`);
+}
+
+/** A long date for a template: plain as `{date}`, and with the Italian article its day needs as
+ *  `{il_date}`: "il 6 novembre", "l'8 novembre", "l'11 novembre", "il 1° novembre". */
+export function dateParams(date: string): Record<string, string> {
+  const day = /^\d+/.exec(date)?.[0];
+  const ilDate = day === "8" || day === "11" ? `l'${date}` : day === "1" ? `il 1°${date.slice(1)}` : `il ${date}`;
+  return { date, il_date: ilDate };
 }
 
 /** "6 November 2026" / "6 novembre 2026". UTC by default, so the server-drawn page and the first

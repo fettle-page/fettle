@@ -91,6 +91,8 @@ async function pageFor(env: Env, path: string, locale: Locale): Promise<Page> {
 function ogTags(og: OgText, origin: string, url: string): string {
   const prop = (p: string, v: string) => `<meta property="${p}" content="${escapeHtml(v)}">`;
   return [
+    // The shell has no description of its own; search engines and some previews read this one.
+    `<meta name="description" content="${escapeHtml(og.description)}">`,
     prop("og:title", og.title),
     prop("og:description", og.description),
     prop("og:url", url),

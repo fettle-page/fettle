@@ -20,6 +20,12 @@ const COUNT: Record<Locale, Record<Counted, (n: number) => string>> = {
   },
 };
 
+/** When every counted line is fine: one plain phrase instead of a lone "12 fine". */
+const ALL_FINE: Record<Locale, (n: number) => string> = {
+  en: (n) => (n === 1 ? "1 check, fine" : `${n} checks, all fine`),
+  it: (n) => (n === 1 ? "1 controllo, a posto" : `${n} controlli, tutti a posto`),
+};
+
 const TITLE: Record<Locale, string> = { en: "Fettle receipt", it: "Scontrino Fettle" };
 const NOTHING_COUNTED: Record<Locale, string> = { en: "A PC check-up by Fettle.", it: "Un controllo del PC fatto con Fettle." };
 
@@ -33,11 +39,11 @@ export const LOCKED_OG: Record<Locale, OgText> = {
 export function ogText(receipt: Receipt, locale: Locale): OgText {
   const counts = new Map<Level, number>();
   for (const section of receipt.sections) for (const line of section.lines) counts.set(line.level, (counts.get(line.level) ?? 0) + 1);
-  const parts = ORDER.filter((level) => (counts.get(level) ?? 0) > 0).map((level) => COUNT[locale][level](counts.get(level)!));
-  return {
-    title: `${TITLE[locale]}: ${text(receipt.summary.key, locale)}`,
-    description: parts.length > 0 ? parts.join(" · ") : NOTHING_COUNTED[locale],
-  };
+  const counted = ORDER.filter((level) => (counts.get(level) ?? 0) > 0);
+  const parts = counted.map((level) => COUNT[locale][level](counts.get(level)!));
+  const description =
+    counted.length === 1 && counted[0] === "fine" ? ALL_FINE[locale](counts.get("fine")!) : parts.length > 0 ? parts.join(" · ") : NOTHING_COUNTED[locale];
+  return { title: `${TITLE[locale]}: ${text(receipt.summary.key, locale)}`, description };
 }
 
 const HTML_ESCAPES: Record<string, string> = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" };

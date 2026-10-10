@@ -27,6 +27,7 @@ function payloadOf(html: string): any {
 
 const meta = (html: string, property: string) =>
   new RegExp(`<meta property="${property}" content="([^"]*)">`).exec(html)?.[1];
+const described = (html: string) => [...html.matchAll(/<meta name="description" content="([^"]*)">/g)].map((m) => m[1]);
 
 async function expectShareHeaders(res: Response) {
   expect(res.headers.get("content-type")).toBe("text/html; charset=utf-8");
@@ -47,6 +48,8 @@ describe("GET /r/:id", () => {
     const html = await res.text();
     expect(meta(html, "og:title")).toBe("Fettle receipt: Needs attention.");
     expect(meta(html, "og:description")).toMatch(/to act on soon/);
+    // One plain description for search engines and link previews, the same text as the card.
+    expect(described(html)).toEqual([meta(html, "og:description")]);
     expect(meta(html, "og:url")).toBe(`${ORIGIN}/r/${id}`);
     expect(meta(html, "og:type")).toBe("website");
     expect(meta(html, "og:site_name")).toBe("Fettle");
@@ -116,6 +119,7 @@ describe("GET /r/:id", () => {
     expect(payloadOf(html)).toEqual({ kind: "locked", id, expiresAt, locale: "en" });
     expect(meta(html, "og:title")).toBe("Fettle receipt (password protected)");
     expect(meta(html, "og:description")).toBe("Open the link and enter the password to see it.");
+    expect(described(html)).toEqual(["Open the link and enter the password to see it."]);
     expect(meta(html, "og:image")).toBe(`${ORIGIN}/og/share.png`);
     expect(html).not.toContain("SecretToolXYZ");
     expect(html).not.toContain("Needs attention");

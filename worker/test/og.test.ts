@@ -34,6 +34,15 @@ describe("ogText", () => {
     expect(ogText(one, "it").description).toBe("1 non verificato");
   });
 
+  it("says so plainly when every counted line is fine", () => {
+    const fine = receipt("summary.fine", [...lines("fine", 12), ...lines("info", 2)]);
+    expect(ogText(fine, "en").description).toBe("12 checks, all fine");
+    expect(ogText(fine, "it").description).toBe("12 controlli, tutti a posto");
+    const one = receipt("summary.fine", lines("fine", 1));
+    expect(ogText(one, "en").description).toBe("1 check, fine");
+    expect(ogText(one, "it").description).toBe("1 controllo, a posto");
+  });
+
   it("falls back to a plain line when nothing is counted", () => {
     const quiet = receipt("summary.partial", lines("info", 2));
     expect(ogText(quiet, "en").description).toBe("A PC check-up by Fettle.");

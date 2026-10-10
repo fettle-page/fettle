@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests {
     use super::*;
+    use windows::Win32::Foundation::GENERIC_WRITE;
 
     const DESC: usize = size_of::<STORAGE_PROTOCOL_DATA_DESCRIPTOR>();
     const SPECIFIC: usize = offset_of!(STORAGE_PROTOCOL_DATA_DESCRIPTOR, ProtocolSpecificData);
@@ -36,6 +37,40 @@ mod tests {
         assert!(extract_health_log(&buf, buf.len()).is_err());
     }
 
+    // Fettle only reads: a drive is never opened with write access, and once the health log has
+    // been read, no further (stronger) open is tried.
+    #[test]
+    fn never_asks_for_write_access() {
+        for (name, access) in ACCESS_TRIES {
+            assert_eq!(access & GENERIC_WRITE.0, 0, "{name} asks for write access");
+        }
+        let mut asked = Vec::new();
+        let attempts = drive_attempts(|access| {
+            asked.push(access);
+            Opened::Failed("access denied".into())
+        });
+        assert_eq!(asked, vec![0, GENERIC_READ.0]);
+        assert_eq!(attempts.unwrap().len(), 2);
+    }
+
+    #[test]
+    fn stops_at_the_first_access_that_reads_the_log() {
+        let mut asked = Vec::new();
+        let attempts = drive_attempts(|access| {
+            asked.push(access);
+            Opened::Log(Ok([0u8; LOG_LEN]))
+        })
+        .unwrap();
+        assert_eq!(asked, vec![0]);
+        assert_eq!(attempts.len(), 1);
+        assert_eq!(attempts[0]["ok"], true);
+    }
+
+    #[test]
+    fn a_drive_that_isn_t_there_is_skipped() {
+        assert!(drive_attempts(|_| Opened::Missing).is_none());
+    }
+
     #[test]
     fn rejects_reply_shorter_than_log() {
         let buf = reply();
@@ -46,7 +81,7 @@ mod tests {
 use super::nvme::parse_nvme_health_log;
 use serde_json::{Value, json};
 use std::mem::{offset_of, size_of};
-use windows::Win32::Foundation::{CloseHandle, ERROR_FILE_NOT_FOUND, GENERIC_READ, GENERIC_WRITE, HANDLE};
+use windows::Win32::Foundation::{CloseHandle, ERROR_FILE_NOT_FOUND, GENERIC_READ, HANDLE};
 use windows::Win32::Storage::FileSystem::{CreateFileW, FILE_FLAGS_AND_ATTRIBUTES, FILE_SHARE_READ, FILE_SHARE_WRITE, OPEN_EXISTING};
 use windows::Win32::System::IO::DeviceIoControl;
 use windows::Win32::System::Ioctl::{
@@ -60,33 +95,51 @@ const NVME_LOG_PAGE_HEALTH: u32 = 0x02;
 const LOG_LEN: usize = 512;
 const MAX_DRIVES: u32 = 16;
 
-/// NVMe health log for each physical drive, tried with no access rights and then with read/write.
+/// How a drive is opened, in order: with no access rights (enough for the health query, and allowed
+/// without administrator rights), then read-only. Fettle only reads, so never with write access.
+const ACCESS_TRIES: [(&str, u32); 2] = [("none", 0), ("read", GENERIC_READ.0)];
+
+/// One try at opening a drive and reading its health log.
+enum Opened {
+    Missing,
+    Failed(String),
+    Log(Result<[u8; LOG_LEN], String>),
+}
+
+/// Tries each access in turn and stops at the first that reads the log. None: there's no such drive.
+fn drive_attempts(mut open: impl FnMut(u32) -> Opened) -> Option<Vec<Value>> {
+    let mut attempts = Vec::new();
+    for (access_name, access) in ACCESS_TRIES {
+        match open(access) {
+            Opened::Missing => return None,
+            Opened::Failed(e) => attempts.push(json!({"access": access_name, "ok": false, "error": format!("open: {e}")})),
+            Opened::Log(Ok(log)) => {
+                attempts.push(json!({"access": access_name, "ok": true, "health": parse_nvme_health_log(&log)}));
+                break;
+            }
+            Opened::Log(Err(e)) => attempts.push(json!({"access": access_name, "ok": false, "error": e})),
+        }
+    }
+    Some(attempts)
+}
+
+/// NVMe health log for each physical drive.
 pub fn nvme_health() -> Result<Value, String> {
     let mut out = Vec::new();
     for n in 0..MAX_DRIVES {
         let path = format!(r"\\.\PhysicalDrive{n}");
-        let mut attempts = Vec::new();
-        let mut missing = false;
-        for (access_name, access) in [("none", 0u32), ("read", GENERIC_READ.0 | GENERIC_WRITE.0)] {
-            match open_drive(&path, access) {
-                Err(e) if e.code() == ERROR_FILE_NOT_FOUND.to_hresult() => {
-                    missing = true;
-                    break;
+        let attempts = drive_attempts(|access| match open_drive(&path, access) {
+            Err(e) if e.code() == ERROR_FILE_NOT_FOUND.to_hresult() => Opened::Missing,
+            Err(e) => Opened::Failed(e.to_string()),
+            Ok(handle) => {
+                let result = query_health_log(handle);
+                unsafe {
+                    let _ = CloseHandle(handle);
                 }
-                Err(e) => attempts.push(json!({"access": access_name, "ok": false, "error": format!("open: {e}")})),
-                Ok(handle) => {
-                    let result = query_health_log(handle);
-                    unsafe {
-                        let _ = CloseHandle(handle);
-                    }
-                    attempts.push(match result {
-                        Ok(log) => json!({"access": access_name, "ok": true, "health": parse_nvme_health_log(&log)}),
-                        Err(e) => json!({"access": access_name, "ok": false, "error": e}),
-                    });
-                }
+                Opened::Log(result)
             }
-        }
-        if !missing {
+        });
+        if let Some(attempts) = attempts {
             out.push(json!({"drive": n, "attempts": attempts}));
         }
     }

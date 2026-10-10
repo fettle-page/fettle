@@ -61,10 +61,30 @@ describe("the code signing policy page", () => {
     expect(page("it/download.html")).toMatch(/<main[\s\S]*href="\/it\/code-signing"[\s\S]*<\/main>/);
   });
 
+  // SignPath's terms ask for the words "Code signing policy" on the home page and the download page.
+  it("is called the Code signing policy on the home page and the download page", () => {
+    for (const file of ["index.html", "download.html"]) {
+      expect(page(file), file).toMatch(/<a href="\/code-signing"[^>]*>Code signing policy<\/a>/);
+    }
+    for (const file of ["it.html", "it/download.html"]) {
+      expect(page(file), file).toMatch(/<a href="\/it\/code-signing"[^>]*>Policy di firma del codice<\/a>/);
+    }
+  });
+
   it("is in the sitemap in both languages", () => {
     const sitemap = readFileSync(join(DIST, "sitemap-0.xml"), "utf8");
     expect(sitemap).toMatch(/\/code-signing</);
     expect(sitemap).toMatch(/\/it\/code-signing</);
+  });
+
+  // SignPath's terms: install instructions come with uninstall instructions.
+  it("the download page says how to remove each download", () => {
+    const en = text(page("download.html"));
+    const it_ = text(page("it/download.html"));
+    expect(en).toMatch(/Windows Settings > Apps/);
+    expect(en).toMatch(/delete its folder/);
+    expect(it_).toMatch(/Impostazioni di Windows > App/);
+    expect(it_).toMatch(/elimina la sua cartella/);
   });
 
   it("once signed, no page still says Fettle will apply for signing", () => {

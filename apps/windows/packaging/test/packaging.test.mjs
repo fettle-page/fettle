@@ -68,6 +68,18 @@ describe("fettle.iss: privacy during installation", () => {
     assert.match(iss, /'"updates":true', '"updates":false'/);
     assert.match(iss, /'\{"updates":false\}'/);
   });
+
+  it("for all users, a cleared box turns the update check off for every account on the PC", () => {
+    // HKLM\Software\Fettle\UpdateCheck = 0, written only in an all-users install with the box cleared,
+    // and removed with Fettle.
+    const reg = /^Root: HKLM; Subkey: "Software\\Fettle"; ValueType: dword; ValueName: "UpdateCheck"; ValueData: 0; (.*)$/m.exec(iss);
+    assert.ok(reg, "no machine-wide UpdateCheck value");
+    assert.match(reg[1], /Tasks: not updatecheck/);
+    assert.match(reg[1], /Check: IsAdminInstallMode/);
+    assert.match(reg[1], /uninsdeletevalue/);
+    // Installing again for all users with the box ticked takes the machine-wide "off" away.
+    assert.match(iss, /RegDeleteValue\(HKLM, 'Software\\Fettle', 'UpdateCheck'\)/);
+  });
 });
 
 describe("build.mjs", () => {

@@ -62,6 +62,18 @@ pub fn system_dark() -> Option<bool> {
     read.is_ok().then_some(value == 0)
 }
 
+/// The machine-wide update-check default an all-users install wrote (HKLM\Software\Fettle,
+/// UpdateCheck: 0 off, anything else on). None when there's none.
+pub fn machine_updates() -> Option<bool> {
+    use windows::Win32::System::Registry::{HKEY_LOCAL_MACHINE, RRF_RT_REG_DWORD, RegGetValueW};
+    use windows::core::w;
+    let mut value = 0u32;
+    let mut size = std::mem::size_of::<u32>() as u32;
+    // SAFETY: a DWORD read into a local of the right size.
+    let read = unsafe { RegGetValueW(HKEY_LOCAL_MACHINE, w!(r"Software\Fettle"), w!("UpdateCheck"), RRF_RT_REG_DWORD, None, Some(&mut value as *mut u32 as *mut _), Some(&mut size)) };
+    read.is_ok().then_some(value != 0)
+}
+
 /// Working set and private bytes, in MB.
 pub fn memory_mb() -> (f64, f64) {
     use windows::Win32::System::ProcessStatus::{GetProcessMemoryInfo, PROCESS_MEMORY_COUNTERS_EX};

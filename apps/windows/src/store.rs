@@ -35,11 +35,19 @@ pub trait Store {
 /// The real store: JSON files in one folder.
 pub struct FileStore {
     dir: PathBuf,
+    /// The machine-wide update-check default an all-users install can set (None: not set).
+    machine_updates: Option<bool>,
 }
 
 impl FileStore {
     pub fn new(dir: PathBuf) -> FileStore {
-        FileStore { dir }
+        FileStore { dir, machine_updates: None }
+    }
+
+    /// The update check's default for a user who hasn't chosen in Settings: off when an all-users
+    /// install had its box cleared (`HKLM\Software\Fettle\UpdateCheck` = 0). A user's own choice wins.
+    pub fn with_machine_updates(self, machine_updates: Option<bool>) -> FileStore {
+        FileStore { machine_updates, ..self }
     }
 
     /// `%LOCALAPPDATA%\Fettle`, or the portable copy's `Fettle data` folder beside the exe.
@@ -94,7 +102,7 @@ fn field<T: serde::de::DeserializeOwned>(object: &serde_json::Value, name: &str,
 
 impl Store for FileStore {
     fn load_settings(&self) -> Settings {
-        let d = Settings::default();
+        let d = Settings { updates: self.machine_updates.unwrap_or(true), ..Settings::default() };
         let Some(o) = self.read(SETTINGS).filter(serde_json::Value::is_object) else { return d };
         Settings {
             remember: field(&o, "remember", d.remember),
@@ -200,6 +208,22 @@ pub(crate) mod tests {
         std::fs::create_dir_all(&other).unwrap();
         std::fs::write(other.join(PORTABLE_DIR), "").unwrap();
         assert_eq!(data_dir(Some(&other), None), PathBuf::from("Fettle"));
+    }
+
+    #[test]
+    fn a_machine_wide_update_setting_is_the_default_until_the_user_chooses() {
+        // An all-users install with the box cleared: every account starts with the check off.
+        let dir = temp_dir();
+        let store = FileStore::new(dir.clone()).with_machine_updates(Some(false));
+        assert!(!store.load_settings().updates, "no settings yet");
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("settings.json"), r#"{"theme":"dark"}"#).unwrap();
+        assert!(!store.load_settings().updates, "settings without a choice about updates");
+        // A choice the user made in Settings wins: it's their own account.
+        std::fs::write(dir.join("settings.json"), r#"{"updates":true}"#).unwrap();
+        assert!(store.load_settings().updates);
+        // Without a machine-wide setting, the check is on unless the user turned it off.
+        assert!(FileStore::new(temp_dir()).with_machine_updates(None).load_settings().updates);
     }
 
     #[test]

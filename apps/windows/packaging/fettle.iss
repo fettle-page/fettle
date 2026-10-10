@@ -80,6 +80,11 @@ Name: "{autodesktop}\Fettle"; Filename: "{app}\fettle.exe"; Tasks: desktopicon
 [Run]
 Filename: "{app}\fettle.exe"; Description: "{cm:LaunchProgram,Fettle}"; Flags: nowait postinstall skipifsilent
 
+[Registry]
+; For all users, a cleared "Check for a new version" box is the default for every account on the PC:
+; Fettle reads HKLM\Software\Fettle\UpdateCheck = 0 as "off" for anyone who hasn't chosen in Settings.
+Root: HKLM; Subkey: "Software\Fettle"; ValueType: dword; ValueName: "UpdateCheck"; ValueData: 0; Tasks: not updatecheck; Check: IsAdminInstallMode; Flags: uninsdeletevalue uninsdeletekeyifempty
+
 [Code]
 // A cleared "Check for a new version" box turns the app's setting off. The app reads its settings
 // field by field, so a first install writes just that field; an earlier install's settings keep
@@ -90,6 +95,9 @@ var
   Saved: AnsiString;
   Text: String;
 begin
+  // Installing again for all users with the box ticked takes back an earlier machine-wide "off".
+  if (CurStep = ssPostInstall) and IsAdminInstallMode and WizardIsTaskSelected('updatecheck') then
+    RegDeleteValue(HKLM, 'Software\Fettle', 'UpdateCheck');
   if (CurStep = ssPostInstall) and not WizardIsTaskSelected('updatecheck') then
   begin
     Path := ExpandConstant('{localappdata}\Fettle\settings.json');

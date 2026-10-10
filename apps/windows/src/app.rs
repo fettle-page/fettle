@@ -86,6 +86,9 @@ impl Default for Deps {
         Deps {
             system_lang: crate::win::system_lang(),
             scanner: Arc::new(crate::scan::RealScanner),
+            #[cfg(windows)]
+            store: Rc::new(FileStore::new(FileStore::default_dir()).with_machine_updates(crate::win::machine_updates())),
+            #[cfg(not(windows))]
             store: Rc::new(FileStore::new(FileStore::default_dir())),
             background: Rc::new(crate::scan::Threads),
             wake: Arc::new(|| {

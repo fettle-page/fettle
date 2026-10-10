@@ -226,7 +226,10 @@ mod tests {
         let real = dir.join("real");
         std::fs::create_dir_all(&real).unwrap();
         let link = dir.join("link");
-        let made = std::process::Command::new("cmd").args(["/C", "mklink", "/J"]).arg(&link).arg(&real).output().unwrap();
+        // mklink reads a "/" in an unquoted path as a switch (a path without spaces isn't quoted), so
+        // hand it backslashes only.
+        let windows_path = |p: &std::path::Path| p.to_string_lossy().replace('/', "\\");
+        let made = std::process::Command::new("cmd").args(["/C", "mklink", "/J"]).arg(windows_path(&link)).arg(windows_path(&real)).output().unwrap();
         assert!(made.status.success(), "{made:?}");
         assert!(write_report(&link.join("fettle-deep-1-1.json"), &a_report()).is_err(), "a junction may point anywhere");
         assert!(!real.join("fettle-deep-1-1.json").exists());

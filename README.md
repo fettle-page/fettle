@@ -72,7 +72,7 @@ Fettle runs on Windows 10 and 11 (64-bit). Get it from [fettle.page/download](ht
 **About the Windows warning:** the downloads aren't code-signed yet, so SmartScreen may say "Windows protected your PC" the first time. Choose "More info", then "Run anyway". Every release is built by GitHub Actions from the tagged source, never on someone's own PC. Each release lists the SHA-256 of its files in `SHA256SUMS.txt`, and you can check where a download was built with the [GitHub CLI](https://cli.github.com/):
 
 ```sh
-gh attestation verify Fettle-Setup-1.0.0.exe --repo fettle-page/fettle
+gh attestation verify Fettle-Setup-1.0.1.exe --repo fettle-page/fettle
 ```
 
 The [code signing policy](https://fettle.page/code-signing) explains how releases are built and approved, and the plan to sign them through the SignPath Foundation.

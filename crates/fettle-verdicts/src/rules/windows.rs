@@ -44,7 +44,8 @@ fn support_line(w: &Windows, build: u32, now: i64) -> Line {
             return line("windows-support", Level::Fine, "windows.supported", &[product(), until()], Action::Default);
         }
         // Ending soon: the same way out as once it has ended, while there's still time.
-        let key = if build >= 22000 {
+        // LTSC moves to a newer LTSC release, not to a feature update.
+        let key = if build >= 22000 && !info.fixed {
             "windows.ending_feature_update"
         } else if info.esu != Esu::None {
             "windows.ending_esu"
@@ -57,7 +58,7 @@ fn support_line(w: &Windows, build: u32, now: i64) -> Line {
     let esu_over = info.esu_end.is_some_and(|end| now > end);
     if info.esu == Esu::None || esu_over {
         // An old Windows 11 release just needs the latest (free) feature update.
-        let key = if build >= 22000 { "windows.unsupported_feature_update" } else { "windows.unsupported" };
+        let key = if build >= 22000 && !info.fixed { "windows.unsupported_feature_update" } else { "windows.unsupported" };
         return line("windows-support", Level::ActSoon, key, &[product()], Action::Default);
     }
 

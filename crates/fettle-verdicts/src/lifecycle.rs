@@ -1,4 +1,5 @@
-// Windows support end dates, copied from Microsoft's lifecycle pages on 2026-10-07.
+// Windows support end dates, copied from Microsoft's lifecycle pages on 2026-10-07 (LTSC 2024, LTSB 2015/2016,
+// IoT LTSC 2019 and IoT Enterprise added from them on 2026-10-11).
 // Each date is Microsoft's "End Date" as an instant (they list e.g. "10/14/2026 6:59:59 AM",
 // which is the last second of 13 Oct in Redmond). Update with each Fettle release.
 
@@ -20,12 +21,14 @@ pub enum Esu {
 }
 
 /// `esu_end` is always enforced; `show_esu_end` says whether the date is exact enough to print.
+/// `fixed`: LTSC/LTSB (the Fixed policy), where a feature update isn't the way to stay supported.
 #[derive(Clone, Copy, Debug)]
 pub struct SupportInfo {
     pub end: i64,
     pub esu: Esu,
     pub esu_end: Option<i64>,
     pub show_esu_end: bool,
+    pub fixed: bool,
 }
 
 /// An instant: day plus Redmond's usual 06:59:59 UTC, unless a time is given.
@@ -52,7 +55,8 @@ fn win11_home_pro(v: &str) -> Option<i64> {
 }
 
 // https://learn.microsoft.com/en-us/lifecycle/products/windows-11-enterprise-and-education
-// (Education, Enterprise, Enterprise multi-session)
+// (Education, Enterprise, Enterprise multi-session; IoT Enterprise has the same dates:
+// https://learn.microsoft.com/en-us/lifecycle/products/windows-11-iot-enterprise)
 fn win11_enterprise(v: &str) -> Option<i64> {
     Some(match v {
         "21H2" => d("2024-10-09"),
@@ -88,6 +92,7 @@ fn win10_home_pro(v: &str) -> Option<i64> {
 }
 
 // https://learn.microsoft.com/en-us/lifecycle/products/windows-10-enterprise-and-education
+// (IoT Enterprise has the same dates: https://learn.microsoft.com/en-us/lifecycle/products/windows-10-iot-enterprise)
 fn win10_enterprise(v: &str) -> Option<i64> {
     Some(match v {
         "22H2" => d("2025-10-15"),
@@ -109,14 +114,31 @@ fn win10_enterprise(v: &str) -> Option<i64> {
 }
 
 // LTSC follows the Fixed policy and is matched by build, not by version string.
+// https://learn.microsoft.com/en-us/lifecycle/products/windows-11-enterprise-ltsc-2024
+// https://learn.microsoft.com/en-us/lifecycle/products/windows-11-iot-enterprise-ltsc-2024
+fn win11_ltsc(build: u32, edition: EditionClass) -> Option<i64> {
+    match (build, edition) {
+        (26100, EditionClass::Ltsc) => Some(d("2029-10-10")),
+        (26100, EditionClass::IotLtsc) => Some(d("2034-10-11")),
+        _ => None,
+    }
+}
+
 // https://learn.microsoft.com/en-us/lifecycle/products/windows-10-enterprise-ltsc-2021
 // https://learn.microsoft.com/en-us/lifecycle/products/windows-10-iot-enterprise-ltsc-2021
 // https://learn.microsoft.com/en-us/lifecycle/products/windows-10-enterprise-ltsc-2019
+// https://learn.microsoft.com/en-us/lifecycle/products/windows-10-iot-enterprise-ltsc-2019
+// https://learn.microsoft.com/en-us/lifecycle/products/windows-10-2016-ltsb
+// https://learn.microsoft.com/en-us/lifecycle/products/windows-10-iot-enterprise-ltsb-2016
+// https://learn.microsoft.com/en-us/lifecycle/products/windows-10-2015-ltsb
+// https://learn.microsoft.com/en-us/lifecycle/products/windows-10-iot-enterprise-ltsb-2015
 fn win10_ltsc(build: u32, edition: EditionClass) -> Option<i64> {
     match (build, edition) {
         (19044, EditionClass::Ltsc) => Some(d("2027-01-13")),
         (19044, EditionClass::IotLtsc) => Some(d("2032-01-14")),
-        (17763, EditionClass::Ltsc) => Some(d("2029-01-10")),
+        (17763, EditionClass::Ltsc | EditionClass::IotLtsc) => Some(d("2029-01-10")),
+        (14393, EditionClass::Ltsc | EditionClass::IotLtsc) => Some(d("2026-10-14")),
+        (10240, EditionClass::Ltsc | EditionClass::IotLtsc) => Some(d("2025-10-15")),
         _ => None,
     }
 }
@@ -144,7 +166,7 @@ fn edition_class(edition_id: Option<&str>) -> Option<EditionClass> {
         Some(EditionClass::Ltsc)
     } else if ["Core", "Professional", "CloudEdition"].iter().any(|p| starts_with_ci(e, p)) {
         Some(EditionClass::HomePro)
-    } else if ["Enterprise", "Education", "ServerRdsh"].iter().any(|p| starts_with_ci(e, p)) {
+    } else if ["Enterprise", "Education", "ServerRdsh", "IoTEnterprise"].iter().any(|p| starts_with_ci(e, p)) {
         Some(EditionClass::Enterprise)
     } else {
         None
@@ -154,19 +176,20 @@ fn edition_class(edition_id: Option<&str>) -> Option<EditionClass> {
 /// Support end for a Windows install, or None when Fettle doesn't know this version or edition.
 pub fn support_end(build: u32, display_version: Option<&str>, edition_id: Option<&str>) -> Option<SupportInfo> {
     let edition = edition_class(edition_id)?;
-    let plain = |end| SupportInfo { end, esu: Esu::None, esu_end: None, show_esu_end: false };
+    let plain = |end| SupportInfo { end, esu: Esu::None, esu_end: None, show_esu_end: false, fixed: false };
+    let fixed = |end| SupportInfo { fixed: true, ..plain(end) };
     let version = display_version.filter(|v| !v.is_empty());
 
     if build >= 22000 {
         let end = match edition {
             EditionClass::HomePro => version.and_then(win11_home_pro),
             EditionClass::Enterprise => version.and_then(win11_enterprise),
-            _ => None,
+            EditionClass::Ltsc | EditionClass::IotLtsc => return win11_ltsc(build, edition).map(fixed),
         };
         return end.map(plain);
     }
     if matches!(edition, EditionClass::Ltsc | EditionClass::IotLtsc) {
-        return win10_ltsc(build, edition).map(plain);
+        return win10_ltsc(build, edition).map(fixed);
     }
     let end = version.and_then(if edition == EditionClass::HomePro { win10_home_pro } else { win10_enterprise })?;
     // ESU only covers 22H2.
@@ -174,9 +197,9 @@ pub fn support_end(build: u32, display_version: Option<&str>, edition_id: Option
         return Some(plain(end));
     }
     Some(if edition == EditionClass::HomePro {
-        SupportInfo { end, esu: Esu::Consumer, esu_end: Some(consumer_esu_end()), show_esu_end: true }
+        SupportInfo { end, esu: Esu::Consumer, esu_end: Some(consumer_esu_end()), show_esu_end: true, fixed: false }
     } else {
-        SupportInfo { end, esu: Esu::Commercial, esu_end: Some(commercial_esu_end()), show_esu_end: false }
+        SupportInfo { end, esu: Esu::Commercial, esu_end: Some(commercial_esu_end()), show_esu_end: false, fixed: false }
     })
 }
 

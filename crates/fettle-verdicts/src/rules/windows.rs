@@ -1,6 +1,6 @@
 use super::common::{Action, couldnt_check, line, section_problem};
 use crate::lifecycle::{Esu, last_day, support_end};
-use crate::thresholds::UPTIME_NUDGE_DAYS;
+use crate::thresholds::{SUPPORT_END_KEEP_AN_EYE_DAYS, UPTIME_NUDGE_DAYS};
 use crate::{Level, Line, MessageRef, Param, SectionId, SectionVerdict, fmt};
 use fettle_facts::{EsuState, Section, Windows};
 
@@ -37,7 +37,21 @@ fn support_line(w: &Windows, build: u32, now: i64) -> Line {
     };
 
     if now <= info.end {
-        return line("windows-support", Level::Fine, "windows.supported", &[product(), ("until", last_day(info.end).into())], Action::Default);
+        let until = || ("until", Param::from(last_day(info.end)));
+        // Already enrolled in ESU: updates carry on past the end, nothing to do.
+        let enrolled = w.esu == Some(EsuState::Enrolled);
+        if info.end - now > SUPPORT_END_KEEP_AN_EYE_DAYS * 86_400_000 || enrolled {
+            return line("windows-support", Level::Fine, "windows.supported", &[product(), until()], Action::Default);
+        }
+        // Ending soon: the same way out as once it has ended, while there's still time.
+        let key = if build >= 22000 {
+            "windows.ending_feature_update"
+        } else if info.esu != Esu::None {
+            "windows.ending_esu"
+        } else {
+            "windows.ending"
+        };
+        return line("windows-support", Level::KeepAnEye, key, &[product(), until()], Action::Default);
     }
     // Out of support, and ESU can't help: not 22H2, LTSC, or ESU itself has ended.
     let esu_over = info.esu_end.is_some_and(|end| now > end);

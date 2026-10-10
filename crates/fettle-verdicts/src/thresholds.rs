@@ -8,6 +8,8 @@ pub const BATTERY_KEEP_AN_EYE: f64 = 0.8;
 pub const BATTERY_ACT_SOON: f64 = 0.6;
 pub const STARTUP_ITEMS_KEEP_AN_EYE: usize = 15;
 pub const UPTIME_NUDGE_DAYS: u64 = 14;
+/// Days before Windows support ends when Fettle starts warning about it.
+pub const SUPPORT_END_KEEP_AN_EYE_DAYS: i64 = 60;
 pub const DRIVER_AGE_INFO_MONTHS: i32 = 12;
 
 /// The summary shows at most this many actions.

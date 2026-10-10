@@ -93,4 +93,25 @@ describe("workflows", () => {
     assert.match(r, /gh release create[^\n]*--draft/);
     assert.match(r, /SHA256SUMS\.txt/);
   });
+
+  // Install and build scripts (npm, cargo, Inno Setup) run in a job that can only read the repo; the
+  // job that can write (attestations, the draft release) runs none of them.
+  it("release.yml builds with read-only rights and publishes in a separate job", () => {
+    const r = workflow("release.yml");
+    assert.match(r, /^permissions: \{\}$/m, "no rights by default");
+    const job = (name) => {
+      const m = new RegExp(`^  ${name}:\\n([\\s\\S]*?)(?=^  \\w[\\w-]*:\\n|(?![\\s\\S]))`, "m").exec(r);
+      assert.ok(m, `${name} job missing`);
+      return m[1];
+    };
+    const build = job("build");
+    const publish = job("publish");
+    assert.match(build, /permissions:\n\s+contents: read\n/);
+    assert.doesNotMatch(build, /: write/);
+    for (const step of ["npm ci", "npm test", "cargo test", "npm run package:windows", "upload-artifact"]) assert.ok(build.includes(step), `build: ${step}`);
+    assert.match(publish, /needs: build/);
+    for (const right of ["contents: write", "id-token: write", "attestations: write"]) assert.ok(publish.includes(right), `publish: ${right}`);
+    for (const step of ["download-artifact", "sha256sum -c SHA256SUMS.txt", "attest-build-provenance", "gh release create"]) assert.ok(publish.includes(step), `publish: ${step}`);
+    for (const forbidden of ["npm ", "cargo ", "actions/checkout", "Inno Setup"]) assert.ok(!publish.includes(forbidden), `publish runs ${forbidden}`);
+  });
 });

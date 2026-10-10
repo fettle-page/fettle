@@ -59,3 +59,15 @@ fn a_hard_drive_smart_value_is_never_read_as_wear() {
     let only = judge(hdd(json!({ "life_used_pct": 100 })), "2026-10-11T10:00:00Z", true);
     assert_eq!(find(&only, "disk-0-health").level, Level::CouldntCheck);
 }
+
+// NVMe critical-warning bit 1 only says the drive is hot right now; the hot-disk line covers that.
+#[test]
+fn a_hot_nvme_drive_is_not_called_failing() {
+    let nvme = |warning: u8| json!({ "storage": ok(json!({ "disks": [{ "bus": "nvme", "media": "ssd", "model": "Samsung 980", "nvme": { "critical_warning": warning, "percentage_used": 10, "temperature_c": 75 } }] })) });
+    let hot = judge(nvme(0x02), "2026-10-11T10:00:00Z", true);
+    assert!(lines(&hot).iter().all(|l| l.id != "disk-0-critical"), "temperature alone isn't a failing drive");
+    assert_eq!(find(&hot, "disk-0-temp").level, Level::KeepAnEye);
+
+    let failing = judge(nvme(0x02 | 0x04), "2026-10-11T10:00:00Z", true);
+    assert_eq!(find(&failing, "disk-0-critical").level, Level::ActSoon);
+}

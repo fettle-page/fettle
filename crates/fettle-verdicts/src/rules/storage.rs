@@ -31,6 +31,10 @@ pub fn storage_rules(s: Option<&Section<Storage>>, elevated: bool) -> SectionVer
 }
 
 // "Looks healthy" needs evidence: at least one real health value, not just a temperature.
+/// NVMe critical-warning bit 1: the drive is above its temperature threshold right now. That passes
+/// once it cools, and the hot-disk line already says it, so it alone doesn't make a failing drive.
+const NVME_WARNING_TEMPERATURE: u8 = 0x02;
+
 fn has_nvme_health(n: &NvmeHealth) -> bool {
     n.percentage_used.is_some() || n.critical_warning.is_some() || n.media_errors.is_some() || n.available_spare_pct.is_some()
 }
@@ -61,7 +65,7 @@ fn disk_lines(disk: &Disk, id: &str, elevated: bool) -> Vec<Line> {
     if let Some(n) = disk.nvme.as_ref().filter(|n| has_nvme_health(n)) {
         // The drive's own verdict: any critical-warning bit, or spare capacity below its threshold.
         let spare_low = matches!((n.available_spare_pct, n.available_spare_threshold_pct), (Some(s), Some(t)) if s < t);
-        if n.critical_warning.unwrap_or(0) != 0 || spare_low {
+        if n.critical_warning.unwrap_or(0) & !NVME_WARNING_TEMPERATURE != 0 || spare_low {
             issues.push(line(format!("{id}-critical"), Level::ActSoon, "storage.nvme_critical", &[("model", model.clone())], Action::Default));
         }
         if let Some(used) = n.percentage_used {

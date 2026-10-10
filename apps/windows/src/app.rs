@@ -72,8 +72,9 @@ pub struct Deps {
     /// launch and every few seconds, so Auto follows a change made while Fettle is open.
     pub system_dark: Rc<dyn Fn() -> Option<bool>>,
     /// The Deep check's elevated scan: Windows asks first (in a prompt owned by the window, its HWND,
-    /// 0 for none), then the helper's report. Runs off the window's thread; Err says why there's none.
-    pub deep_scan: Arc<dyn Fn(isize) -> Result<Report, crate::state::DeepError> + Send + Sync>,
+    /// 0 for none), then the helper's report and how long its scan took (not counting the prompt).
+    /// Runs off the window's thread; Err says why there's none.
+    pub deep_scan: Arc<dyn Fn(isize) -> Result<(Report, f64), crate::state::DeepError> + Send + Sync>,
 }
 
 thread_local! {
@@ -366,15 +367,19 @@ impl Fettle {
                 let owner = 0;
                 let (deep_scan, scanner, post) = (self.0.deps.deep_scan.clone(), self.0.deps.scanner.clone(), self.poster());
                 self.0.deps.background.spawn(Box::new(move || {
-                    let start = Instant::now();
+                    // The time shown is the two scans', not the time spent answering Windows' prompt.
                     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
-                        let elevated = deep_scan(owner)?;
+                        let (elevated, elevated_secs) = deep_scan(owner)?;
                         // The user's own scan, for what belongs to them (their startup apps).
+                        let start = Instant::now();
                         let user = scanner.scan(&|_| {});
-                        Ok(crate::elevate::merge_deep(user, elevated))
+                        Ok((crate::elevate::merge_deep(user, elevated), elevated_secs + start.elapsed().as_secs_f64()))
                     }))
                     .unwrap_or(Err(crate::state::DeepError::Failed));
-                    post(Event::DeepFinished(result, start.elapsed().as_secs_f64()));
+                    match result {
+                        Ok((report, secs)) => post(Event::DeepFinished(Ok(report), secs)),
+                        Err(e) => post(Event::DeepFinished(Err(e), 0.0)),
+                    }
                 }));
             }
             Effect::RenderPreview => {

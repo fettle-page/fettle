@@ -114,22 +114,23 @@ pub fn error_from(hresult: i32) -> DeepError {
 /// app's window, 0 for none), then the helper scans and writes its report into Fettle's own folder,
 /// which this reads and deletes. Blocks until the helper is done; run it off the window's thread.
 #[cfg(windows)]
-pub fn deep_scan(owner: isize) -> Result<Report, DeepError> {
+pub fn deep_scan(owner: isize) -> Result<(Report, f64), DeepError> {
     let dir = crate::store::FileStore::default_dir();
     std::fs::create_dir_all(&dir).map_err(|_| DeepError::Failed)?;
     let nonce = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or(0);
     let path = dir.join(format!("fettle-deep-{}-{nonce}.json", std::process::id()));
-    let result = run_elevated(owner, &path).and_then(|()| {
+    let result = run_elevated(owner, &path).and_then(|secs| {
         let text = std::fs::read(&path).map_err(|_| DeepError::Failed)?;
-        serde_json::from_slice::<Report>(&text).map_err(|_| DeepError::Failed)
+        Ok((serde_json::from_slice::<Report>(&text).map_err(|_| DeepError::Failed)?, secs))
     });
     let _ = std::fs::remove_file(&path);
     result
 }
 
-/// Starts the helper as administrator and waits (up to two minutes) for it to finish.
+/// Starts the helper as administrator and waits (up to two minutes) for it to finish: how long it
+/// ran, from when Windows started it (so not the time spent on the prompt).
 #[cfg(windows)]
-fn run_elevated(owner: isize, path: &Path) -> Result<(), DeepError> {
+fn run_elevated(owner: isize, path: &Path) -> Result<f64, DeepError> {
     use windows::Win32::Foundation::{CloseHandle, HWND, WAIT_OBJECT_0};
     use windows::Win32::System::Threading::{GetExitCodeProcess, WaitForSingleObject};
     use windows::Win32::UI::Shell::{SEE_MASK_NOASYNC, SEE_MASK_NOCLOSEPROCESS, SHELLEXECUTEINFOW, ShellExecuteExW};
@@ -156,11 +157,12 @@ fn run_elevated(owner: isize, path: &Path) -> Result<(), DeepError> {
         if info.hProcess.is_invalid() {
             return Err(DeepError::Failed);
         }
+        let started = std::time::Instant::now();
         let finished = WaitForSingleObject(info.hProcess, 120_000) == WAIT_OBJECT_0;
         let mut code = 1u32;
         let _ = GetExitCodeProcess(info.hProcess, &mut code);
         let _ = CloseHandle(info.hProcess);
-        if finished && code == 0 { Ok(()) } else { Err(DeepError::Failed) }
+        if finished && code == 0 { Ok(started.elapsed().as_secs_f64()) } else { Err(DeepError::Failed) }
     }
 }
 

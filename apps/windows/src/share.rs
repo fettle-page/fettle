@@ -162,8 +162,6 @@ pub fn share_report(http: &dyn Http, origin: &str, report: &Report, expires: Opt
     read_json(&r).and_then(|v| serde_json::from_value::<Shared>(v).ok()).ok_or(Failure::new("bad_response"))
 }
 
-/// A link the Worker says is already gone (expired or deleted elsewhere) counts as deleted. Any
-/// other 404, such as a proxy's page at a wrong address, doesn't: the report may still be public.
 /// How a Delete went: deleted now, or it was already gone (deleted on the website, say).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Deleted {
@@ -192,6 +190,9 @@ pub fn link_exists(http: &dyn Http, origin: &str, id: &str) -> Result<bool, Fail
     }
 }
 
+/// Deletes a shared link with its delete token. A link the Worker says is already gone (expired or
+/// deleted elsewhere) counts as deleted. Any other 404, such as a proxy's page at a wrong address,
+/// doesn't: the report may still be public.
 pub fn delete_shared(http: &dyn Http, origin: &str, id: &str, token: &str) -> Result<Deleted, Failure> {
     // Ids are the Worker's own (letters and digits); anything else is refused rather than sent.
     if !sane_id(id) {

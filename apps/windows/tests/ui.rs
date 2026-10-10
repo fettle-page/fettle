@@ -1150,7 +1150,7 @@ fn a_deep_check_shows_the_users_own_startup_apps_in_the_same_window() {
     let items = ["AdminTool", "Backup Agent", "VPN Client", "Remote Desk", "Updater", "Sync"].iter().map(|n| StartupItem { name: Some(n.to_string()), enabled: Some(true), ..Default::default() }).collect();
     admin.facts.startup = Some(Section { check: fettle_facts::Check { status: fettle_facts::CheckStatus::Ok, detail: None }, data: Some(Startup { items }) });
     let a = admin.clone();
-    let h = harness_with(Locale::En, temp_dir(), move |deps| deps.deep_scan = Arc::new(move |_owner| Ok(a.clone())));
+    let h = harness_with(Locale::En, temp_dir(), move |deps| deps.deep_scan = Arc::new(move |_owner| Ok((a.clone(), 0.4))));
     // Tall enough that the whole receipt is on screen (the testing API only finds that).
     h.app.window().window().set_size(slint::LogicalSize::new(1240.0, 3000.0));
     press(&h.app, "Check this PC");
@@ -1168,4 +1168,24 @@ fn a_deep_check_shows_the_users_own_startup_apps_in_the_same_window() {
     let status: Vec<String> = { use slint::Model; h.app.window().get_status_items().iter().map(|s| s.to_string()).collect() };
     assert!(status.iter().any(|s| s.starts_with("Deep check · ")), "the rest is the Deep check: {status:?}");
     assert!(has(&h.app, "Share a link"), "still this window, on the receipt");
+}
+
+#[test]
+fn the_deep_checks_time_leaves_out_the_time_spent_on_windows_prompt() {
+    let mut deep = dump_report();
+    deep.elevated = true;
+    let h = harness_with(Locale::En, temp_dir(), move |deps| {
+        deps.deep_scan = Arc::new(move |_owner| {
+            // The user takes a while to answer the prompt; the helper's own scan takes 0.1 s.
+            std::thread::sleep(std::time::Duration::from_millis(400));
+            Ok((deep.clone(), 0.1))
+        })
+    });
+    press(&h.app, "Check this PC");
+    h.background.run_all(&h.app);
+    press(&h.app, "Run a Deep check");
+    h.background.run_all(&h.app);
+    let status: Vec<String> = { use slint::Model; h.app.window().get_status_items().iter().map(|s| s.to_string()).collect() };
+    let took = status.iter().find_map(|s| s.strip_prefix("Deep check · ")).and_then(|s| s.trim_end_matches(" s").parse::<f64>().ok()).expect("a Deep check time");
+    assert!(took < 0.35, "{took} s includes the prompt");
 }

@@ -1,5 +1,5 @@
 use super::common::{Action, couldnt_check, int, line, plural, section_problem};
-use crate::thresholds::{DISK_TEMP_KEEP_AN_EYE_C, FREE_SPACE_KEEP_AN_EYE, NVME_WEAR_ACT_SOON, NVME_WEAR_KEEP_AN_EYE};
+use crate::thresholds::{DISK_TEMP_KEEP_AN_EYE_C, FREE_SPACE_KEEP_AN_EYE, SSD_WEAR_ACT_SOON, SSD_WEAR_KEEP_AN_EYE};
 use crate::{Level, Line, Param, SectionId, SectionVerdict};
 use fettle_facts::{Bus, Disk, NvmeHealth, Section, SmartSummary, Storage};
 
@@ -38,6 +38,18 @@ fn has_smart_health(m: &SmartSummary) -> bool {
     m.reallocated_sectors.is_some() || m.pending_sectors.is_some() || m.offline_uncorrectable.is_some() || m.life_used_pct.is_some()
 }
 
+/// A wear warning for an SSD that has used `used`% of its rated life (NVMe or SATA), or none yet.
+fn wear_line(id: &str, model: &Param, used: u8) -> Option<Line> {
+    let (level, key) = if used >= SSD_WEAR_ACT_SOON {
+        (Level::ActSoon, "storage.ssd_worn")
+    } else if used >= SSD_WEAR_KEEP_AN_EYE {
+        (Level::KeepAnEye, "storage.ssd_wearing")
+    } else {
+        return None;
+    };
+    Some(line(format!("{id}-wear"), level, key, &[("model", model.clone()), ("pct", Param::Int(used.min(100).into()))], Action::Default))
+}
+
 fn disk_lines(disk: &Disk, id: &str, elevated: bool) -> Vec<Line> {
     let model: Param = disk.model.clone().unwrap_or_else(|| "?".into()).into();
     let mut issues = Vec::new();
@@ -50,13 +62,8 @@ fn disk_lines(disk: &Disk, id: &str, elevated: bool) -> Vec<Line> {
             issues.push(line(format!("{id}-critical"), Level::ActSoon, "storage.nvme_critical", &[("model", model.clone())], Action::Default));
         }
         if let Some(used) = n.percentage_used {
-            let wear = used.min(100);
-            wear_pct = Some(wear);
-            if used >= NVME_WEAR_ACT_SOON {
-                issues.push(line(format!("{id}-wear"), Level::ActSoon, "storage.nvme_worn", &[("model", model.clone()), ("pct", Param::Int(wear.into()))], Action::Default));
-            } else if used >= NVME_WEAR_KEEP_AN_EYE {
-                issues.push(line(format!("{id}-wear"), Level::KeepAnEye, "storage.nvme_wearing", &[("model", model.clone()), ("pct", Param::Int(wear.into()))], Action::Default));
-            }
+            wear_pct = Some(used.min(100));
+            issues.extend(wear_line(id, &model, used));
         }
         if let Some(errors) = n.media_errors.filter(|e| *e > 0) {
             issues.push(line(format!("{id}-media"), Level::KeepAnEye, &plural("storage.media_errors", errors), &[("model", model.clone()), ("count", int(errors))], Action::Key("storage.media_errors.action")));
@@ -68,8 +75,10 @@ fn disk_lines(disk: &Disk, id: &str, elevated: bool) -> Vec<Line> {
         if let Some(realloc) = m.reallocated_sectors.filter(|r| *r > 0) {
             issues.push(line(format!("{id}-realloc"), Level::KeepAnEye, &plural("storage.reallocated_sectors", realloc), &[("model", model.clone()), ("count", int(realloc))], Action::Key("storage.reallocated_sectors.action")));
         }
+        // SATA SSDs report wear through vendor SMART attributes: the same points as NVMe.
         if let Some(life) = m.life_used_pct {
             wear_pct = Some(life.min(100));
+            issues.extend(wear_line(id, &model, life));
         }
     } else if disk.bus == Some(Bus::Sata) && !elevated {
         // No "needs administrator access" detail: the headline already says so.

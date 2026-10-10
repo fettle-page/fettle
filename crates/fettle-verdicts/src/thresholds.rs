@@ -1,7 +1,7 @@
 // Every threshold the verdicts use, named. Starting points, tuned with real data from the spike.
 
-pub const NVME_WEAR_KEEP_AN_EYE: u8 = 80;
-pub const NVME_WEAR_ACT_SOON: u8 = 100;
+pub const SSD_WEAR_KEEP_AN_EYE: u8 = 80;
+pub const SSD_WEAR_ACT_SOON: u8 = 100;
 pub const DISK_TEMP_KEEP_AN_EYE_C: i32 = 70;
 pub const FREE_SPACE_KEEP_AN_EYE: f64 = 0.1;
 pub const BATTERY_KEEP_AN_EYE: f64 = 0.8;

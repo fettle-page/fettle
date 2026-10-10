@@ -1,0 +1,48 @@
+//! SSD wear: a SATA SSD reports wear through SMART and warns at the same points as an NVMe drive.
+//! Small reports built from JSON, judged at a fixed time.
+
+use fettle_facts::Facts;
+use fettle_verdicts::{Level, Line, Receipt, evaluate, fmt};
+use serde_json::{Value, json};
+
+fn judge(facts: Value, now: &str, elevated: bool) -> Receipt {
+    let facts: Facts = serde_json::from_value(facts).expect("facts");
+    evaluate(&facts, fmt::parse_rfc3339(now).expect("now"), elevated)
+}
+fn lines(r: &Receipt) -> Vec<&Line> {
+    r.sections.iter().flat_map(|s| &s.lines).collect()
+}
+fn find<'a>(r: &'a Receipt, id: &str) -> &'a Line {
+    lines(r).into_iter().find(|l| l.id == id).unwrap_or_else(|| panic!("no line {id}: {:?}", lines(r).iter().map(|l| &l.id).collect::<Vec<_>>()))
+}
+fn ok(data: Value) -> Value {
+    json!({ "check": { "status": "ok" }, "data": data })
+}
+fn sata_ssd(smart: Value) -> Value {
+    json!({ "storage": ok(json!({ "disks": [{ "bus": "sata", "media": "ssd", "model": "Crucial MX500", "smart": smart }] })) })
+}
+
+// 1. A SATA SSD reports its wear through SMART; it warns at the same points as an NVMe drive.
+#[test]
+fn a_worn_sata_ssd_warns_like_an_nvme_one() {
+    let wearing = judge(sata_ssd(json!({ "life_used_pct": 95 })), "2026-10-11T10:00:00Z", true);
+    let l = find(&wearing, "disk-0-wear");
+    assert_eq!((l.level, l.headline.key.as_str()), (Level::KeepAnEye, "storage.ssd_wearing"));
+    assert_eq!(l.action.as_ref().map(|a| a.key.as_str()), Some("storage.ssd_wearing.action"));
+
+    let worn = judge(sata_ssd(json!({ "life_used_pct": 100 })), "2026-10-11T10:00:00Z", true);
+    assert_eq!(find(&worn, "disk-0-wear").level, Level::ActSoon);
+    assert_eq!(find(&worn, "disk-0-wear").headline.key, "storage.ssd_worn");
+
+    let fine = judge(sata_ssd(json!({ "life_used_pct": 40 })), "2026-10-11T10:00:00Z", true);
+    assert_eq!(find(&fine, "disk-0").headline.key, "storage.disk_fine_wear");
+}
+
+#[test]
+fn nvme_wear_keeps_its_points_under_the_shared_name() {
+    let nvme = json!({ "storage": ok(json!({ "disks": [{ "bus": "nvme", "media": "ssd", "model": "Samsung 980", "nvme": { "percentage_used": 85 } }] })) });
+    let r = judge(nvme, "2026-10-11T10:00:00Z", true);
+    let l = find(&r, "disk-0-wear");
+    assert_eq!((l.level, l.headline.key.as_str()), (Level::KeepAnEye, "storage.ssd_wearing"));
+}
+

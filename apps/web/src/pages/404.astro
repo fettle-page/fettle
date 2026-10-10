@@ -1,0 +1,13 @@
+---
+import Doc from "../components/Doc.astro";
+import { pages } from "../i18n/pages.ts";
+import Base from "../layouts/Base.astro";
+
+const c = pages("en").notFound;
+---
+
+<Base locale="en" path="/404" title={c.title} description={c.description} utility>
+  <Doc kicker="404" title={c.h1} intro={c.p}>
+    <p class="prose"><a class="btn btn-primary" href="/">{c.home}</a></p>
+  </Doc>
+</Base>

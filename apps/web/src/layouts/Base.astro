@@ -1,0 +1,81 @@
+---
+// Every page: head metadata (canonical, hreflang, Open Graph), the cutting mat, nav and footer.
+// Fonts are declared in styles/fonts.css. Preloaded: the headline face, and the mono 600 face the
+// hero receipt's title uses (the browser counts that receipt as the largest paint on phones).
+import "../styles/site.css";
+import Footer from "../components/Footer.astro";
+import Nav from "../components/Nav.astro";
+import { alternates, type Locale } from "../i18n/paths.ts";
+import { t } from "../i18n/strings.ts";
+import { ldJson } from "../content/schema.ts";
+
+interface Props {
+  locale: Locale;
+  /** The page path without the language prefix, e.g. "/faq". */
+  path: string;
+  title: string;
+  description: string;
+  ogImage?: string;
+  /** Not a real page (the 404): noindex, no language alternates, language switch to the other home. */
+  utility?: boolean;
+  /** Structured data for this page (see content/schema.ts). */
+  jsonLd?: unknown;
+}
+
+const { locale, path, title, description, ogImage = "/og/site.png", utility = false, jsonLd } = Astro.props;
+const navPath = utility ? "/" : path;
+const site = Astro.site!.origin;
+const alt = alternates(path);
+const here = alt[locale];
+---
+
+<!doctype html>
+<html lang={locale}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    {utility && <meta name="robots" content="noindex" />}
+    {!utility && <link rel="canonical" href={site + here} />}
+    {!utility && <link rel="alternate" hreflang="en" href={site + alt.en} />}
+    {!utility && <link rel="alternate" hreflang="it" href={site + alt.it} />}
+    {!utility && <link rel="alternate" hreflang="x-default" href={site + alt.en} />}
+    <meta name="theme-color" content="#E8EDE7" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#1F6A45" media="(prefers-color-scheme: dark)" />
+    <script src="/theme.js" is:inline></script>
+    <link rel="preload" href="/fonts/bricolage-display-800.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="preload" href="/fonts/fettle-mono-600.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="sitemap" href="/sitemap-index.xml" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={t(locale, "meta.site")} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={site + here} />
+    <meta property="og:image" content={site + ogImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:locale" content={locale === "it" ? "it_IT" : "en_GB"} />
+    <meta name="twitter:card" content="summary_large_image" />
+    {jsonLd !== undefined && <script type="application/ld+json" is:inline set:html={ldJson(jsonLd)} />}
+  </head>
+  <body>
+    <a class="skip" href="#main">{t(locale, "skip")}</a>
+    <div class="mat"><svg class="cuts" aria-hidden="true" focusable="false"></svg>
+      <div class="ruler" aria-hidden="true">
+        {Array.from({ length: 12 }, (_, i) => <span data-n={i * 5} />)}
+      </div>
+      <Nav locale={locale} path={navPath} />
+      <main id="main">
+        <slot />
+      </main>
+      <Footer locale={locale} path={navPath} />
+    </div>
+    <script>
+      import "../scripts/theme-controls.ts";
+      import "../scripts/cuts.ts";
+    </script>
+  </body>
+</html>

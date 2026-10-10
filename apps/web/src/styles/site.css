@@ -1,0 +1,835 @@
+@import "tailwindcss";
+@import "@fettle/receipt-ui/theme.css";
+@import "@fettle/receipt-ui/receipt.css";
+@import "@fettle/receipt-ui/themes.css";
+@import "./fonts.css";
+@source "../";
+@source "../../../../packages/receipt-ui/src";
+
+/* ------------------------------------------------------------------------------------------
+   Fettle website: a green self-healing cutting mat with paper laid on it.
+   Motifs: 1 cm grid and 5 cm lines, a ruler edge, label-maker tape, thermal receipts, an inked stamp.
+   ------------------------------------------------------------------------------------------ */
+
+:root {
+  /* Colours come from themes.css. */
+  --gutter: clamp(20px, 5vw, 72px);
+  --wrap-max: 1320px; /* one content width for the nav, every section and the footer */
+  --ease-out: cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scroll-padding-top: 24px; }
+html, body { margin: 0; }
+body {
+  background: var(--t-page);
+  color: var(--on-mat);
+  font-family: var(--font-display);
+  font-optical-sizing: auto;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+img, svg { display: block; max-width: 100%; }
+a { color: inherit; }
+[hidden] { display: none !important; } /* the theme controls stay hidden without JavaScript */
+:focus-visible { outline: 2px solid var(--t-accent); outline-offset: 3px; border-radius: 2px; }
+/* Selected text looks marked with a green highlighter, on the mat and on paper, in every theme. */
+::selection { background: var(--color-soft); color: var(--color-ink); }
+
+.skip {
+  position: absolute; left: 12px; top: -60px; z-index: 10;
+  padding: 10px 14px; background: var(--color-paper); color: var(--color-ink);
+  font: 600 14px/1 var(--font-mono); text-decoration: none; border-radius: 2px;
+}
+.skip:focus { top: 12px; }
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* The mat: 1 cm grid (38px), 5 cm major lines, a soft light falloff. */
+.mat {
+  position: relative;
+  min-height: 100vh;
+  overflow-x: clip;
+  background:
+    linear-gradient(var(--line-strong) 1px, transparent 1px) 0 0 / 190px 190px,
+    linear-gradient(90deg, var(--line-strong) 1px, transparent 1px) 0 0 / 190px 190px,
+    linear-gradient(var(--line) 1px, transparent 1px) 0 0 / 38px 38px,
+    linear-gradient(90deg, var(--line) 1px, transparent 1px) 0 0 / 38px 38px,
+    radial-gradient(130% 70% at 25% 0%, var(--t-mat) 45%, var(--t-mat-deep));
+}
+
+/* Ruler along the top edge: ticks every centimetre, a number every 5 cm. */
+.ruler {
+  position: absolute; inset: 0 0 auto; height: 26px; display: flex; view-transition-name: ruler;
+  pointer-events: none; user-select: none;
+  background: repeating-linear-gradient(90deg, var(--line-strong) 0 1px, transparent 1px 38px) top / 100% 10px no-repeat;
+}
+.ruler span {
+  flex: 0 0 190px; padding: 13px 0 0 4px;
+  font: 500 10px/1 var(--font-mono); color: var(--t-ruler);
+}
+/* Drawn by CSS: pure decoration, so it stays out of the text (and the accessibility tree). */
+.ruler span::before { content: attr(data-n); }
+
+/* ---------- Navigation: label-maker tape ---------- */
+.nav {
+  position: relative; z-index: 3; view-transition-name: nav;
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  max-width: var(--wrap-max); margin-inline: auto;
+  padding: 44px var(--gutter) 0;
+}
+.nav-home { display: inline-flex; color: var(--on-mat); }
+.nav-wordmark { height: 30px; width: auto; }
+.tapes { display: flex; align-items: center; gap: 10px; margin: 0; padding: 0; list-style: none; }
+
+.tape {
+  display: inline-flex; align-items: center; min-height: 32px;
+  padding: 8px 12px 7px; border-radius: 2px;
+  background: var(--t-tape); color: var(--t-tape-ink);
+  font: 700 12px/1 var(--font-mono); letter-spacing: 0.14em; text-transform: uppercase; text-decoration: none;
+  text-shadow: 0 1px 0 rgb(255 255 255 / 0.18), 0 -1px 0 rgb(0 0 0 / 0.6); /* embossed letters */
+  box-shadow: 0 2px 0 rgb(0 0 0 / 0.25), inset 0 1px 0 rgb(255 255 255 / 0.06);
+  clip-path: polygon(0 0, 100% 0, 98.5% 50%, 100% 100%, 0 100%, 1.5% 50%);
+  transition: transform 0.25s var(--ease-out), translate 100ms var(--ease-out), box-shadow 100ms var(--ease-out);
+}
+.tapes li:nth-child(2) .tape { transform: rotate(-1.4deg); }
+.tapes li:nth-child(3) .tape { transform: rotate(0.9deg); }
+.tapes li:nth-child(4) .tape { transform: rotate(-0.5deg); }
+@media (hover: hover) and (pointer: fine) {
+  .tape:hover, .tapes li .tape:hover { transform: translateY(-2px) rotate(0deg); }
+}
+.tape[aria-current="page"] { box-shadow: 0 2px 0 rgb(0 0 0 / 0.25), inset 0 -2px 0 var(--t-accent); }
+.tape.quiet { color: var(--on-mat); background: transparent; box-shadow: inset 0 0 0 1px var(--line-strong); text-shadow: none; clip-path: none; }
+.tape.light { background: var(--t-tape-light); color: var(--t-tape-light-ink); text-shadow: 0 1px 0 rgb(255 255 255 / 0.7); box-shadow: 0 2px 0 rgb(0 0 0 / 0.25), inset 0 0 0 1px var(--t-tape-light-ring); }
+/* Pressed onto the mat: down a pixel, with a shorter shadow (translate, so each tape keeps its angle). */
+/* Only tapes you can click press in (a, button); label tapes like "v1.1" stay put. */
+:is(a, button).tape:active { translate: 0 1px; box-shadow: 0 1px 0 rgb(0 0 0 / 0.25), inset 0 1px 0 rgb(255 255 255 / 0.06); }
+:is(a, button).tape[aria-current="page"]:active { box-shadow: 0 1px 0 rgb(0 0 0 / 0.25), inset 0 -2px 0 var(--t-accent); }
+:is(a, button).tape.light:active { box-shadow: 0 1px 0 rgb(0 0 0 / 0.25), inset 0 0 0 1px var(--t-tape-light-ring); }
+:is(a, button).tape.quiet:active { box-shadow: inset 0 0 0 1px var(--line-strong); }
+@media (max-width: 760px) {
+  .wide-only { display: none; }
+  .nav { padding-top: 36px; }
+}
+
+/* ---------- Page body ---------- */
+main { position: relative; z-index: 2; view-transition-name: page; }
+.wrap { padding-inline: var(--gutter); max-width: var(--wrap-max); margin-inline: auto; }
+
+/* ---------- Footer: the last slip off the roll ---------- */
+.foot { position: relative; z-index: 2; padding: 96px var(--gutter) 0; view-transition-name: foot; }
+.foot-slip {
+  --edge: 9px;
+  max-width: calc(var(--wrap-max) - 2 * var(--gutter)); margin-inline: auto; /* lines up with .wrap's content */
+  display: grid; grid-template-columns: 1.2fr 2fr; gap: 18px 40px; align-items: start;
+  padding: calc(34px + var(--edge)) 32px 40px;
+  background: var(--color-paper); color: var(--color-ink);
+  font: 400 14px/1.6 var(--font-mono);
+  box-shadow: 0 -18px 40px -24px rgb(0 0 0 / 0.5);
+  /* torn top edge */
+  mask:
+    linear-gradient(#000 0 0) bottom / 100% calc(100% - var(--edge)) no-repeat,
+    conic-gradient(from 135deg at top, #0000, #000 1deg 89deg, #0000 90deg) top / calc(var(--edge) * 2) var(--edge) repeat-x;
+}
+.foot-brand p { margin: 10px 0 0; color: var(--color-ink-soft); }
+.foot-wordmark { height: 26px; width: auto; color: var(--color-ink); }
+.foot-links { display: flex; flex-wrap: wrap; gap: 8px 22px; justify-content: flex-end; }
+.foot-links a { font-weight: 600; text-decoration: none; border-bottom: 1px dashed var(--color-ink-soft); }
+.foot-links a:hover { border-bottom-style: solid; }
+.foot-links a:focus-visible { outline-color: var(--color-mat); }
+.theme-toggle { gap: 7px; border: 0; cursor: pointer; }
+.theme-icon { width: 13px; height: 13px; flex: none; }
+/* Theme picker: each choice is a swatch of its mat; the chosen one is stuck on as a strip of label tape. */
+.foot-theme { grid-column: 1 / -1; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0; padding: 0; border: 0; font-size: 13px; }
+.foot-theme legend { float: left; margin-right: 10px; padding: 0; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; font-size: 12px; }
+.foot-theme label {
+  position: relative; display: inline-flex; align-items: center; gap: 8px; min-height: 32px;
+  padding: 6px 12px 5px 10px; border: 1px dashed var(--color-ink-soft); border-radius: 2px; cursor: pointer;
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s, transform 0.25s var(--ease-out), translate 100ms var(--ease-out);
+}
+.foot-theme label:hover { border-style: solid; }
+.foot-theme label:active { translate: 0 1px; }
+.foot-theme label:has(input:checked) {
+  border-color: transparent; background: var(--color-ink); color: var(--color-paper); font-weight: 600;
+  text-shadow: 0 1px 0 rgb(255 255 255 / 0.18), 0 -1px 0 rgb(0 0 0 / 0.6); /* embossed, like the nav's tape */
+  box-shadow: 0 2px 0 rgb(0 0 0 / 0.25);
+  transform: rotate(-1deg);
+}
+.foot-theme label:has(input:focus-visible) { outline: 2px solid var(--color-mat); outline-offset: 3px; }
+.swatch { width: 12px; height: 12px; flex: none; border-radius: 2px; box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.3); }
+.foot-theme label:has(input:checked) .swatch { box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.5); }
+.swatch-auto { background: linear-gradient(135deg, #E8EDE7 50%, #1F6A45 50%); } /* the mats from themes.css */
+.swatch-light { background: #E8EDE7; }
+.swatch-dark { background: #1F6A45; }
+.swatch-oled { background: #000; }
+@media (prefers-reduced-motion: reduce) { .foot-theme label { transition: none; } }
+.foot-small { grid-column: 1 / -1; margin: 0; font-size: 12px; color: var(--color-ink-soft); letter-spacing: 0.02em; }
+.foot-small + .foot-small { margin-top: -12px; }
+@media (max-width: 760px) {
+  .foot-slip { grid-template-columns: 1fr; padding-inline: 22px; }
+  .foot-links { justify-content: flex-start; }
+}
+
+/* ---------- Shared type ---------- */
+h1, h2, h3 { margin: 0; font-family: var(--font-display); }
+h1, h2 { font-family: var(--font-headline); }
+h2 { font-weight: 800; font-size: clamp(34px, 4.6vw, 60px); line-height: 1; letter-spacing: -0.035em; text-wrap: balance; }
+.kicker {
+  margin: 0 0 14px; font: 600 12px/1 var(--font-mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--t-accent);
+}
+.body { margin: 18px 0 0; max-width: 46ch; font: 500 18px/1.55 var(--font-display); color: var(--on-mat-soft); text-wrap: pretty; }
+.text-link {
+  display: inline-block; margin-top: 22px; font: 600 15px/1.4 var(--font-mono); color: var(--on-mat);
+  text-decoration: none; border-bottom: 1.5px solid var(--t-accent);
+}
+.text-link:hover { border-bottom-color: var(--on-mat); }
+section.wrap { padding-block: clamp(64px, 10vw, 128px) 0; }
+
+/* ---------- Hero ---------- */
+section.hero {
+  position: relative; display: grid; grid-template-columns: 1.15fr 0.85fr; gap: 4vw; align-items: center;
+  padding-block: clamp(40px, 8vh, 96px) clamp(56px, 10vh, 120px);
+}
+.hero::before { /* 45 and 60 degree angle guides, like a real mat */
+  content: ""; position: absolute; inset: -40px 0 0; pointer-events: none; z-index: -1;
+  background:
+    linear-gradient(45deg, transparent calc(50% - 0.5px), var(--line) 50%, transparent calc(50% + 0.5px)),
+    linear-gradient(-30deg, transparent calc(50% - 0.5px), var(--line) 50%, transparent calc(50% + 0.5px));
+}
+.hero h1 { font-weight: 900; font-size: clamp(56px, 8.4vw, 128px); line-height: 0.95; letter-spacing: -0.045em; text-wrap: balance; }
+.hero h1 em { font-style: normal; color: var(--t-accent); }
+.lede { margin: 26px 0 0; max-width: 34ch; font: 500 clamp(18px, 1.6vw, 21px)/1.45 var(--font-display); color: var(--on-mat-soft); text-wrap: pretty; }
+.ctas { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 32px; }
+.btn {
+  display: inline-flex; align-items: center; min-height: 52px; padding: 16px 22px; border-radius: 4px;
+  font: 800 16px/1 var(--font-display); text-decoration: none; transition: transform 0.25s var(--ease-out), translate 100ms var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .btn:hover { transform: translateY(-2px); }
+}
+.btn-primary { background: var(--t-btn); color: var(--t-btn-ink); box-shadow: 0 6px 0 var(--t-btn-shadow); }
+.btn-primary:active { transform: translateY(3px); box-shadow: 0 3px 0 var(--t-btn-shadow); }
+.btn-ghost { color: var(--on-mat); box-shadow: inset 0 0 0 1.5px var(--t-ghost-ring); }
+.btn-ghost:active { translate: 0 2px; }
+.fine { margin: 18px 0 0; font: 500 12px/1.5 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--on-mat-faint); }
+
+/* The desk: knife, live receipt, stamp */
+.desk { position: relative; justify-self: center; width: 100%; max-width: 400px; }
+.knife {
+  position: absolute; left: -70px; top: -44px; width: 230px; transform: rotate(-28deg);
+  filter: drop-shadow(0 12px 10px rgb(0 0 0 / 0.35)); pointer-events: none;
+}
+.live {
+  --edge: 9px;
+  position: relative; margin: 0; padding: 26px 26px 34px;
+  background: var(--color-paper); color: var(--color-ink);
+  font: 400 13px/1.65 var(--font-mono);
+  transform: rotate(0.8deg);
+  filter: drop-shadow(0 22px 20px rgb(0 0 0 / 0.32)) drop-shadow(0 2px 2px rgb(0 0 0 / 0.2));
+  mask:
+    linear-gradient(#000 0 0) top / 100% calc(100% - var(--edge)) no-repeat,
+    conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / calc(var(--edge) * 2) var(--edge) repeat-x;
+}
+.live-head { display: flex; justify-content: space-between; align-items: center; font-weight: 600; letter-spacing: 0.06em; }
+.live-wordmark { height: 22px; width: auto; color: var(--color-ink); }
+.live hr { border: 0; border-top: 1px dashed color-mix(in srgb, var(--color-paper) 72%, var(--color-ink)); margin: 12px 0; }
+.live dl { margin: 0; }
+.live-row { display: flex; justify-content: space-between; gap: 14px; margin: 0; }
+.live-row dt, .live-title { text-transform: uppercase; letter-spacing: 0.04em; }
+.live-title { margin-top: 14px; font-weight: 600; }
+.live-row dd { margin: 0; font-weight: 600; text-align: right; }
+.live-row dd.na { font-weight: 400; color: var(--color-ink-soft); }
+.live-end { display: block; margin-top: 4px; font-weight: 600; }
+.live-end a { position: relative; isolation: isolate; color: var(--color-mat); text-decoration: none; }
+.live-end a::after { /* the marker highlight, drawn so it can sweep in */
+  content: ""; position: absolute; inset: 60% 0 0; z-index: -1;
+  background: var(--color-soft); transform-origin: left;
+}
+.live-end a:focus-visible { outline-color: var(--color-mat); }
+.live-note { display: block; margin-top: 10px; font-size: 12px; color: var(--color-ink-soft); }
+.live-tag { margin-left: 6px; vertical-align: 1px; }
+.live-barcode {
+  height: 34px; margin-top: 14px; opacity: 0.85;
+  background: repeating-linear-gradient(90deg, var(--color-ink) 0 2px, transparent 2px 4px, var(--color-ink) 4px 5px, transparent 5px 8px);
+}
+
+/* The intro and the legend side by side, so the legend never crowds the notes beside the receipt. */
+.how-head { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 27rem); gap: 32px 64px; align-items: end; }
+.how-head .legend { margin-top: 0; }
+
+/* ---------- The annotated sample receipt ----------
+   Base layout (also what browsers without anchor positioning get): the notes and the principles sit in
+   grid cells around the receipt. With anchor positioning, each note lines up with its receipt section
+   from 900 px, and each principle with the line that proves it from 1200 px. */
+.annotated {
+  position: relative; margin-top: 48px;
+  display: grid; grid-template-columns: minmax(0, 1fr) fit-content(480px) minmax(0, 1fr); grid-template-areas: "notes receipt callouts";
+  gap: 40px; align-items: start;
+}
+.annotated-receipt { grid-area: receipt; scroll-margin-top: 24px; }
+.sample-receipt { --r-size: clamp(14px, 1.1vw, 15px); margin-inline: auto; } /* centred in its column: anchors use its edges */
+.notes { grid-area: notes; display: flex; flex-direction: column; gap: 28px; justify-self: end; max-width: 280px; }
+.margin-note { margin: 0; font: 500 15px/1.5 var(--font-display); color: var(--on-mat-soft); text-wrap: pretty; }
+.note-label { display: block; margin-bottom: 6px; font: 600 12px/1 var(--font-mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--t-accent); }
+.callouts { grid-area: callouts; display: flex; flex-direction: column; gap: 28px; max-width: 260px; margin: 0; padding: 0; list-style: none; }
+.callout { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.callout .tape { line-height: 1.35; } /* long labels (Italian) wrap onto a second line */
+.callout .tape:hover { transform: none; } /* a label, not a link */
+.callout-body { font: 500 15px/1.45 var(--font-display); color: var(--on-mat-soft); text-wrap: pretty; }
+
+@media (width < 1200px) {
+  .annotated { grid-template-columns: minmax(0, 1fr) fit-content(480px); grid-template-areas: "callouts callouts" "notes receipt"; }
+  .callouts { flex-direction: row; flex-wrap: wrap; gap: 20px 32px; max-width: none; }
+  .callout { flex: 1 1 220px; }
+}
+@media (width < 900px) {
+  .annotated { grid-template-columns: minmax(0, 1fr); grid-template-areas: "callouts" "notes" "receipt"; gap: 32px; }
+  .notes { justify-self: stretch; max-width: none; }
+  .how-head { grid-template-columns: minmax(0, 1fr); }
+  .notes { display: none; } /* on a phone the receipt's own section titles carry it */
+  .annotated-receipt { justify-self: center; }
+  .sample-receipt { --r-size: 13px; } /* 14px breaks the BIOS label at 390 px */
+}
+
+/* Lined up with the receipt: notes on the left from 900 px, principles on the right from 1200 px. */
+@media (width >= 900px) {
+  @supports (anchor-name: --a) {
+    .annotated-receipt .fettle-receipt { anchor-name: --r; }
+    .annotated-receipt .r-head { anchor-name: --s-machine; }
+    .annotated-receipt [data-section="storage"] { anchor-name: --s-storage; }
+    .annotated-receipt [data-section="battery"] { anchor-name: --s-battery; }
+    .annotated-receipt [data-section="memory"] { anchor-name: --s-memory; }
+    .annotated-receipt [data-section="windows"] { anchor-name: --s-windows; }
+    .annotated-receipt [data-section="startup"] { anchor-name: --s-startup; }
+    .annotated-receipt [data-section="graphics"] { anchor-name: --s-graphics; }
+    .margin-note { position: absolute; top: anchor(top); right: anchor(--r left); width: 260px; margin-right: 48px; }
+    .margin-note::after { /* a ruler-straight leader to the receipt */
+      content: ""; position: absolute; left: 100%; top: 0.55em; width: 40px; height: 1px;
+      background: var(--t-accent); transform-origin: right;
+    }
+    .margin-note[data-note-for="machine"] { position-anchor: --s-machine; }
+    .margin-note[data-note-for="storage"] { position-anchor: --s-storage; }
+    .margin-note[data-note-for="battery"] { position-anchor: --s-battery; }
+    .margin-note[data-note-for="memory"] { position-anchor: --s-memory; }
+    .margin-note[data-note-for="windows"] { position-anchor: --s-windows; }
+    .margin-note[data-note-for="startup"] { position-anchor: --s-startup; }
+    .margin-note[data-note-for="graphics"] { position-anchor: --s-graphics; }
+  }
+}
+@media (width >= 1200px) {
+  @supports (anchor-name: --a) {
+    .annotated-receipt .r-summary h2 { anchor-name: --c-plain; }
+    .annotated-receipt [data-section="storage"] .fold { anchor-name: --c-numbers; }
+    .annotated-receipt .line[data-level="couldnt_check"] { anchor-name: --c-unchecked; }
+    .callout { position: absolute; top: anchor(top); left: anchor(--r right); width: 280px; margin-left: 40px; }
+    .callout::before {
+      content: ""; position: absolute; right: 100%; top: 16px; width: 32px; height: 1px;
+      background: var(--t-accent); transform-origin: left;
+    }
+    .callout[data-callout="plain"] { position-anchor: --c-plain; }
+    .callout[data-callout="numbers"] { position-anchor: --c-numbers; }
+    .callout[data-callout="unchecked"] { position-anchor: --c-unchecked; }
+  }
+}
+
+.legend {
+  margin-top: 18px; padding: 22px 22px 18px; max-width: 30rem;
+  background: var(--t-panel); border-radius: 4px; box-shadow: inset 0 0 0 1px var(--line-strong);
+}
+.legend h3 { margin: 0 0 14px; font: 600 12px/1 var(--font-mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--t-accent); }
+.legend dl { margin: 0; display: grid; gap: 10px; }
+.legend dl > div { display: grid; grid-template-columns: 76px 1fr; align-items: baseline; gap: 12px; }
+.legend dd { margin: 0; font: 500 15px/1.45 var(--font-display); color: var(--on-mat-soft); }
+/* Each tag is a button: point at it to see its lines on the sample, click to pin (scripts/legend.ts). */
+.legend-pick { margin: 0; padding: 0; border: 0; background: none; font: inherit; color: inherit; cursor: pointer; }
+.legend-pick:focus-visible { outline: none; }
+/* Focus is a dashed ring; a pin is a solid ring with a soft-green halo, so the two never look alike. */
+.legend-pick:focus-visible .tag { outline: 2px dashed var(--t-accent); outline-offset: 3px; }
+.legend-pick[aria-pressed="true"] .tag { outline: 2px solid var(--t-accent); outline-offset: 2px; box-shadow: 0 0 0 4px var(--color-soft); }
+.legend-pick[aria-pressed="true"]:focus-visible .tag { outline-style: dashed; outline-offset: 3px; } /* pinned and focused */
+.legend-none { display: block; margin-top: 2px; font: 500 12px/1.4 var(--font-mono); color: var(--t-accent); }
+
+/* The highlighter: one pill-shaped band, drawn behind whatever it marks. Shown by turning its opacity up.
+   Set --band-inset, --band-color, --band-radius and --band-opacity to fit it to a line or a section. */
+/* The sample receipt's parts that notes and principles point at are banded too (scripts/annotate.ts). */
+.annotated-receipt .line, .annotated-receipt [data-section], .annotated-receipt .r-head, .annotated-receipt .r-summary h2,
+.annotated-receipt .fold { position: relative; isolation: isolate; }
+.annotated-receipt :is([data-section], .r-head, .r-summary h2, .fold) { --band-radius: 1em; }
+.annotated-receipt .line::before, .annotated-receipt [data-section]::before, .annotated-receipt .r-head::before,
+.annotated-receipt .r-summary h2::before, .annotated-receipt .fold::before {
+  content: ""; position: absolute; inset: var(--band-inset, -2px -8px); z-index: -1; pointer-events: none;
+  border-radius: var(--band-radius, 999px); background: var(--band-color, var(--color-soft)); opacity: 0;
+  transition: opacity 160ms var(--ease-out);
+}
+
+/* While a level is shown, its lines are marked and the others step back. */
+.annotated-receipt .line { --band-radius: 1em; transition: opacity 160ms var(--ease-out); } /* several lines tall: a full pill would be a blob */
+#how[data-show] .annotated-receipt .line { opacity: 0.3; }
+#how[data-show="fine"] .annotated-receipt .line[data-level="fine"],
+#how[data-show="info"] .annotated-receipt .line[data-level="info"],
+#how[data-show="keep_an_eye"] .annotated-receipt .line[data-level="keep_an_eye"],
+#how[data-show="act_soon"] .annotated-receipt .line[data-level="act_soon"],
+#how[data-show="couldnt_check"] .annotated-receipt .line[data-level="couldnt_check"] { opacity: 1; }
+#how[data-show="fine"] .annotated-receipt .line[data-level="fine"]::before,
+#how[data-show="info"] .annotated-receipt .line[data-level="info"]::before,
+#how[data-show="keep_an_eye"] .annotated-receipt .line[data-level="keep_an_eye"]::before,
+#how[data-show="act_soon"] .annotated-receipt .line[data-level="act_soon"]::before,
+#how[data-show="couldnt_check"] .annotated-receipt .line[data-level="couldnt_check"]::before { opacity: var(--band-opacity, 1); }
+/* Pointing at a note or a principle marks its part of the receipt, a little lighter, and back. */
+.annotated-receipt .is-pointed { --band-opacity: 0.55; }
+.annotated-receipt .is-pointed::before { opacity: var(--band-opacity, 1); }
+.margin-note { transition: color 160ms var(--ease-out); }
+.margin-note.is-pointed { color: var(--on-mat); }
+.margin-note.is-pointed::after { height: 2px; }
+.callout.is-pointed .tape { translate: 0 -1px; }
+
+/* Status tags outside the receipt (legend, hero receipt): the receipt's look, on paper chips */
+.tag {
+  display: inline-block; padding: 3px 7px 2px; border: 1px solid transparent; border-radius: 2px;
+  background: var(--color-paper); font: 700 11px/1.3 var(--font-mono); letter-spacing: 0.1em; white-space: nowrap;
+}
+.tag-fine, .tag-info { color: var(--color-ink-soft); }
+.tag-keep_an_eye { color: var(--color-accent-ink); border: 1.5px solid currentColor; }
+.tag-act_soon { color: var(--color-paper); background: var(--color-accent-ink); border-color: var(--color-accent-ink); }
+.tag-couldnt_check { color: var(--color-ink-soft); border: 1px dashed currentColor; }
+
+.section-head { max-width: 760px; }
+
+/* ---------- Technicians ---------- */
+.tech { display: grid; grid-template-columns: 1.1fr 0.9fr; gap: clamp(32px, 6vw, 96px); align-items: center; }
+.checks { margin: 24px 0 0; padding: 0; list-style: none; display: grid; gap: 10px; }
+.checks li { position: relative; padding-left: 30px; font: 500 17px/1.45 var(--font-display); }
+.checks li::before {
+  content: ""; position: absolute; left: 0; top: 0.25em; width: 16px; height: 16px; border-radius: 2px;
+  background: var(--color-paper); box-shadow: inset 0 0 0 1.5px var(--color-ink);
+}
+.checks li::after {
+  content: ""; position: absolute; left: 4px; top: calc(0.25em + 3px); width: 8px; height: 5px;
+  border-left: 2px solid var(--color-mat); border-bottom: 2px solid var(--color-mat); transform: rotate(-45deg);
+}
+.soon { margin: 26px 0 0; max-width: 46ch; font: 500 15px/1.6 var(--font-mono); color: var(--on-mat-soft); }
+.soon .tape { margin-right: 8px; min-height: 0; padding: 5px 8px 4px; font-size: 11px; vertical-align: 1px; }
+.tech-stack { position: relative; justify-self: center; width: min(320px, 80%); aspect-ratio: 210 / 297; }
+.sheet { position: absolute; inset: 0; background: var(--color-paper); border-radius: 2px; box-shadow: 0 24px 40px -18px rgb(0 0 0 / 0.5), 0 1px 2px rgb(0 0 0 / 0.2); }
+.sheet-back { transform: rotate(6deg) translate(16px, 6px); background: color-mix(in srgb, var(--color-paper) 92%, #000); }
+.sheet-mid { transform: rotate(-3deg) translate(-10px, 4px); background: color-mix(in srgb, var(--color-paper) 96%, #000); }
+.sheet-front { transform: rotate(1deg); }
+
+/* The printout: the receipt as it prints, one 42-character column in the middle of the A4 page.
+   Sized from the sheet's own width, so it reads the same at every sheet size. */
+.print-sheet { container-type: inline-size; overflow: hidden; display: flex; justify-content: center; align-items: flex-start; }
+.ps-col {
+  width: 58cqi; height: 124cqi; overflow: hidden; margin-top: 10cqi; /* cqi: the sheet's width, so on the column, not the sheet */
+  color: var(--color-ink); font: 400 2.3cqi/1.5 var(--font-mono);
+  mask-image: linear-gradient(#000 78%, transparent 96%); /* page one runs on */
+}
+.ps-head { display: flex; justify-content: space-between; align-items: center; color: var(--color-ink-soft); }
+.ps-word { height: 3.6cqi; width: auto; color: var(--color-ink); }
+.ps-kv { margin: 2.4cqi 0 0; }
+.ps-kv div { display: flex; justify-content: space-between; gap: 2cqi; }
+.ps-kv dt { color: var(--color-ink-soft); }
+.ps-kv dd { margin: 0; text-align: right; }
+.ps-sum { margin: 3cqi 0 1.6cqi; padding-top: 2.4cqi; border-top: 1px dashed color-mix(in srgb, var(--color-paper) 72%, var(--color-ink)); font: 800 4.4cqi/1.1 var(--font-display); letter-spacing: -0.02em; }
+.ps-steps { margin: 0; padding: 0; list-style: none; }
+.ps-steps li + li { margin-top: 1cqi; }
+.ps-step { color: var(--color-accent-ink); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; }
+.ps-sec { margin-top: 2.6cqi; }
+.ps-title { margin: 0 0 1cqi; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; }
+.ps-line { display: flex; justify-content: space-between; align-items: flex-start; gap: 2cqi; margin: 0 0 1.2cqi; }
+.ps-tag { flex: none; padding: 0 0.8cqi; border: 1px solid transparent; border-radius: 1px; font-weight: 600; letter-spacing: 0.06em; color: var(--color-ink-soft); }
+.ps-tag-keep_an_eye { color: var(--color-accent-ink); border-color: currentColor; }
+.ps-tag-act_soon { color: var(--color-paper); background: var(--color-accent-ink); }
+.ps-tag-couldnt_check { border: 1px dashed currentColor; }
+.sheet-tag {
+  position: absolute; right: 9%; bottom: 7%; transform: rotate(-8deg);
+  padding: 6px 10px 4px; border: 2.5px solid var(--color-accent-ink); border-radius: 5px; color: var(--color-accent-ink);
+  font: 900 18px/1 var(--font-display); letter-spacing: 0.08em; mix-blend-mode: multiply;
+}
+
+/* ---------- Privacy ---------- */
+.privacy { display: grid; grid-template-columns: 0.8fr 1.2fr; gap: clamp(32px, 6vw, 96px); align-items: center; }
+/* The privacy slip comes out of a slot, like paper out of a printer (the feed is scroll-linked, below). */
+.slip-feed { position: relative; justify-self: center; width: min(360px, 100%); }
+.slip-feed .slip { width: 100%; }
+.slip-slot { position: absolute; top: -6px; left: -8px; right: -8px; height: 2px; border-radius: 1px; background: var(--t-tape); }
+.slip {
+  --edge: 8px;
+  justify-self: center; width: min(360px, 100%); margin: 0; padding: 24px 24px calc(28px + var(--edge));
+  background: var(--color-paper); color: var(--color-ink); font: 400 13px/1.7 var(--font-mono);
+  transform: rotate(-1.2deg);
+  filter: drop-shadow(0 20px 18px rgb(0 0 0 / 0.3));
+  mask:
+    linear-gradient(#000 0 0) top / 100% calc(100% - var(--edge)) no-repeat,
+    conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / calc(var(--edge) * 2) var(--edge) repeat-x;
+}
+.slip-head { padding-bottom: 10px; margin-bottom: 10px; border-bottom: 1px dashed color-mix(in srgb, var(--color-paper) 72%, var(--color-ink)); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+.slip dl { margin: 0; }
+.slip-row { display: flex; justify-content: space-between; gap: 12px; }
+.slip-row dt { text-transform: uppercase; letter-spacing: 0.03em; }
+.slip-row dd { margin: 0; display: inline-flex; align-items: center; gap: 8px; color: var(--color-ink-soft); }
+.slip-row strong { color: var(--color-mat); }
+.redact { display: inline-block; width: 64px; height: 0.9em; background: var(--color-ink); border-radius: 1px; }
+
+/* ---------- Free / open source seal ---------- */
+.free { display: grid; grid-template-columns: auto 1fr; gap: clamp(28px, 5vw, 72px); align-items: center; }
+.seal { width: clamp(150px, 18vw, 220px); color: var(--t-accent); transform: rotate(-8deg); }
+.seal-ring { font: 700 15px var(--font-mono); letter-spacing: 0.12em; fill: currentColor; text-transform: uppercase; }
+.seal-mid { font: 900 40px var(--font-headline); letter-spacing: 0.02em; fill: currentColor; }
+
+/* ---------- FAQ ---------- */
+.faq { margin-top: 32px; display: grid; gap: 10px; max-width: 860px; }
+.faq-item { background: var(--color-paper); color: var(--color-ink); border-radius: 3px; box-shadow: 0 10px 22px -16px rgb(0 0 0 / 0.6); }
+.faq-item summary {
+  display: flex; justify-content: space-between; gap: 16px; align-items: center; padding: 18px 20px; cursor: pointer; list-style: none;
+  font: 700 18px/1.3 var(--font-display); letter-spacing: -0.01em;
+}
+.faq-item summary::-webkit-details-marker { display: none; }
+.faq-item summary::after { content: "+"; flex: none; font: 600 20px/1 var(--font-mono); color: var(--color-mat); transition: transform 0.2s var(--ease-out); }
+.faq-item[open] summary::after { transform: rotate(45deg); }
+.faq-item summary:focus-visible { outline: 2px solid var(--color-mat); outline-offset: -2px; }
+.faq-answer { padding: 0 20px 18px; font: 400 15px/1.65 var(--font-mono); color: var(--color-ink); }
+.faq-answer p { margin: 0 0 10px; max-width: 70ch; }
+/* Answers ease open and shut, and the words come in as one opens. Browsers that can't animate to
+   "auto" snap open, as before. */
+@supports (interpolate-size: allow-keywords) {
+  :root { interpolate-size: allow-keywords; }
+  .faq-item::details-content {
+    block-size: 0; overflow: clip;
+    transition: block-size 220ms var(--ease-out), content-visibility 220ms allow-discrete;
+  }
+  .faq-item[open]::details-content { block-size: auto; }
+  .faq-answer { transition: opacity 180ms var(--ease-out), translate 180ms var(--ease-out); }
+  @starting-style {
+    .faq-item[open] .faq-answer { opacity: 0; translate: 0 4px; }
+  }
+}
+
+/* ---------- Text pages: heading on the mat, a sheet of paper below ---------- */
+.doc { padding-block: clamp(48px, 8vw, 96px) 0; max-width: 980px; }
+.doc-head h1 { font-weight: 900; font-size: clamp(44px, 6.4vw, 88px); line-height: 0.98; letter-spacing: -0.04em; text-wrap: balance; }
+.doc-sheet {
+  margin-top: 40px; padding: clamp(24px, 5vw, 56px);
+  background: var(--color-paper); color: var(--color-ink); border-radius: 3px;
+  box-shadow: 0 30px 50px -30px rgb(0 0 0 / 0.55), 0 1px 2px rgb(0 0 0 / 0.2);
+}
+.doc-sheet .faq { margin-top: 0; }
+.doc-sheet .faq-item { box-shadow: none; border-bottom: 1px dashed color-mix(in srgb, var(--color-paper) 72%, var(--color-ink)); border-radius: 0; }
+.doc-sheet .faq-item summary { padding-inline: 0; }
+.doc-sheet .faq-answer { padding-inline: 0; }
+.prose { max-width: 68ch; font: 400 17px/1.65 var(--font-display); color: var(--color-ink); }
+.prose section + section { margin-top: 34px; }
+.prose h2 { font-family: var(--font-display); margin: 0 0 10px; font-size: clamp(22px, 2.4vw, 28px); line-height: 1.15; letter-spacing: -0.02em; color: var(--color-ink); }
+.prose h2 time { margin-left: 10px; font: 500 14px var(--font-mono); color: var(--color-ink-soft); letter-spacing: 0; }
+.prose p { margin: 0 0 12px; text-wrap: pretty; }
+.prose ul { margin: 0; padding-left: 1.1em; }
+.prose li { margin: 6px 0; }
+.prose li::marker { color: var(--color-mat); }
+.prose a:not(.btn) { color: var(--color-mat); }
+.prose a:focus-visible { outline-color: var(--color-mat); }
+.updated { margin-top: 34px !important; font: 500 13px var(--font-mono) !important; color: var(--color-ink-soft); }
+.download-cta { margin: 0 0 34px !important; }
+.download-cta:has(+ .download-more) { margin-bottom: 20px !important; }
+.download-more { margin: 0 0 34px !important; }
+.btn.is-waiting {
+  background: transparent; color: var(--color-ink-soft); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--color-paper) 72%, var(--color-ink));
+  cursor: default; font-family: var(--font-mono); font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; font-size: 13px;
+}
+.btn.is-waiting:hover { transform: none; }
+.doc-sheet .btn-primary:not(.is-waiting) { background: var(--color-ink); color: var(--color-paper); box-shadow: 0 5px 0 #000; }
+
+/* ---------- Ending: the questions slip and the download slip ---------- */
+.ending { margin-top: 40px; display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 40px; align-items: start; }
+.ending .slip { width: 100%; justify-self: stretch; }
+.questions-slip { --tilt: -0.4deg; padding: 28px 30px calc(32px + var(--edge)); font-size: 14px; transform: rotate(var(--tilt)); }
+.qa + .qa { margin-top: 16px; padding-top: 16px; border-top: 1px dashed color-mix(in srgb, var(--color-paper) 72%, var(--color-ink)); }
+.qa h3 { margin: 0 0 6px; font: 600 14px/1.5 var(--font-mono); }
+.qa p { margin: 0 0 6px; max-width: 68ch; }
+.end-slip {
+  display: flex; flex-direction: column; align-items: flex-start; gap: 18px;
+  --tilt: 0.6deg; padding: 30px 30px calc(34px + var(--edge)); transform: rotate(var(--tilt));
+  transform-origin: 100% 0; /* it comes off the roll from its top corner */
+}
+.end-wordmark { height: 26px; width: auto; color: var(--color-ink); }
+.end-h { margin: 0; font: 800 clamp(26px, 2.4vw, 34px)/1.05 var(--font-display); letter-spacing: -0.03em; text-wrap: balance; }
+.end-fine { margin: 0; color: var(--color-ink-soft); font-size: 13px; }
+.end-slip .btn-primary { background: var(--color-ink); color: var(--color-paper); box-shadow: 0 5px 0 #000; } /* ink on paper, in every theme */
+.ending-side { display: flex; flex-direction: column; gap: 28px; }
+.more-slip { padding: 26px 30px calc(30px + var(--edge)); font-size: 14px; transform: rotate(-0.3deg); }
+.more-slip ul { margin: 0; padding: 0; list-style: none; }
+.more-slip li + li { border-top: 1px dashed color-mix(in srgb, var(--color-paper) 72%, var(--color-ink)); }
+.more-slip li { padding: 8px 0; position: relative; }
+.more-slip li a::before { content: ""; position: absolute; inset: 0; } /* the whole row is the link, the pill stays on the words */
+.more-slip li a { color: var(--color-ink); text-decoration: none; }
+.more-slip li a::after { content: " →"; content: " →" / ""; color: var(--color-mat); } /* the arrow isn't read aloud */
+.more-slip li a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.more-all { display: inline-block; margin-top: 14px; color: var(--color-mat); font-weight: 600; text-decoration: none; }
+.more-all:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+/* ---------- Under the hand: paper lifts, links get the highlighter ---------- */
+.live, .slip, .sheet-front { transition: translate 200ms var(--ease-out), filter 200ms var(--ease-out), box-shadow 200ms var(--ease-out); }
+/* The highlighter sweeps in under a link from the left, a pill on the lower half of the text. */
+.text-link, .more-all, .foot-links a { --band-inset: 55% -4px -1px; position: relative; isolation: isolate; }
+.text-link { --band-color: color-mix(in srgb, var(--t-accent) 35%, transparent); } /* on the mat: shows on green too */
+/* "More questions" links can wrap (Italian, mid widths): an inline highlighter, cloned so each line gets its own pill. */
+.more-slip li a {
+  display: inline; padding: 1px 4px; margin: 0 -4px; border-radius: 999px;
+  background-image: linear-gradient(var(--color-soft), var(--color-soft)); background-repeat: no-repeat; background-size: 0% 100%;
+  box-decoration-break: clone; -webkit-box-decoration-break: clone; transition: background-size 220ms var(--ease-out);
+}
+.text-link::before, .more-all::before, .foot-links a::before {
+  content: ""; position: absolute; inset: var(--band-inset); z-index: -1; pointer-events: none;
+  border-radius: 999px; background: var(--band-color, var(--color-soft));
+  transform: scaleX(0); transform-origin: left; transition: transform 220ms var(--ease-out);
+}
+@media (hover: hover) and (pointer: fine) {
+  .live:hover { translate: 0 -3px; filter: drop-shadow(0 28px 26px rgb(0 0 0 / 0.32)) drop-shadow(0 2px 2px rgb(0 0 0 / 0.2)); }
+  .slip:hover { translate: 0 -3px; filter: drop-shadow(0 26px 24px rgb(0 0 0 / 0.3)); }
+  /* The front sheet is inert, so the browser never sees the pointer over it: its stack carries the hover. */
+  .tech-stack:hover .sheet-front { translate: 0 -3px; box-shadow: 0 30px 46px -18px rgb(0 0 0 / 0.5), 0 1px 2px rgb(0 0 0 / 0.2); }
+  .text-link:hover::before, .more-all:hover::before, .foot-links a:hover::before { transform: scaleX(1); }
+  .more-slip li a:hover { background-size: 100% 100%; }
+  .more-slip li a:hover, .more-all:hover { text-decoration: none; } /* the band marks it now */
+}
+
+/* ---------- Self-healing cuts (scripts/cuts.ts) ----------
+   Drawn on a layer over the mat and under everything on it; a cut closes up and fades in 1.5 s. */
+.cuts { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; overflow: visible; }
+.cut path {
+  fill: none; stroke-width: 1px; stroke-linecap: round; stroke-linejoin: round;
+  transition: stroke-width 1500ms ease-in, opacity 1500ms ease-in;
+}
+.cut .cut-light { stroke: color-mix(in srgb, var(--on-mat) 55%, transparent); }
+.cut .cut-dark { stroke: rgb(0 0 0 / 0.25); transform: translateY(1px); }
+.cut.healing path { stroke-width: 0; opacity: 0; }
+
+/* ---------- Phones and narrow windows ---------- */
+@media (width < 900px) {
+  .ending { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 960px) {
+  section.hero, .tech, .privacy { grid-template-columns: 1fr; }
+  .knife { display: none; }
+  .tech-stack { width: min(260px, 70%); }
+  .privacy .slip-feed { order: 2; }
+}
+@media (max-width: 760px) {
+  .free { grid-template-columns: 1fr; justify-items: start; }
+  .legend dl > div { grid-template-columns: 70px 1fr; }
+}
+
+/* ---------- Motion: calm, transform and opacity only, all done within about 1 s ---------- */
+/* The hero receipt feeds out of the printer and its lines print in. Pure CSS from first paint, so
+   it never waits for JavaScript and never flickers; the script only fills in the values. */
+@keyframes fettle-feed { /* transform only: visible, so counted as painted, from the start */
+  from { transform: translateY(-18px) rotate(0.8deg); }
+  to { transform: translateY(0) rotate(0.8deg); }
+}
+@keyframes fettle-line {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fettle-tag-land {
+  from { opacity: 0; transform: scale(0.9); }
+}
+@keyframes fettle-sweep {
+  from { transform: scaleX(0); }
+}
+.live { animation: fettle-feed 0.45s var(--ease-out) both; }
+.live dl > div { animation: fettle-line 0.26s var(--ease-out) both; animation-delay: calc(150ms + var(--i, 0) * 50ms); }
+.live dl > div:nth-child(2) { --i: 1; }
+.live dl > div:nth-child(3) { --i: 2; }
+.live dl > div:nth-child(4) { --i: 3; }
+.live dl > div:nth-child(5) { --i: 4; }
+.live dl > div:nth-child(6) { --i: 5; }
+/* Then what a browser can't see gets its ?? tag, and the way to the rest is underlined. */
+.live-tag { animation: fettle-tag-land 0.16s var(--ease-out) 0.6s both; }
+.live dl > div:nth-child(6) .live-tag { animation-delay: 0.69s; }
+.live-end a::after { animation: fettle-sweep 0.24s var(--ease-out) 0.76s both; }
+
+/* Around the receipt, the rest of the desk settles in the same second: the headline settles onto the
+   mat (moved, never hidden: it's the largest paint on desktop), the knife is set down along its blade,
+   then the buttons and the small print arrive. */
+@keyframes fettle-settle {
+  from { transform: translateY(0.12em); }
+}
+@keyframes fettle-knife-down { /* no "to": it ends on the knife's own resting angle */
+  0% { opacity: 0; transform: rotate(-28deg) translateX(24px); }
+  40% { opacity: 1; }
+}
+@keyframes fettle-rise {
+  from { opacity: 0; transform: translateY(6px); }
+}
+.hero h1 { animation: fettle-settle 400ms var(--ease-out) both; }
+.knife { animation: fettle-knife-down 450ms var(--ease-out) 80ms both; }
+.ctas { animation: fettle-rise 250ms var(--ease-out) 450ms both; }
+.fine { animation: fettle-rise 250ms var(--ease-out) 500ms both; }
+/* Coming from another Fettle page, the page change is the entrance: the hero is simply there. */
+html[data-arrival="page"] :is(.hero h1, .knife, .ctas, .fine, .live, .live dl > div, .live-tag),
+html[data-arrival="page"] .live-end a::after { animation: none; }
+
+/* The notes and principles arrive as their line scrolls into view: each leader draws out from the
+   receipt and the note settles onto the mat. Only where scroll timelines exist; elsewhere they are simply there. */
+@keyframes fettle-note-in {
+  from { opacity: 0; transform: translateX(var(--nudge, 8px)); }
+}
+@keyframes fettle-lead {
+  from { transform: scaleX(0); }
+}
+.callout { --nudge: -8px; }
+@keyframes fettle-slip-in {
+  from { opacity: 0; transform: translateY(24px) rotate(var(--tilt, 0deg)); }
+}
+/* The privacy slip feeds down out of its slot: it slides its whole height while the clip's top edge moves
+   up through it at the same rate, so the edge you see stays on the slot line (6px above the slip).
+   The sides and bottom leave room for the shadow, so it's never cut. */
+@keyframes fettle-slot-feed { /* both ends: clip-path can't blend into "none" */
+  from { clip-path: inset(calc(100% - 6px) -40px -60px -40px); transform: translateY(-100%) rotate(-1.2deg); }
+  to { clip-path: inset(-6px -40px -60px -40px); transform: rotate(-1.2deg); }
+}
+/* The download slip comes off the roll: from a little higher and turned, onto its resting angle. */
+@keyframes fettle-tear-off {
+  from { opacity: 0; transform: translateY(-28px) rotate(calc(var(--tilt) - 3deg)); }
+}
+/* The technicians' stack starts as one squared pile; the copies fan out from behind the front sheet. */
+@keyframes fettle-fan {
+  from { transform: rotate(1deg) translate(0, 0); }
+}
+/* The seal is pressed down once: from just above the mat, a little turned, onto its resting angle. */
+@keyframes fettle-stamp-down {
+  from { opacity: 0; transform: scale(1.15) rotate(-12deg); }
+  60% { opacity: 1; }
+  to { opacity: 1; transform: scale(1) rotate(-8deg); }
+}
+/* The legend's tags are pressed onto the mat one after another: from a hair above, a touch large. */
+@keyframes fettle-tag-press {
+  from { opacity: 0; transform: translateY(-3px) scale(1.06); }
+}
+/* A tick is drawn short stroke first, then the long one: clipped open along its own (rotated) width. */
+@keyframes fettle-tick-draw { /* both ends: clip-path can't blend into "none" */
+  from { clip-path: inset(0 100% 0 0); }
+  to { clip-path: inset(0); }
+}
+@supports (animation-timeline: view()) {
+  /* Longhands on purpose: a shorthand gets minified to "animation: ... view()", which Chromium drops. */
+  .end-slip { animation-name: fettle-tear-off; animation-timing-function: linear; animation-fill-mode: both; animation-timeline: view(); animation-range: entry 0% cover 25%; }
+  .margin-note, .callout { animation-name: fettle-note-in; animation-timing-function: linear; animation-fill-mode: both; animation-timeline: view(); animation-range: entry 10% cover 30%; }
+  .margin-note::after, .callout::before { animation-name: fettle-lead; animation-timing-function: linear; animation-fill-mode: both; animation-timeline: view(); animation-range: entry 10% cover 30%; }
+
+  /* Further down the page, one moment per section, each tied to your scrolling:
+     the sample receipt prints line by line as you read it (the app's own print-in), */
+  .annotated-receipt :is(.kv > div, .steps li, .r-section h3, .line) { animation-name: fettle-print-in; animation-timing-function: var(--ease-out); animation-fill-mode: both; animation-timeline: view(); animation-range: entry 25% cover 20%; }
+  /* the privacy slip's bars are inked across one row after another, on the slip's own timeline, */
+  .privacy-slip { view-timeline-name: --privacy-slip; animation-name: fettle-slot-feed; animation-timing-function: var(--ease-out); animation-fill-mode: both; animation-timeline: --privacy-slip; animation-range: entry 20% cover 30%; }
+  .redact { transform-origin: left center; animation-name: fettle-sweep; animation-timing-function: var(--ease-out); animation-fill-mode: both; animation-timeline: --privacy-slip; }
+  .slip-row:nth-child(1) .redact { animation-range: cover 15% cover 27%; }
+  .slip-row:nth-child(2) .redact { animation-range: cover 19% cover 31%; }
+  .slip-row:nth-child(3) .redact { animation-range: cover 23% cover 35%; }
+  .slip-row:nth-child(4) .redact { animation-range: cover 27% cover 39%; }
+  /* the technicians' copies fan out from behind the printout, */
+  .sheet-back, .sheet-mid { animation-name: fettle-fan; animation-timing-function: var(--ease-out); animation-fill-mode: both; animation-timeline: view(); }
+  .sheet-back { animation-range: entry 30% cover 50%; }
+  .sheet-mid { animation-range: entry 30% cover 42%; }
+  /* the open-source seal is stamped down once, */
+  .seal { animation-name: fettle-stamp-down; animation-timing-function: var(--ease-out); animation-fill-mode: both; animation-timeline: view(); animation-range: entry 50% cover 35%; }
+  /* and the questions land with the download slip beside them. */
+  .questions-slip { animation-name: fettle-slip-in; animation-timing-function: var(--ease-out); animation-fill-mode: both; animation-timeline: view(); animation-range: entry 0% entry 35%; }
+  /* The legend's tags are pressed on in turn, */
+  .legend { view-timeline-name: --legend; }
+  .legend .tag { animation-name: fettle-tag-press; animation-timing-function: var(--ease-out); animation-fill-mode: both; animation-timeline: --legend; }
+  .legend dl > div:nth-child(1) .tag { animation-range: cover 10% cover 22%; }
+  .legend dl > div:nth-child(2) .tag { animation-range: cover 13% cover 25%; }
+  .legend dl > div:nth-child(3) .tag { animation-range: cover 16% cover 28%; }
+  .legend dl > div:nth-child(4) .tag { animation-range: cover 19% cover 31%; }
+  .legend dl > div:nth-child(5) .tag { animation-range: cover 22% cover 34%; }
+  /* and the technicians' boxes are ticked one by one. */
+  .checks { view-timeline-name: --checks; }
+  .checks li::after { animation-name: fettle-tick-draw; animation-timing-function: var(--ease-out); animation-fill-mode: both; animation-timeline: --checks; }
+  .checks li:nth-child(1)::after { animation-range: cover 15% cover 27%; }
+  .checks li:nth-child(2)::after { animation-range: cover 21% cover 33%; }
+  .checks li:nth-child(3)::after { animation-range: cover 27% cover 39%; }
+  .checks li:nth-child(4)::after { animation-range: cover 33% cover 45%; }
+}
+
+/* ---------- Motion: between pages ----------
+   The mat, ruler and nav stay put; the old page is taken away and the new one is laid down on the mat.
+   Browsers without cross-document view transitions just load the page, as before. */
+@view-transition { navigation: auto; }
+@keyframes fettle-page-in {
+  from { opacity: 0; transform: translateY(16px); }
+}
+@keyframes fettle-fade-in {
+  from { opacity: 0; }
+}
+/* Nothing slides over from where it was on a scrolled page: each part is shown where it belongs on the
+   new page. The nav and ruler look the same on every page, so they simply stay. The mat and the old
+   page go in one frame: a crossfade from a scrolled page would show the grid twice, and the old page's
+   picture would be drawn where the new page starts, as if scrolled back to its top. */
+::view-transition-group(*) { animation: none; }
+::view-transition-old(root) { display: none; }
+::view-transition-new(root) { animation: none; }
+::view-transition-old(page), ::view-transition-old(foot) { display: none; }
+/* The nav and ruler are only drawn new: with the group's animation off, their pictures get no crossfade,
+   and the old and new ones drawn together add up, so the nav flashed brighter (light parts went white). */
+::view-transition-old(ruler), ::view-transition-old(nav) { display: none; }
+::view-transition-new(page), ::view-transition-new(foot) { animation-name: fettle-page-in; animation-duration: 280ms; animation-timing-function: var(--ease-out); animation-fill-mode: both; }
+
+/* ---------- Motion: switching theme ----------
+   The whole page is one sheet (theme-controls.ts sets data-vt for the length of the switch), and the
+   new theme is drawn down over the old one, like a fresh sheet feeding out. */
+html[data-vt^="theme"] :is(.ruler, .nav, main, .foot) { view-transition-name: none; }
+html[data-vt^="theme"]::view-transition-old(root) { display: block; animation: none; }
+html[data-vt="theme"]::view-transition-new(root) { animation-name: fettle-wipe; animation-duration: 380ms; animation-timing-function: var(--ease-out); animation-fill-mode: both; }
+@keyframes fettle-wipe { /* both ends: clip-path can't blend into "none" */
+  from { clip-path: inset(0 0 100% 0); }
+  to { clip-path: inset(0); }
+}
+/* From the footer, the new theme spreads from the swatch you picked to the farthest corner (theme-controls.ts sets the --vt-* values). */
+html[data-vt="theme-spot"]::view-transition-new(root) { animation-name: fettle-spread; animation-duration: 450ms; animation-timing-function: var(--ease-out); animation-fill-mode: both; }
+@keyframes fettle-spread {
+  from { clip-path: circle(0 at var(--vt-x) var(--vt-y)); }
+  to { clip-path: circle(var(--vt-r) at var(--vt-x) var(--vt-y)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-vt="theme"]::view-transition-new(root) { animation: none; }
+  html[data-vt="theme-spot"]::view-transition-new(root) { animation: none; }
+  /* Page changes still fade in, without moving. */
+  ::view-transition-new(page), ::view-transition-new(foot) { animation-name: fettle-fade-in; animation-duration: 150ms; }
+  .tape, .btn, .faq-item summary::after { transition: none; }
+  .tape:hover, .btn:hover { transform: none; }
+  .live, .live dl > div, .live-tag, .live-end a::after { animation: none; }
+  .hero h1, .knife, .ctas, .fine { animation: none; }
+  .faq-item::details-content, .faq-answer { transition: none; }
+  :is(a, button).tape:active, .btn-ghost:active, .foot-theme label:active { translate: none; }
+  .legend .tag, .checks li::after { animation: none; }
+  .privacy-slip { animation: none; }
+  .annotated-receipt .line, .annotated-receipt .line::before, .margin-note { transition: none; }
+  .annotated-receipt :is([data-section], .r-head, .r-summary h2, .fold)::before { transition: none; }
+  .live, .slip, .sheet-front { transition: none; }
+  .live:hover, .slip:hover, .tech-stack:hover .sheet-front { translate: none; }
+  .cuts { display: none; }
+  .text-link::before, .more-all::before, .foot-links a::before, .more-slip li a { transition: none; }
+  .margin-note, .callout, .margin-note::after, .callout::before, .end-slip { animation: none; }
+  .annotated-receipt :is(.kv > div, .steps li, .r-section h3, .line), .redact, .sheet-back, .sheet-mid, .seal, .questions-slip { animation: none; }
+}
+
+@media print {
+  body, .mat { background: #fff; color: #000; }
+  .ruler, .nav, .foot { display: none; }
+  /* Printed, the page shows everything at rest, including what was never scrolled to. */
+  .legend .tag, .checks li::after, .privacy-slip, .redact, .seal, .sheet-back, .sheet-mid, .questions-slip, .end-slip, .margin-note, .callout,
+  .margin-note::after, .callout::before, .annotated-receipt :is(.kv > div, .steps li, .r-section h3, .line) { animation: none; }
+  /* and plain: nothing faded or marked by the legend or a note, and no slot line. */
+  #how[data-show] .annotated-receipt .line { opacity: 1; }
+  .annotated-receipt .line::before, .annotated-receipt .is-pointed::before, .slip-slot { display: none; }
+}
+
+/* ---------- Big screens (a 4K monitor at 150% is 2560 px wide): a wider column, a larger receipt ---------- */
+/* Last in the file, so it wins over the base sizes above. */
+@media (min-width: 1800px) {
+  :root { --wrap-max: 1560px; }
+  .sample-receipt { --r-size: 16px; }
+}

@@ -1,0 +1,63 @@
+---
+// The hero's receipt: what this browser can see, printed live. The markup is already a complete
+// receipt (values "–"), so with JavaScript off nothing is missing; the script fills it in.
+import { text } from "@fettle/brain";
+import { Wordmark } from "@fettle/receipt-ui";
+import type { Locale } from "../i18n/paths.ts";
+import { home } from "../i18n/home.ts";
+import Knife from "./Knife.astro";
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const h = home(locale);
+const rows = [
+  ["screen", h.liveScreen],
+  ["threads", h.liveThreads],
+  ["memory", h.liveMemory],
+  ["system", h.liveSystem],
+  ["disk", h.liveDisk],
+  ["battery", h.liveBattery],
+] as const;
+---
+
+<div class="desk">
+  <Knife />
+  <figure class="live" data-live-receipt data-missing={h.liveMissing} aria-label={h.liveHead}>
+    <div class="live-head">
+      <Wordmark className="live-wordmark" />
+      <span data-time>--:--</span>
+    </div>
+    <p class="live-row live-title"><span>{h.liveHead}</span></p>
+    <hr />
+    <dl>
+      {
+        rows.map(([key, label]) => (
+          <div class="live-row">
+            <dt>{label}</dt>
+            {key === "disk" || key === "battery" ? (
+              <dd data-fact={key} class="na">
+                {h.liveMissing} <span class="tag tag-couldnt_check live-tag" aria-hidden="true">{text("tag.couldnt_check", locale)}</span>
+              </dd>
+            ) : (
+              <dd data-fact={key}>–</dd>
+            )}
+          </div>
+        ))
+      }
+    </dl>
+    <hr />
+    <p class="live-row live-end">
+      {h.liveEnd}<br />
+      <a href="#sample">{h.liveMore} →</a>
+    </p>
+    <p class="live-row live-note">{h.liveNote}</p>
+    <div class="live-barcode" aria-hidden="true"></div>
+  </figure>
+</div>
+
+<script>
+  import "../scripts/live-receipt.ts";
+</script>

@@ -1,0 +1,48 @@
+/* Shared look for the 1200×630 preview cards. Fonts load from the repo's own node_modules. */
+@font-face { font-family: "Bricolage"; src: url("../../../../node_modules/@fontsource-variable/bricolage-grotesque/files/bricolage-grotesque-latin-opsz-normal.woff2") format("woff2"); font-weight: 200 900; }
+@font-face { font-family: "Plex"; src: url("../../../../node_modules/@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-400-normal.woff2") format("woff2"); font-weight: 400; }
+@font-face { font-family: "Plex"; src: url("../../../../node_modules/@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-600-normal.woff2") format("woff2"); font-weight: 600; }
+@font-face { font-family: "Plex"; src: url("../../../../node_modules/@fontsource/ibm-plex-mono/files/ibm-plex-mono-latin-700-normal.woff2") format("woff2"); font-weight: 700; }
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1200px; height: 630px; overflow: hidden; }
+body {
+  position: relative; color: #F3F1EA; font-family: "Bricolage";
+  background:
+    linear-gradient(rgb(232 244 236 / 0.26) 1px, transparent 1px) 0 0 / 190px 190px,
+    linear-gradient(90deg, rgb(232 244 236 / 0.26) 1px, transparent 1px) 0 0 / 190px 190px,
+    linear-gradient(rgb(232 244 236 / 0.12) 1px, transparent 1px) 0 0 / 38px 38px,
+    linear-gradient(90deg, rgb(232 244 236 / 0.12) 1px, transparent 1px) 0 0 / 38px 38px,
+    radial-gradient(130% 90% at 25% 10%, #1F6A45 45%, #17543A);
+}
+.ruler { position: absolute; inset: 0 0 auto; height: 10px; background: repeating-linear-gradient(90deg, rgb(232 244 236 / 0.3) 0 1px, transparent 1px 38px); }
+.wordmark { position: absolute; left: 72px; top: 62px; height: 46px; }
+h1 { position: absolute; left: 72px; top: 150px; width: 640px; font-weight: 900; font-size: 92px; line-height: 0.95; letter-spacing: -0.045em; }
+h1 em { font-style: normal; color: #BFE3C8; }
+.fine { position: absolute; left: 74px; bottom: 64px; font: 600 17px/1 "Plex"; letter-spacing: 0.12em; text-transform: uppercase; color: rgb(243 241 234 / 0.75); }
+
+.slip {
+  --edge: 10px;
+  position: absolute; right: 86px; top: 92px; width: 360px; padding: 26px 26px calc(30px + var(--edge));
+  background: #FBFAF6; color: #1D1C1A; font: 400 17px/1.7 "Plex";
+  transform: rotate(2deg);
+  filter: drop-shadow(0 26px 22px rgb(0 0 0 / 0.35));
+  mask:
+    linear-gradient(#000 0 0) top / 100% calc(100% - var(--edge)) no-repeat,
+    conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / calc(var(--edge) * 2) var(--edge) repeat-x;
+}
+.slip .head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.slip .head img { height: 28px; }
+.slip .head span { font-weight: 600; }
+.slip .sum { font: 800 30px/1.05 "Bricolage"; letter-spacing: -0.02em; margin: 8px 0 14px; }
+.slip hr { border: 0; border-top: 1.5px dashed #B9B4A8; margin: 12px 0; }
+.row { display: flex; justify-content: space-between; align-items: center; }
+.tag { padding: 2px 8px 1px; border-radius: 2px; font: 700 14px/1.3 "Plex"; letter-spacing: 0.1em; color: #5D5A53; }
+.tag.watch { color: #B93A12; border: 2px solid currentColor; }
+.barcode { height: 40px; margin-top: 16px; background: repeating-linear-gradient(90deg, #2A2926 0 2px, transparent 2px 4px, #2A2926 4px 5px, transparent 5px 8px); }
+.stamp {
+  position: absolute; right: 104px; top: 372px; transform: rotate(-9deg);
+  color: #1F6A45; border: 4px solid currentColor; border-radius: 8px; padding: 9px 14px 7px;
+  font: 900 24px/1 "Bricolage"; letter-spacing: 0.08em; text-transform: uppercase; mix-blend-mode: multiply;
+}
+.bar { display: inline-block; width: 46px; height: 10px; border-radius: 2px; background: #DAD6CB; }

@@ -1,0 +1,21 @@
+---
+// The last slip off the roll before the footer: the download, so the page ends on something to do.
+import { Wordmark } from "@fettle/receipt-ui";
+import type { Locale } from "../i18n/paths.ts";
+import { localePath } from "../i18n/paths.ts";
+import { home } from "../i18n/home.ts";
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const h = home(locale);
+---
+
+<div class="slip end-slip">
+  <Wordmark className="end-wordmark" />
+  <p class="end-h">{h.endH}</p>
+  <a class="btn btn-primary" href={localePath(locale, "/download")}>{h.ctaDownload}</a>
+  <p class="end-fine">{h.endFine}</p>
+</div>

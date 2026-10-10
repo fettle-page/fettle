@@ -1,0 +1,22 @@
+{
+  "name": "@fettle/report-schema",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "test": "vitest run && tsc -p ."
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "json-schema-to-zod": "^2.8.1",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.3"
+  },
+  "dependencies": {
+    "zod": "^4.6.5"
+  }
+}

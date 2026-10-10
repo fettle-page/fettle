@@ -1,0 +1,50 @@
+---
+import Doc from "../components/Doc.astro";
+import { releases } from "../content/changelog.ts";
+import { pages } from "../i18n/pages.ts";
+import { localePath, type Locale } from "../i18n/paths.ts";
+import Base from "../layouts/Base.astro";
+import { checkRelease, downloads, release } from "../release.ts";
+
+interface Props {
+  locale: Locale;
+}
+const { locale } = Astro.props;
+const c = pages(locale).download;
+// A half-set release switch fails the build here, before anything is published.
+checkRelease(release, releases);
+const files = downloads(release);
+const intro = files ? c.introReady.replace("{version}", files.version) : c.intro;
+---
+
+<Base locale={locale} path="/download" title={c.title} description={c.description}>
+  <Doc kicker={c.kicker} title={c.h1} intro={intro}>
+    <div class="prose">
+      {
+        files ? (
+          <>
+            <p class="download-cta"><a class="btn btn-primary" href={files.installer}>{c.installer}</a></p>
+            <p class="download-more">
+              <a href={files.portable}>{c.portable}</a> · <a href={files.checksums}>{c.checksums}</a> · <a href={files.all}>{c.allReleases}</a>
+            </p>
+          </>
+        ) : (
+          <p class="download-cta"><span class="btn btn-primary is-waiting">{c.button}</span></p>
+        )
+      }
+      <section>
+        <h2>{c.needsH}</h2>
+        <ul>{c.needs.map((n) => <li>{n}</li>)}</ul>
+      </section>
+      <section>
+        <h2>{c.formatsH}</h2>
+        <ul>{c.formats.map((n) => <li>{n}</li>)}</ul>
+      </section>
+      <section>
+        <h2>{c.warningH}</h2>
+        {c.warning.map((p) => <p>{p}</p>)}
+        <p><a href={localePath(locale, "/code-signing")}>{c.signingLink}</a></p>
+      </section>
+    </div>
+  </Doc>
+</Base>

@@ -1,0 +1,803 @@
+// The side panel's pieces: buttons, the first screen, the check's
+// progress, the answer and its numbers, and Settings.
+import { Theme, Copy } from "theme.slint";
+import { AboutSlint } from "std-widgets.slint";
+import { Row, Group, Section } from "data.slint";
+
+export component Icon inherits Path {
+    in property <color> ink: Theme.chrome-ink;
+    in property <length> size: 16px;
+    width: size;
+    height: size;
+    viewbox-width: 24;
+    viewbox-height: 24;
+    stroke: ink;
+    stroke-width: 1.8px;
+    stroke-line-cap: round;
+    stroke-line-join: round;
+    fill: transparent;
+}
+
+// A focus ring only when the focus came from the keyboard, as Windows does.
+export component Focusable inherits FocusScope {
+    in property <string> label;
+    out property <bool> ring: self.has-focus && by-keyboard;
+    property <bool> by-keyboard;
+    callback activate();
+    // Left/Right (and Home/End as -1000/1000) inside a group of tabs.
+    callback arrow(int);
+    focus-gained(reason) => {
+        by-keyboard = reason == FocusReason.tab-navigation;
+    }
+    focus-lost => {
+        by-keyboard = false;
+    }
+    key-pressed(event) => {
+        if event.text == " " || event.text == "\n" {
+            activate();
+            return accept;
+        }
+        if event.text == Key.RightArrow {
+            arrow(1);
+            return accept;
+        }
+        if event.text == Key.LeftArrow {
+            arrow(-1);
+            return accept;
+        }
+        if event.text == Key.Home {
+            arrow(-1000);
+            return accept;
+        }
+        if event.text == Key.End {
+            arrow(1000);
+            return accept;
+        }
+        reject
+    }
+}
+
+export component PrimaryButton inherits Rectangle {
+    in property <string> text;
+    in property <bool> enabled: true;
+    callback clicked();
+    height: 44px;
+    border-radius: 6px;
+    opacity: enabled ? 1 : 0.45;
+    background: touch.pressed ? Theme.btn.darker(0.08) : touch.has-hover ? Theme.btn.brighter(0.06) : Theme.btn;
+    border-width: 1px;
+    border-color: Theme.btn-edge;
+    drop-shadow-offset-y: touch.pressed ? 1px : 2px;
+    drop-shadow-color: Theme.btn-edge;
+    accessible-role: button;
+    accessible-label: text;
+    accessible-enabled: enabled;
+    accessible-action-default => {
+        if enabled {
+            clicked();
+        }
+    }
+    focus := Focusable {
+        enabled: root.enabled;
+        activate => {
+            root.clicked();
+        }
+    }
+    touch := TouchArea {
+        enabled: root.enabled;
+        clicked => {
+            root.clicked();
+        }
+    }
+    Text {
+        y: touch.pressed ? 1px : 0;
+        width: parent.width;
+        height: parent.height;
+        text: root.text;
+        font-family: Theme.text;
+        font-size: 15px;
+        font-weight: 800;
+        color: #FFFFFF;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+    if focus.ring: Rectangle {
+        x: -4px;
+        y: -4px;
+        width: parent.width + 8px;
+        height: parent.height + 8px;
+        border-radius: 9px;
+        border-width: 2px;
+        border-color: Theme.accent;
+    }
+}
+
+export component Button inherits Rectangle {
+    in property <string> text;
+    // What a screen reader says, when it's more than the visible text (an icon and a count).
+    in property <string> label;
+    in property <string> icon;
+    in property <bool> enabled: true;
+    in property <bool> quiet;
+    callback clicked();
+    height: 34px;
+    min-width: row.preferred-width;
+    border-radius: 6px;
+    border-width: quiet ? 0 : 1px;
+    border-color: Theme.chrome-line;
+    background: touch.pressed ? Theme.chrome-hover.with-alpha(0.14) : touch.has-hover ? Theme.chrome-hover : quiet ? transparent : Theme.chrome-card;
+    opacity: enabled ? 1 : 0.5;
+    accessible-role: button;
+    accessible-label: label != "" ? label : text;
+    accessible-enabled: enabled;
+    accessible-action-default => {
+        if enabled {
+            clicked();
+        }
+    }
+    // Gives this button the keyboard (a view's Back button when the view opens).
+    public function take-focus() {
+        focus.focus();
+    }
+    focus := Focusable {
+        enabled: root.enabled;
+        activate => {
+            root.clicked();
+        }
+    }
+    touch := TouchArea {
+        enabled: root.enabled;
+        clicked => {
+            root.clicked();
+        }
+    }
+    row := HorizontalLayout {
+        alignment: center;
+        spacing: 8px;
+        padding-left: 12px;
+        padding-right: 12px;
+        if icon != "": Rectangle {
+            width: 15px;
+            Icon {
+                y: (parent.height - self.height) / 2;
+                size: 15px;
+                commands: root.icon;
+            }
+        }
+        Text {
+            text: root.text;
+            font-family: Theme.text;
+            font-size: 13px;
+            font-weight: 800;
+            color: Theme.chrome-ink;
+            vertical-alignment: center;
+        }
+    }
+    if focus.ring: Rectangle {
+        x: -3px;
+        y: -3px;
+        width: parent.width + 6px;
+        height: parent.height + 6px;
+        border-radius: 8px;
+        border-width: 2px;
+        border-color: Theme.accent;
+    }
+}
+
+export component Kicker inherits HorizontalLayout {
+    in property <string> text;
+    in property <string> aside;
+    padding-bottom: 12px;
+    Text {
+        text: root.text.to-uppercase();
+        font-family: Theme.mono;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 2px;
+        color: Theme.chrome-soft;
+    }
+    if aside != "": Text {
+        text: aside;
+        font-family: Theme.mono;
+        font-size: 11px;
+        color: Theme.chrome-soft;
+        horizontal-alignment: right;
+    }
+}
+
+component Title inherits Text {
+    font-family: Theme.display;
+    font-weight: 800;
+    color: Theme.chrome-ink;
+    wrap: word-wrap;
+}
+
+component Body inherits Text {
+    font-family: Theme.text;
+    font-size: 14px;
+    font-weight: 500;
+    color: Theme.chrome-soft;
+    wrap: word-wrap;
+    line-height-factor: 1.25;
+}
+
+component Card inherits Rectangle {
+    border-radius: 8px;
+    border-width: 1px;
+    border-color: Theme.chrome-line;
+    background: Theme.chrome-card;
+}
+
+export component Note inherits Card {
+    in property <string> text;
+    HorizontalLayout {
+        padding: 13px;
+        padding-left: 14px;
+        spacing: 12px;
+        Icon {
+            size: 18px;
+            ink: Theme.btn;
+            commands: "M21.5 12 A9.5 9.5 0 1 1 2.5 12 A9.5 9.5 0 1 1 21.5 12 Z M7.5 12.3 L10.5 15.3 L16.5 9";
+        }
+        Text {
+            text: root.text;
+            font-family: Theme.text;
+            font-size: 14px;
+            font-weight: 500;
+            color: Theme.chrome-ink;
+            wrap: word-wrap;
+            line-height-factor: 1.15;
+        }
+    }
+}
+
+export component HomePanel inherits VerticalLayout {
+    // Empty the first time; the last verdict and how long ago, coming back.
+    in property <string> back-title;
+    in property <string> back-body;
+    spacing: 28px;
+    VerticalLayout {
+        Kicker { text: back-title == "" ? Copy.tr("home.kicker", Copy.lang) : Copy.tr("home.back", Copy.lang); }
+        Title {
+            text: back-title == "" ? Copy.tr("home.title", Copy.lang) : back-title;
+            font-size: 34px;
+            letter-spacing: -0.85px;
+        }
+        VerticalLayout {
+            padding-top: 10px;
+            Body { text: back-title == "" ? Copy.tr("home.body", Copy.lang) : back-body; }
+        }
+    }
+    Note { text: back-title == "" ? Copy.tr("home.reads", Copy.lang) : Copy.tr("home.kept", Copy.lang); }
+}
+
+export struct Progress { title: string, done: bool }
+
+export component CheckingPanel inherits VerticalLayout {
+    in property <[Progress]> sections;
+    in property <string> count;
+    Kicker { text: Copy.tr("scan.status", Copy.lang); }
+    VerticalLayout {
+        spacing: 8px;
+        accessible-role: list;
+        for s in sections: HorizontalLayout {
+            spacing: 10px;
+            opacity: s.done ? 1 : 0.55;
+            animate opacity { duration: 200ms; }
+            Rectangle {
+                width: 10px;
+                Rectangle {
+                    width: 9px;
+                    height: 9px;
+                    border-radius: 4.5px;
+                    border-width: s.done ? 0 : 1.2px;
+                    border-color: Theme.chrome-soft;
+                    background: s.done ? Theme.btn : transparent;
+                }
+            }
+            Text {
+                text: s.title.to-uppercase();
+                font-family: Theme.mono;
+                font-size: 13px;
+                font-weight: 600;
+                letter-spacing: 1.6px;
+                color: s.done ? Theme.chrome-ink : Theme.chrome-soft;
+            }
+        }
+    }
+    VerticalLayout {
+        padding-top: 16px;
+        Body {
+            text: Copy.tr("scan.usually", Copy.lang);
+            font-size: 12.5px;
+        }
+    }
+    // Screen readers hear how far it is, as it changes.
+    Rectangle {
+        height: 0;
+        accessible-role: text;
+        accessible-label: count;
+        accessible-live-region: polite;
+    }
+}
+
+// "The numbers": one tab per section that has details, and its rows.
+component Numbers inherits VerticalLayout {
+    in property <[Section]> sections;
+    property <int> chosen: 0;
+    spacing: 12px;
+    Rectangle {
+        height: 32px;
+        border-radius: 7px;
+        background: Theme.chrome-hover;
+        HorizontalLayout {
+            padding: 3px;
+            spacing: 2px;
+            for s[i] in sections: Rectangle {
+                border-radius: 5px;
+                background: i == chosen ? Theme.chrome : transparent;
+                drop-shadow-blur: i == chosen ? 2px : 0;
+                drop-shadow-offset-y: self.drop-shadow-blur > 0 ? 1px : 0;
+                drop-shadow-color: #00000026;
+                accessible-role: tab;
+                accessible-label: s.tab;
+                accessible-checkable: true;
+                accessible-checked: i == chosen;
+                accessible-action-default => {
+                    chosen = i;
+                }
+                tab-focus := Focusable {
+                    // Only the chosen tab is in the Tab order; arrows move between them.
+                    focus-on-tab-navigation: i == chosen;
+                    activate => {
+                        chosen = i;
+                    }
+                    arrow(step) => {
+                        let n = sections.length;
+                        chosen = step == -1000 ? 0 : step == 1000 ? n - 1 : Math.mod(chosen + step + n, n);
+                    }
+                }
+                TouchArea {
+                    clicked => {
+                        tab-focus.focus();
+                        chosen = i;
+                    }
+                }
+                if tab-focus.ring: Rectangle {
+                    border-radius: 5px;
+                    border-width: 2px;
+                    border-color: Theme.accent;
+                }
+                Text {
+                    text: s.tab;
+                    font-family: Theme.text;
+                    font-size: 12px;
+                    font-weight: 800;
+                    color: i == chosen ? Theme.chrome-ink : Theme.chrome-soft;
+                    horizontal-alignment: center;
+                    vertical-alignment: center;
+                }
+            }
+        }
+    }
+    VerticalLayout {
+        spacing: 14px;
+        for g in sections[chosen].details: VerticalLayout {
+            if g.title != "": Text {
+                text: g.title;
+                font-family: Theme.text;
+                font-size: 14px;
+                font-weight: 800;
+                color: Theme.chrome-ink;
+                wrap: word-wrap;
+            }
+            for r in g.rows: VerticalLayout {
+                HorizontalLayout {
+                    padding-top: 7px;
+                    padding-bottom: 7px;
+                    spacing: 12px;
+                    Text {
+                        text: r.label;
+                        font-family: Theme.mono;
+                        font-size: 13px;
+                        color: Theme.chrome-soft;
+                        horizontal-stretch: 0;
+                    }
+                    Text {
+                        text: r.value;
+                        font-family: Theme.mono;
+                        font-size: 13px;
+                        color: Theme.chrome-ink;
+                        horizontal-alignment: right;
+                        wrap: word-wrap;
+                        horizontal-stretch: 1;
+                    }
+                }
+                Rectangle {
+                    height: 1px;
+                    background: Theme.chrome-line;
+                }
+            }
+        }
+    }
+}
+
+export component ResultPanel inherits VerticalLayout {
+    in property <string> when;
+    in property <string> answer;
+    in property <bool> deep;
+    in property <string> deep-problem;
+    // Windows' prompt is open: asking again would do nothing.
+    in property <bool> deep-asking;
+    in property <[Section]> numbers;
+    // The privacy switch's card: empty when the switch is off.
+    in property <bool> private-shown;
+    in property <[Row]> private-rows;
+    callback again();
+    callback run-deep();
+    spacing: 28px;
+    VerticalLayout {
+        Kicker {
+            text: Copy.tr("result.kicker", Copy.lang);
+            aside: when;
+        }
+        Title {
+            text: answer;
+            font-size: 26px;
+            letter-spacing: -0.65px;
+        }
+        HorizontalLayout {
+            alignment: start;
+            padding-top: 14px;
+            Button {
+                text: Copy.tr("scan.again", Copy.lang);
+                icon: "M20 11 A8 8 0 1 0 17.7 16.7 M20 4 L20 11 L13 11";
+                clicked => {
+                    root.again();
+                }
+            }
+        }
+    }
+    if deep: VerticalLayout {
+        Kicker { text: Copy.tr("more.kicker", Copy.lang); }
+        Card {
+            VerticalLayout {
+                padding: 16px;
+                spacing: 6px;
+                HorizontalLayout {
+                    spacing: 8px;
+                    Icon {
+                        size: 16px;
+                        ink: Theme.btn;
+                        commands: "M12 3 L4.5 6 L4.5 11.5 C4.5 16.1 7.7 19.8 12 21 C16.3 19.8 19.5 16.1 19.5 11.5 L19.5 6 Z";
+                    }
+                    Text {
+                        text: Copy.tr("deep.title", Copy.lang);
+                        font-family: Theme.text;
+                        font-size: 15px;
+                        font-weight: 800;
+                        color: Theme.chrome-ink;
+                    }
+                }
+                Body {
+                    text: Copy.tr("deep.why", Copy.lang);
+                    font-size: 13px;
+                }
+                VerticalLayout {
+                    padding-top: 6px;
+                    Button {
+                        text: Copy.tr("deep.button", Copy.lang);
+                        enabled: !root.deep-asking;
+                        clicked => {
+                            root.run-deep();
+                        }
+                    }
+                }
+                if deep-problem != "": Text {
+                    text: deep-problem;
+                    accessible-role: text;
+                    accessible-label: deep-problem;
+                    accessible-live-region: assertive;
+                    font-family: Theme.mono;
+                    font-size: 13px;
+                    font-weight: 600;
+                    color: Theme.accent;
+                    wrap: word-wrap;
+                }
+            }
+        }
+    }
+    if numbers.length > 0: VerticalLayout {
+        Kicker { text: Copy.tr("numbers.kicker", Copy.lang); }
+        Numbers { sections: numbers; }
+    }
+    if private-shown: Rectangle {
+        border-radius: 8px;
+        border-width: 1px;
+        border-color: Theme.chrome-soft;
+        VerticalLayout {
+            padding: 14px;
+            padding-left: 16px;
+            padding-right: 16px;
+            Kicker { text: Copy.tr("private.kicker", Copy.lang); }
+            if private-rows.length == 0: Text {
+                text: Copy.tr("private.none", Copy.lang);
+                font-family: Theme.mono;
+                font-size: 12.5px;
+                color: Theme.chrome-soft;
+                wrap: word-wrap;
+            }
+            for r in private-rows: HorizontalLayout {
+                padding-top: 6px;
+                padding-bottom: 6px;
+                spacing: 12px;
+                Text {
+                    text: r.label;
+                    font-family: Theme.mono;
+                    font-size: 13px;
+                    color: Theme.chrome-soft;
+                    horizontal-stretch: 0;
+                }
+                Text {
+                    text: r.value;
+                    font-family: Theme.mono;
+                    font-size: 13px;
+                    color: Theme.chrome-ink;
+                    horizontal-alignment: right;
+                    wrap: word-wrap;
+                    horizontal-stretch: 1;
+                }
+            }
+        }
+    }
+}
+
+// A row of choices that looks like a segmented control.
+export component Choice inherits Rectangle {
+    in property <[string]> labels;
+    in property <[string]> values;
+    in property <string> value;
+    callback chose(string);
+    height: 32px;
+    border-radius: 7px;
+    background: Theme.chrome-hover;
+    HorizontalLayout {
+        padding: 3px;
+        spacing: 2px;
+        for l[i] in labels: Rectangle {
+            border-radius: 5px;
+            background: values[i] == value ? Theme.chrome : transparent;
+            drop-shadow-blur: values[i] == value ? 2px : 0;
+            drop-shadow-offset-y: self.drop-shadow-blur > 0 ? 1px : 0;
+            drop-shadow-color: #00000026;
+            accessible-role: radio-button;
+            accessible-label: l;
+            accessible-checkable: true;
+            accessible-checked: values[i] == value;
+            accessible-action-default => {
+                chose(values[i]);
+            }
+            option-focus := Focusable {
+                activate => {
+                    chose(values[i]);
+                }
+            }
+            TouchArea {
+                clicked => {
+                    option-focus.focus();
+                    chose(values[i]);
+                }
+            }
+            if option-focus.ring: Rectangle {
+                border-radius: 5px;
+                border-width: 2px;
+                border-color: Theme.accent;
+            }
+            Text {
+                text: l;
+                font-family: Theme.text;
+                font-size: 12px;
+                font-weight: 800;
+                color: values[i] == value ? Theme.chrome-ink : Theme.chrome-soft;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+    }
+}
+
+
+// An on/off switch, as in Windows settings: the whole row toggles it.
+export component Switch inherits Rectangle {
+    in property <string> text;
+    in property <string> hint;
+    in property <bool> on;
+    callback toggled(bool);
+    accessible-role: switch;
+    accessible-label: text;
+    accessible-description: hint;
+    accessible-checkable: true;
+    accessible-checked: on;
+    accessible-action-default => {
+        toggled(!on);
+    }
+    focus := Focusable {
+        activate => {
+            root.toggled(!root.on);
+        }
+    }
+    TouchArea {
+        clicked => {
+            focus.focus();
+            root.toggled(!root.on);
+        }
+    }
+    if focus.ring: Rectangle {
+        x: -3px;
+        y: -3px;
+        width: parent.width + 6px;
+        height: parent.height + 6px;
+        border-radius: 6px;
+        border-width: 2px;
+        border-color: Theme.accent;
+    }
+    VerticalLayout {
+        spacing: 6px;
+        HorizontalLayout {
+            spacing: 12px;
+            Rectangle {
+                width: 40px;
+                height: 20px;
+                y: 1px;
+                border-radius: 10px;
+                border-width: on ? 0 : 1px;
+                border-color: Theme.chrome-soft;
+                background: on ? Theme.btn : transparent;
+                Rectangle {
+                    x: on ? 23px : 4px;
+                    width: 12px;
+                    height: 12px;
+                    border-radius: 6px;
+                    background: on ? #FFFFFF : Theme.chrome-soft;
+                    animate x { duration: 150ms; }
+                }
+            }
+            Text {
+                text: root.text;
+                font-family: Theme.text;
+                font-size: 14px;
+                font-weight: 500;
+                color: Theme.chrome-ink;
+                wrap: word-wrap;
+                vertical-alignment: center;
+                horizontal-stretch: 1;
+            }
+        }
+        if hint != "": Text {
+            text: root.hint;
+            font-family: Theme.mono;
+            font-size: 12.5px;
+            color: Theme.chrome-soft;
+            wrap: word-wrap;
+        }
+    }
+}
+
+// Settings, in the side panel: Look, Language, Privacy, Updates and About.
+export component SettingsPanel inherits VerticalLayout {
+    in property <string> theme-choice;
+    in property <string> lang-choice;
+    in property <bool> remember;
+    in property <bool> show-private;
+    in property <bool> updates;
+    // How often the update check asks: hourly, daily or weekly.
+    in property <string> update-every;
+    in property <string> version;
+    callback theme-chosen(string);
+    callback lang-chosen(string);
+    callback remember-toggled(bool);
+    callback private-toggled(bool);
+    callback updates-toggled(bool);
+    callback update-every-chosen(string);
+    spacing: 28px;
+    VerticalLayout {
+        spacing: 10px;
+        Kicker { text: Copy.tr("settings.look", Copy.lang); }
+        Choice {
+            labels: [Copy.tr("theme.auto", Copy.lang), Copy.tr("theme.light", Copy.lang), Copy.tr("theme.dark", Copy.lang), Copy.tr("theme.oled", Copy.lang)];
+            values: ["system", "light", "dark", "oled"];
+            value: root.theme-choice;
+            chose(v) => {
+                root.theme-chosen(v);
+            }
+        }
+    }
+    VerticalLayout {
+        spacing: 10px;
+        Kicker { text: Copy.tr("settings.language", Copy.lang); }
+        Choice {
+            labels: [Copy.tr("theme.auto", Copy.lang), "English", "Italiano"];
+            values: ["auto", "en", "it"];
+            value: root.lang-choice;
+            chose(v) => {
+                root.lang-chosen(v);
+            }
+        }
+    }
+    VerticalLayout {
+        spacing: 14px;
+        Kicker { text: Copy.tr("settings.privacy", Copy.lang); }
+        Switch {
+            text: Copy.tr("settings.remember", Copy.lang);
+            on: root.remember;
+            toggled(v) => {
+                root.remember-toggled(v);
+            }
+        }
+        Switch {
+            text: Copy.tr("settings.private", Copy.lang);
+            hint: Copy.tr("settings.private_hint", Copy.lang);
+            on: root.show-private;
+            toggled(v) => {
+                root.private-toggled(v);
+            }
+        }
+    }
+    VerticalLayout {
+        spacing: 14px;
+        Kicker { text: Copy.tr("settings.updates_group", Copy.lang); }
+        Switch {
+            text: Copy.tr("settings.updates", Copy.lang);
+            hint: Copy.tr("settings.updates_hint", Copy.lang);
+            on: root.updates;
+            toggled(v) => {
+                root.updates-toggled(v);
+            }
+        }
+        if root.updates: Choice {
+            labels: [Copy.tr("settings.every_hour", Copy.lang), Copy.tr("settings.every_day", Copy.lang), Copy.tr("settings.every_week", Copy.lang)];
+            values: ["hourly", "daily", "weekly"];
+            value: root.update-every;
+            chose(v) => {
+                root.update-every-chosen(v);
+            }
+        }
+    }
+    VerticalLayout {
+        spacing: 6px;
+        Kicker { text: Copy.tr("settings.about", Copy.lang); }
+        Text {
+            text: root.version;
+            font-family: Theme.text;
+            font-size: 14px;
+            font-weight: 800;
+            color: Theme.chrome-ink;
+        }
+        Text {
+            text: Copy.tr("about.licence", Copy.lang);
+            font-family: Theme.mono;
+            font-size: 12.5px;
+            color: Theme.chrome-soft;
+            wrap: word-wrap;
+        }
+        Text {
+            text: Copy.tr("about.fonts", Copy.lang);
+            font-family: Theme.mono;
+            font-size: 12.5px;
+            color: Theme.chrome-soft;
+            wrap: word-wrap;
+        }
+        // Slint's own credit, as its royalty-free licence asks. The window's colour scheme follows
+        // Fettle's theme, so the badge sits on the panel like everything else. Its own 12 px
+        // padding is pulled back so the logo lines up with the text above.
+        Rectangle {
+            height: about.min-height - 6px;
+            about := AboutSlint {
+                x: -12px;
+                y: -6px;
+                // The badge centres itself: this width leaves it flush with the text's left edge.
+                width: 130px;
+            }
+        }
+    }
+}

@@ -1,0 +1,28 @@
+// What the receipt shows, already in one language (receipt-ui's ReceiptModel, filled from Rust).
+export struct Row { label: string, value: string }
+export struct Group { title: string, rows: [Row] }
+export struct Line {
+    level: string,
+    tag: string,
+    headline: string,
+    detail: string,
+    action: string,
+    // The line's place in the whole receipt, so lines print one after another.
+    order: int,
+}
+export struct Section { id: string, title: string, tab: string, lines: [Line], details: [Group] }
+export struct ReceiptData {
+    tone: string,
+    when: string,
+    summary: string,
+    actions: [string],
+    machine: [Row],
+    sections: [Section],
+    scan: string,
+    footer: string,
+    stamp: string,
+    next-step: string,
+    details-label: string,
+}
+// A section on the blank receipt: what it will look at, and whether its sources have finished.
+export struct BlankSection { title: string, hint: string, done: bool }

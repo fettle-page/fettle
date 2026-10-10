@@ -1,0 +1,20 @@
+{
+  "name": "fettle",
+  "private": true,
+  "license": "MIT",
+  "workspaces": [
+    "packages/*",
+    "apps/*",
+    "worker"
+  ],
+  "scripts": {
+    "test": "npm test --workspaces --if-present",
+    "gen:schema": "node packages/report-schema/scripts/generate.mjs",
+    "gen:brain-types": "node packages/brain/scripts/gen-types.mjs",
+    "dev:share": "npm run dev -w @fettle/worker",
+    "kit": "node spike/kit/build.mjs",
+    "parity:goldens": "node crates/fettle-receipt/parity/generate.mts",
+    "package:windows": "node apps/windows/packaging/build.mjs",
+    "release:check": "node apps/windows/packaging/release.mjs check"
+  }
+}

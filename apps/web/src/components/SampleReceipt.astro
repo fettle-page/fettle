@@ -1,0 +1,15 @@
+---
+// A real receipt, rendered once at build time from the sample report. No JavaScript: the details
+// folds are native <details>.
+import { Receipt } from "@fettle/receipt-ui";
+import type { Locale } from "../i18n/paths.ts";
+import { sampleModel } from "../content/sample.ts";
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+---
+
+<Receipt model={sampleModel(locale)} className="sample-receipt" />

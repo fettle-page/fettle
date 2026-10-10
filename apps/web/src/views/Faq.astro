@@ -1,0 +1,26 @@
+---
+import Doc from "../components/Doc.astro";
+import FaqList from "../components/FaqList.astro";
+import { faqs } from "../content/faq.ts";
+import { pages } from "../i18n/pages.ts";
+import type { Locale } from "../i18n/paths.ts";
+import Base from "../layouts/Base.astro";
+import { faqSchema } from "../content/schema.ts";
+
+interface Props {
+  locale: Locale;
+}
+const { locale } = Astro.props;
+const c = pages(locale).faq;
+---
+
+<Base locale={locale} path="/faq" title={c.title} description={c.description} jsonLd={faqSchema(locale, faqs(locale))}>
+  <Doc kicker={c.kicker} title={c.h1} intro={c.intro}>
+    <FaqList items={faqs(locale)} locale={locale} />
+  </Doc>
+</Base>
+
+<script>
+  import "../scripts/faq-open.ts";
+  import "../scripts/faq-ease.ts";
+</script>

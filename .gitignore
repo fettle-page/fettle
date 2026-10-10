@@ -1,0 +1,7 @@
+target/
+node_modules/
+packages/receipt-ui/demo/dist/
+worker/.wrangler/
+worker/.dev.vars*
+apps/web/dist/
+apps/web/.astro/

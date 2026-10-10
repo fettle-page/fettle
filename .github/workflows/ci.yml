@@ -1,0 +1,28 @@
+# Every push and pull request: all tests, the same ones run locally (npm test and cargo test).
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Nothing here pushes, so the token needn't stay where npm and cargo build scripts can read it.
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      # rust-toolchain.toml picks the toolchain; the website builds its receipts as WebAssembly.
+      - run: rustup target add wasm32-unknown-unknown
+      - run: npm ci
+      - run: npm test
+      # Every test program runs, so one run shows every failure.
+      - run: cargo test --workspace --no-fail-fast

@@ -1,0 +1,16 @@
+/* Fettle brand tokens for Tailwind 4 hosts: `@import "@fettle/receipt-ui/theme.css";`
+   The receipt itself doesn't depend on these; receipt.css carries its own fallbacks. */
+@theme {
+  --color-mat: #1F6A45;
+  --color-mat-deep: #17543A;
+  --color-paper: #FBFAF6;
+  --color-paper-warm: #F3F1EA;
+  --color-ink: #1D1C1A;
+  --color-ink-soft: #5D5A53;
+  --color-soft: #BFE3C8;
+  --color-accent: #D9481E;
+  --color-accent-ink: #B93A12;
+
+  --font-display: "Bricolage Grotesque Variable", "Bricolage Grotesque", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, monospace;
+}

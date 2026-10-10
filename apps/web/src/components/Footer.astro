@@ -1,0 +1,44 @@
+---
+// The footer is the last slip off the roll: torn edge on top, small print in mono.
+import { Wordmark } from "@fettle/receipt-ui";
+import { alternates, localePath, type Locale } from "../i18n/paths.ts";
+import { t } from "../i18n/strings.ts";
+import { links, release } from "../release.ts";
+
+interface Props {
+  locale: Locale;
+  path: string;
+}
+
+const { locale, path } = Astro.props;
+const other: Locale = locale === "en" ? "it" : "en";
+const to = (p: string) => localePath(locale, p);
+const year = new Date().getFullYear();
+const { source } = links(release);
+---
+
+<footer class="foot">
+  <div class="foot-slip">
+    <div class="foot-brand">
+      <Wordmark className="foot-wordmark" />
+      <p>{t(locale, "footer.tagline")}</p>
+    </div>
+    <nav class="foot-links" aria-label={t(locale, "footer.links")}>
+      <a href={to("/faq")}>{t(locale, "nav.faq")}</a>
+      <a href={to("/privacy")}>{t(locale, "nav.privacy")}</a>
+      <a href={to("/changelog")}>{t(locale, "footer.changelog")}</a>
+      <a href={to("/download")}>{t(locale, "nav.download")}</a>
+      <a href={to("/code-signing")}>{t(locale, "footer.signing")}</a>
+      {source && <a href={source}>{t(locale, "footer.source")}</a>}
+      <a href={alternates(path)[other]} hreflang={other} lang={other}>{t(locale, "nav.other_language")}</a>
+    </nav>
+    <fieldset class="foot-theme" data-theme-picker hidden>
+      <legend>{t(locale, "theme.label")}</legend>
+      {(["auto", "light", "dark", "oled"] as const).map((v) => (
+        <label><input class="sr-only" type="radio" name="theme" value={v} /><span class={`swatch swatch-${v}`} aria-hidden="true"></span>{t(locale, `theme.${v}`)}</label>
+      ))}
+    </fieldset>
+    <p class="foot-small">{t(locale, "footer.small")}</p>
+    <p class="foot-small">© {year} Fettle · {t(locale, "footer.made")}</p>
+  </div>
+</footer>

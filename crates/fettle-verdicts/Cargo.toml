@@ -1,0 +1,16 @@
+[package]
+name = "fettle-verdicts"
+version = "0.1.0"
+edition = "2024"
+license = "MIT"
+publish = false
+
+[dependencies]
+fettle-facts = { path = "../fettle-facts" }
+schemars = { version = "1.2.2", optional = true }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.151"
+
+[features]
+# JSON Schema for the website's generated TypeScript types (packages/brain). Off for the app and wasm.
+schema = ["dep:schemars"]

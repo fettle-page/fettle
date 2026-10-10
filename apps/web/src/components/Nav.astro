@@ -1,0 +1,33 @@
+---
+// Label-maker tape navigation, as in the approved cutting-mat concept.
+import { Wordmark } from "@fettle/receipt-ui";
+import { alternates, localePath, type Locale } from "../i18n/paths.ts";
+import { t } from "../i18n/strings.ts";
+import ThemeToggle from "./ThemeToggle.astro";
+
+interface Props {
+  locale: Locale;
+  path: string;
+}
+
+const { locale, path } = Astro.props;
+const other: Locale = locale === "en" ? "it" : "en";
+const to = (p: string) => localePath(locale, p);
+const current = (p: string) => (p === path ? "page" : undefined);
+---
+
+<nav class="nav" aria-label={t(locale, "nav.label")}>
+  <a class="nav-home" href={to("/")} aria-current={current("/")}>
+    <Wordmark className="nav-wordmark" />
+  </a>
+  <ul class="tapes" role="list">
+    <li class="wide-only"><a class="tape" href={`${to("/")}#how`}>{t(locale, "nav.how")}</a></li>
+    <li class="wide-only"><a class="tape" href={to("/privacy")} aria-current={current("/privacy")}>{t(locale, "nav.privacy")}</a></li>
+    <li class="wide-only"><a class="tape" href={to("/faq")} aria-current={current("/faq")}>{t(locale, "nav.faq")}</a></li>
+    <li><ThemeToggle locale={locale} /></li>
+    <li>
+      <a class="tape quiet" href={alternates(path)[other]} hreflang={other} lang={other}>{t(locale, "nav.other_language")}</a>
+    </li>
+    <li><a class="tape light" href={to("/download")} aria-current={current("/download")}>{t(locale, "nav.download")}</a></li>
+  </ul>
+</nav>

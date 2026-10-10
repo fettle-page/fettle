@@ -1,0 +1,6 @@
+# How to report a security problem in Fettle (the Windows app, this website or its share links).
+# Renew Expires before it passes (test/contact.test.ts checks it).
+Contact: mailto:security@fettle.page
+Expires: 2027-10-01T00:00:00.000Z
+Preferred-Languages: en, it
+Canonical: https://fettle.page/.well-known/security.txt

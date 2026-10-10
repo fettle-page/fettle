@@ -1,0 +1,619 @@
+// The Fettle receipt, drawn natively: a thermal till roll about 42 characters wide (receipt.css).
+import { Theme, Copy } from "theme.slint";
+import { Focusable } from "panels.slint";
+import { Row, Group, Line, Section, ReceiptData, BlankSection } from "data.slint";
+
+export global Paper {
+    // 13 px type, 1.6 line height: one size drives everything, as on the web.
+    out property <length> size: 13px;
+    out property <float> lh: 1.23;
+}
+
+component RText inherits Text {
+    font-family: Theme.mono;
+    font-size: Paper.size;
+    color: Theme.ink;
+    wrap: word-wrap;
+    line-height-factor: Paper.lh;
+}
+
+// Dashed rules, dotted leaders and dashed boxes, drawn as marks in the paper's rule colour
+// (Slint has no dashed borders).
+component Marks inherits Rectangle {
+    in property <length> on: 3px;
+    in property <length> period: 6px;
+    in property <color> tint: Theme.rule;
+    height: 1px;
+    for i in Math.floor((root.width - root.on) / root.period) + 1: Rectangle {
+        x: i * root.period;
+        width: root.on;
+        height: 1px;
+        background: root.tint;
+    }
+}
+
+component Dashes inherits Marks { }
+
+component DashesV inherits Rectangle {
+    in property <color> tint: Theme.rule;
+    width: 1px;
+    for i in Math.floor(root.height / 6px): Rectangle {
+        x: 0;
+        y: i * 6px;
+        width: 1px;
+        height: 3px;
+        background: root.tint;
+    }
+}
+
+component DashedBox inherits Rectangle {
+    in property <color> tint: Theme.rule;
+    Marks { x: 0; y: 0; width: parent.width; tint: root.tint; }
+    Marks { x: 0; y: parent.height - 1px; width: parent.width; tint: root.tint; }
+    DashesV { x: 0; y: 0; height: parent.height; tint: root.tint; }
+    DashesV { x: parent.width - 1px; y: 0; height: parent.height; tint: root.tint; }
+}
+
+export component Wordmark inherits Rectangle {
+    in property <color> ink: Theme.ink;
+    width: self.height * 548 / 150;
+    Path {
+        width: parent.width;
+        height: parent.height;
+        viewbox-x: -4;
+        viewbox-y: -142;
+        viewbox-width: 548;
+        viewbox-height: 150;
+        fill: ink;
+        commands: "M50 0L50-71.60L70-71.60L70-98.80L50-98.80L50-101.40C50-106.20 52.40-109.20 57.60-109.20C62.20-109.20 66.60-106.80 70-103.80L79.80-129.60C74.80-132.20 65-136 53.400-136C27.40-136 14.80-120.20 14-98.80L2-98.80L2-71.60L14-71.60L14 0ZM125.40 2C148 2 161-7.60 168.60-17.40L146.80-38.20C143-29.600 135.80-26.80 126-26.80C116-26.80 108.20-30.20 106-39.80L169.40-39.80C170-42.20 170.40-49.60 170.40-54.40C170.40-78.20 155.80-100.80 122-100.80C91.80-100.80 72.60-79.40 72.60-49.40C72.60-19.40 91.40 2 125.40 2ZM122.20-74C133-74 137.60-68.40 138.20-58.40L105.40-58.40C106.20-68.80 112.40-74 122.20-74ZM224 2C240 2 250.60-5.60 254.80-10.40L245-37.40C241.80-32.40 236.60-29.20 232.20-29.20C227.60-29.20 225-31.80 225-37L225-71.60L249-71.60L249-98.80L225-98.80L225-126L189-110L189-98.80L175-98.80L175-71.60L189-71.60L189-31.80C189-12.60 198.40 2 224 2ZM301.80 2C317.80 2 328.40-5.60 332.60-10.40L322.80-37.40C319.60-32.40 314.40-29.20 310-29.20C305.40-29.20 302.80-31.80 302.80-37L302.80-71.60L326.80-71.60L326.80-98.80L302.80-98.80L302.80-126L266.80-110L266.80-98.80L252.80-98.80L252.80-71.60L266.80-71.60L266.80-31.80C266.80-12.60 276.20 2 301.80 2ZM378.60 0L378.60-134L342.60-134L342.60 0ZM443.40 2C466 2 479-7.60 486.60-17.40L464.80-38.20C461-29.60 453.80-26.80 444-26.80C434-26.80 426.20-30.20 424-39.80L487.40-39.80C488-42.20 488.40-49.60 488.40-54.40C488.40-78.20 473.80-100.80 440-100.80C409.80-100.80 390.60-79.40 390.60-49.40C390.60-19.40 409.40 2 443.40 2ZM440.20-74C451-74 455.60-68.40 456.20-58.40L423.40-58.40C424.20-68.80 430.40-74 440.20-74Z";
+    }
+    // The torn stamp-red slip is the full stop.
+    Path {
+        width: parent.width;
+        height: parent.height;
+        viewbox-x: -4;
+        viewbox-y: -142;
+        viewbox-width: 548;
+        viewbox-height: 150;
+        fill: Theme.stamp-red;
+        commands: "M499.8 -40H539.8V2L534.8 -4L529.8 2L524.8 -4L519.8 2L514.8 -4L509.8 2L504.8 -4L499.8 2Z";
+    }
+}
+
+// Paper: faint thermal grain, torn at both ends, two soft shadows. Content goes inside.
+component PaperSheet inherits Rectangle {
+    Rectangle {
+        y: 7px;
+        height: parent.height - 14px;
+        background: Theme.paper;
+        drop-shadow-offset-y: 18px;
+        drop-shadow-blur: 18px;
+        drop-shadow-color: #000000.with-alpha(0.28);
+    }
+    Rectangle {
+        y: 7px;
+        height: parent.height - 14px;
+        background: Theme.paper;
+        drop-shadow-offset-y: 2px;
+        drop-shadow-blur: 2px;
+        drop-shadow-color: #000000.with-alpha(0.18);
+    }
+    Path {
+        y: 0;
+        height: 7px;
+        width: parent.width;
+        viewbox-width: 372;
+        viewbox-height: 7;
+        fill: Theme.paper;
+        commands: "M0 7 L7 0 L14 7 L21 0 L28 7 L35 0 L42 7 L49 0 L56 7 L63 0 L70 7 L77 0 L84 7 L91 0 L98 7 L105 0 L112 7 L119 0 L126 7 L133 0 L140 7 L147 0 L154 7 L161 0 L168 7 L175 0 L182 7 L189 0 L196 7 L203 0 L210 7 L217 0 L224 7 L231 0 L238 7 L245 0 L252 7 L259 0 L266 7 L273 0 L280 7 L287 0 L294 7 L301 0 L308 7 L315 0 L322 7 L329 0 L336 7 L343 0 L350 7 L357 0 L364 7 L372 7 Z";
+    }
+    Path {
+        y: parent.height - 7px;
+        height: 7px;
+        width: parent.width;
+        viewbox-width: 372;
+        viewbox-height: 7;
+        fill: Theme.paper;
+        commands: "M0 0 L7 7 L14 0 L21 7 L28 0 L35 7 L42 0 L49 7 L56 0 L63 7 L70 0 L77 7 L84 0 L91 7 L98 0 L105 7 L112 0 L119 7 L126 0 L133 7 L140 0 L147 7 L154 0 L161 7 L168 0 L175 7 L182 0 L189 7 L196 0 L203 7 L210 0 L217 7 L224 0 L231 7 L238 0 L245 7 L252 0 L259 7 L266 0 L273 7 L280 0 L287 7 L294 0 L301 7 L308 0 L315 7 L322 0 L329 7 L336 0 L343 7 L350 0 L357 7 L364 0 L372 0 Z";
+    }
+    // The grain is drawn once and reused (it's the costliest thing on the paper to draw).
+    Rectangle {
+        y: 7px;
+        width: parent.width;
+        height: parent.height - 14px;
+        cache-rendering-hint: true;
+        Image {
+            width: parent.width;
+            height: parent.height;
+            source: @image-url("img/grain.png");
+            horizontal-tiling: repeat;
+            vertical-tiling: repeat;
+        }
+    }
+}
+
+component Leader inherits Rectangle {
+    min-width: 16px;
+    horizontal-stretch: 1;
+    Marks {
+        y: 11px;
+        width: parent.width;
+        on: 1px;
+        period: 3px;
+    }
+}
+
+component KV inherits HorizontalLayout {
+    in property <Row> item;
+    in property <color> value-ink: Theme.ink;
+    // The room the row has (the paper is a fixed 42 characters): values take up to 78% of it.
+    in property <length> room: 328px;
+    spacing: 8px;
+    // Labels stay whole when they fit; a very long one (a startup shortcut's name) wraps.
+    RText {
+        text: item.label;
+        color: Theme.ink-soft;
+        horizontal-stretch: 0;
+        max-width: room - min(value.preferred-width, room * 0.78) - 24px;
+    }
+    Leader { }
+    value := RText {
+        text: item.value;
+        color: value-ink;
+        horizontal-alignment: right;
+        max-width: room * 0.78;
+        horizontal-stretch: 0;
+    }
+}
+
+component SectionHead inherits HorizontalLayout {
+    in property <string> title;
+    spacing: 8px;
+    padding-bottom: 6px;
+    Text {
+        text: title.to-uppercase();
+        font-family: Theme.mono;
+        font-size: 12px;
+        font-weight: 600;
+        letter-spacing: 1.9px;
+        color: Theme.ink;
+        vertical-alignment: center;
+        horizontal-stretch: 0;
+    }
+    Rectangle {
+        horizontal-stretch: 1;
+        Dashes { y: (parent.height - 1px) / 2; width: parent.width; }
+    }
+}
+
+// Status tags: the word is the signal, colour only reinforces it.
+component Tag inherits Rectangle {
+    in property <string> level;
+    in property <string> text;
+    property <color> fg: level == "act_soon" ? Theme.paper : level == "keep_an_eye" ? Theme.accent-ink : Theme.ink-soft;
+    width: label.preferred-width + 12px;
+    height: 18px;
+    border-radius: 2px;
+    background: level == "act_soon" ? Theme.accent-ink : transparent;
+    border-width: level == "keep_an_eye" ? 1.5px : 0;
+    border-color: Theme.accent-ink;
+    if level == "couldnt_check": DashedBox {
+        width: parent.width;
+        height: parent.height;
+        tint: Theme.ink-soft;
+    }
+    label := Text {
+        text: root.text;
+        font-family: Theme.mono;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.9px;
+        color: fg;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+}
+
+component VerdictLine inherits HorizontalLayout {
+    in property <Line> line;
+    in property <bool> printed: true;
+    spacing: 12px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    opacity: printed ? 1 : 0;
+    // Printing in: lines arrive one by one, finishing within about 0.9 s (receipt.css).
+    animate opacity {
+        duration: printed ? 320ms : 0ms;
+        delay: printed ? min(line.order * 40ms, 560ms) : 0ms;
+        easing: cubic-bezier(0.2, 0.7, 0.3, 1);
+    }
+    VerticalLayout {
+        horizontal-stretch: 1;
+        RText { text: line.headline; }
+        if line.detail != "": RText {
+            text: line.detail;
+            color: Theme.ink-soft;
+        }
+        if line.action != "": HorizontalLayout {
+            padding-top: 2px;
+            RText {
+                text: ">";
+                wrap: no-wrap;
+                width: 2 * Paper.size * 0.6;
+            }
+            RText {
+                text: line.action;
+                horizontal-stretch: 1;
+            }
+        }
+    }
+    VerticalLayout {
+        alignment: start;
+        padding-top: 2px;
+        Tag {
+            level: line.level;
+            text: line.tag;
+        }
+    }
+}
+
+// "▸ details": the numbers behind a section, folded away.
+component Fold inherits VerticalLayout {
+    in property <string> label;
+    in property <string> section;
+    in property <[Group]> groups;
+    in-out property <bool> open;
+    padding-top: 4px;
+    HorizontalLayout {
+        alignment: start;
+        toggle := TouchArea {
+            min-height: 24px;
+            width: fold-label.preferred-width + 18px;
+            clicked => {
+                open = !open;
+            }
+            accessible-role: button;
+            accessible-label: label + ": " + section;
+            accessible-expandable: true;
+            accessible-expanded: open;
+            accessible-action-default => {
+                open = !open;
+            }
+            fold-focus := Focusable {
+                activate => {
+                    open = !open;
+                }
+            }
+            if fold-focus.ring: Rectangle {
+                x: -2px;
+                width: parent.width + 4px;
+                border-radius: 2px;
+                border-width: 2px;
+                border-color: Theme.paper-green;
+            }
+            HorizontalLayout {
+                spacing: 6px;
+                Rectangle {
+                    width: 8px;
+                    Path {
+                        width: 6px;
+                        height: 8px;
+                        x: 1px;
+                        y: (parent.height - 8px) / 2;
+                        viewbox-width: 6;
+                        viewbox-height: 8;
+                        commands: "M0 0 L6 4 L0 8 Z";
+                        fill: Theme.paper-green;
+                        transform-rotation: open ? 90deg : 0deg;
+                        transform-origin: { x: 3px, y: 4px };
+                        animate transform-rotation { duration: 200ms; }
+                    }
+                }
+                fold-label := Text {
+                    text: label;
+                    font-family: Theme.mono;
+                    font-size: 12px;
+                    font-weight: 600;
+                    color: Theme.paper-green;
+                    vertical-alignment: center;
+                }
+            }
+        }
+    }
+    if open: VerticalLayout {
+        for g in groups: HorizontalLayout {
+            padding-top: 6px;
+            padding-bottom: 2px;
+            DashesV { }
+            VerticalLayout {
+                padding-left: 15px;
+                if g.title != "": RText {
+                    text: g.title;
+                    font-weight: 600;
+                }
+                for r in g.rows: KV {
+                    item: r;
+                    room: 312px;
+                }
+            }
+        }
+    }
+}
+
+component Stamp inherits Rectangle {
+    in property <string> word;
+    in property <string> when;
+    in property <color> ink;
+    in property <color> small-ink: ink;
+    width: col.preferred-width + 18px;
+    height: col.preferred-height + 10px;
+    Rectangle {
+        border-width: 3px;
+        border-radius: 6px;
+        border-color: ink;
+        background: Theme.paper.with-alpha(0.55);
+        opacity: 0.9;
+        transform-rotation: -9deg;
+        col := VerticalLayout {
+            alignment: center;
+            spacing: 2px;
+            Text {
+                text: word.to-uppercase();
+                font-family: Theme.display;
+                font-size: 17px;
+                font-weight: 800;
+                letter-spacing: 1.4px;
+                color: ink;
+                horizontal-alignment: center;
+            }
+            Text {
+                text: when;
+                font-family: Theme.mono;
+                font-size: 9px;
+                font-weight: 600;
+                letter-spacing: 1px;
+                color: small-ink;
+                horizontal-alignment: center;
+            }
+        }
+    }
+}
+
+export component Receipt inherits Rectangle {
+    in property <ReceiptData> data;
+    // False hides the lines; true prints them in, one after another.
+    in property <bool> printed: true;
+    // The last receipt, coming back: only the ink fades, the paper stays solid.
+    in property <bool> faded;
+    // Every fold open (screenshots).
+    in property <bool> open-all;
+    accessible-role: groupbox;
+    accessible-label: data.summary;
+    width: 372px;
+    // The paper is as tall as what's printed on it: down to the end marker, laid out at the
+    // paper's width (Slint's preferred height undercounts wrapped lines here).
+    height: end.y + 33px;
+    PaperSheet {
+        width: parent.width;
+        height: parent.height;
+    }
+    content := VerticalLayout {
+        x: 0;
+        y: 0;
+        width: parent.width;
+        // Top-aligned in a tall box, so where the end marker lands doesn't depend on the paper.
+        height: 100000px;
+        alignment: start;
+        padding-top: 25px;
+        padding-left: 22px;
+        padding-right: 22px;
+        padding-bottom: 33px;
+        opacity: faded ? 0.5 : 1;
+        // Masthead: the wordmark and when.
+        HorizontalLayout {
+            alignment: space-between;
+            Wordmark { height: 19px; }
+            Text {
+                text: data.when;
+                font-family: Theme.mono;
+                font-size: 12px;
+                color: Theme.ink-soft;
+                vertical-alignment: bottom;
+            }
+        }
+        VerticalLayout {
+            padding-top: 12px;
+            padding-bottom: 14px;
+            for r in data.machine: KV { item: r; }
+        }
+        Dashes { }
+        // Hairline, then the summary everyone reads.
+        VerticalLayout {
+            padding-top: 14px;
+            Text {
+                text: data.summary;
+                font-family: Theme.display;
+                font-size: 27px;
+                font-weight: 800;
+                letter-spacing: -0.7px;
+                color: Theme.ink;
+                wrap: word-wrap;
+            }
+            if data.actions.length > 0: VerticalLayout {
+                padding-top: 12px;
+                spacing: 8px;
+                for a[i] in data.actions: VerticalLayout {
+                    Text {
+                        text: (data.next-step + " " + (i + 1)).to-uppercase();
+                        font-family: Theme.mono;
+                        font-size: 11px;
+                        font-weight: 600;
+                        letter-spacing: 1.3px;
+                        color: Theme.accent-ink;
+                    }
+                    RText { text: a; }
+                }
+            }
+        }
+        for s in data.sections: VerticalLayout {
+            padding-top: 18px;
+            SectionHead { title: s.title; }
+            for l in s.lines: VerdictLine {
+                line: l;
+                printed: root.printed;
+            }
+            if s.details.length > 0: Fold {
+                label: data.details-label;
+                section: s.title;
+                groups: s.details;
+                open: root.open-all;
+            }
+        }
+        VerticalLayout {
+            padding-top: 14px;
+            padding-bottom: 14px;
+            Dashes { }
+        }
+        // Footer: how it was checked, the versions, the barcode and the one inked stamp.
+        Rectangle {
+            VerticalLayout {
+                spacing: 2px;
+                Text {
+                    text: data.scan;
+                    font-family: Theme.mono;
+                    font-size: 11px;
+                    color: Theme.ink-soft;
+                    horizontal-alignment: center;
+                    wrap: word-wrap;
+                }
+                Text {
+                    text: data.footer;
+                    font-family: Theme.mono;
+                    font-size: 11px;
+                    color: Theme.ink-soft;
+                    horizontal-alignment: center;
+                    wrap: word-wrap;
+                }
+                Rectangle {
+                    height: 54px;
+                    // The barcode: receipt.css's 13 px pattern of bars.
+                    Rectangle {
+                        x: 0;
+                        y: 14px;
+                        width: parent.width * 0.46;
+                        height: 40px;
+                        opacity: 0.82;
+                        for i in Math.floor(self.width / 13px): Rectangle {
+                            x: i * 13px;
+                            Rectangle { x: 0; width: 2px; background: Theme.ink; }
+                            Rectangle { x: 4px; width: 1px; background: Theme.ink; }
+                            Rectangle { x: 8px; width: 3px; background: Theme.ink; }
+                        }
+                    }
+                }
+            }
+            Stamp {
+                x: parent.width - self.width - 4px;
+                y: parent.height - self.height + 4px;
+                word: data.stamp;
+                when: data.when;
+                ink: data.tone == "some" || data.tone == "attention" ? Theme.stamp-red : data.tone == "partial" ? Theme.ink-soft : Theme.paper-green;
+                small-ink: data.tone == "some" || data.tone == "attention" ? Theme.accent-ink : self.ink;
+            }
+        }
+        end := Rectangle { height: 0; }
+    }
+}
+
+// Before and during a check: the real receipt's layout, with empty lines and a box for each answer.
+export component BlankReceipt inherits Rectangle {
+    accessible-role: groupbox;
+    accessible-label: Copy.tr("blank.label", Copy.lang);
+    in property <[Row]> machine;
+    in property <[BlankSection]> sections;
+    width: 372px;
+    // The paper is as tall as what's printed on it: down to the end marker, laid out at the
+    // paper's width (Slint's preferred height undercounts wrapped lines here).
+    height: end.y + 33px;
+    PaperSheet {
+        width: parent.width;
+        height: parent.height;
+    }
+    content := VerticalLayout {
+        x: 0;
+        y: 0;
+        width: parent.width;
+        // Top-aligned in a tall box, so where the end marker lands doesn't depend on the paper.
+        height: 100000px;
+        alignment: start;
+        padding-top: 25px;
+        padding-left: 22px;
+        padding-right: 22px;
+        padding-bottom: 33px;
+        HorizontalLayout {
+            alignment: space-between;
+            Wordmark { height: 19px; }
+            Text {
+                text: "__/__/____ __:__";
+                font-family: Theme.mono;
+                font-size: 12px;
+                letter-spacing: 1px;
+                color: Theme.ink-soft;
+                vertical-alignment: bottom;
+            }
+        }
+        VerticalLayout {
+            padding-top: 12px;
+            padding-bottom: 14px;
+            for r in machine: HorizontalLayout {
+                spacing: 8px;
+                RText {
+                    text: r.label;
+                    color: Theme.ink-soft;
+                    wrap: no-wrap;
+                    horizontal-stretch: 0;
+                }
+                Leader { }
+            }
+        }
+        Dashes { }
+        for s in sections: VerticalLayout {
+            padding-top: 18px;
+            SectionHead { title: s.title; }
+            HorizontalLayout {
+                spacing: 12px;
+                padding-top: 4px;
+                VerticalLayout {
+                    horizontal-stretch: 1;
+                    spacing: 6px;
+                    RText {
+                        text: s.hint;
+                        color: Theme.ink-soft;
+                    }
+                    Marks {
+                        on: 1px;
+                        period: 3px;
+                    }
+                }
+                VerticalLayout {
+                    alignment: start;
+                    Rectangle {
+                        width: 25px;
+                        height: 20px;
+                        if !s.done: DashedBox { }
+                        if s.done: Rectangle {
+                            border-width: 1px;
+                            border-color: Theme.ink-soft;
+                            Rectangle {
+                                width: 40%;
+                                height: 2px;
+                                background: Theme.ink-soft;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        end := Rectangle { height: 0; }
+    }
+}

@@ -1,0 +1,21 @@
+---
+// Text pages: a heading on the mat, then a sheet of paper laid on it.
+interface Props {
+  kicker: string;
+  title: string;
+  intro?: string;
+}
+
+const { kicker, title, intro } = Astro.props;
+---
+
+<div class="doc wrap">
+  <header class="doc-head">
+    <p class="kicker">{kicker}</p>
+    <h1>{title}</h1>
+    {intro && <p class="body">{intro}</p>}
+  </header>
+  <div class="doc-sheet">
+    <slot />
+  </div>
+</div>

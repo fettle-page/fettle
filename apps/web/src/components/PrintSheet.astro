@@ -1,0 +1,52 @@
+---
+// The front sheet of the technicians' stack: the sample receipt as it prints on A4 (one column in the
+// middle of the page). Built from the same model as the receipt above it, but with no ids or controls:
+// it's a picture of a printout, hidden from screen readers and out of the tab order.
+import { Wordmark } from "@fettle/receipt-ui";
+import { sampleModel } from "../content/sample.ts";
+import type { Locale } from "../i18n/paths.ts";
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const model = sampleModel(locale);
+---
+
+<div class="sheet sheet-front print-sheet" aria-hidden="true" inert>
+  <div class="ps-col">
+    <div class="ps-head">
+      <Wordmark className="ps-word" />
+      <span>{model.meta.when}</span>
+    </div>
+    <dl class="ps-kv">
+      {model.machine.map((r) => (
+        <div>
+          <dt>{r.label}</dt>
+          <dd>{r.value}</dd>
+        </div>
+      ))}
+    </dl>
+    <p class="ps-sum">{model.summary}</p>
+    <ol class="ps-steps">
+      {model.actions.map((a, i) => (
+        <li>
+          <span class="ps-step">{model.labels.nextStep} {i + 1}</span> {a}
+        </li>
+      ))}
+    </ol>
+    {model.sections.map((s) => (
+      <div class="ps-sec">
+        <p class="ps-title">{s.title}</p>
+        {s.lines.map((l) => (
+          <p class="ps-line">
+            <span>{l.headline}</span>
+            <span class={`ps-tag ps-tag-${l.level}`}>{l.tag}</span>
+          </p>
+        ))}
+      </div>
+    ))}
+  </div>
+  <span class="sheet-tag">A4</span>
+</div>

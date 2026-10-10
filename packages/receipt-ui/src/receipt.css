@@ -1,0 +1,198 @@
+/* The Fettle receipt: a thermal till roll about 42 characters wide.
+   Self-contained on purpose: it renders the same on any host, with or without Tailwind.
+   Only opacity and transform ever animate. */
+
+.fettle-receipt {
+  --r-paper: var(--color-paper, #FBFAF6);
+  --r-ink: var(--color-ink, #1D1C1A);
+  --r-ink-soft: var(--color-ink-soft, #5D5A53);
+  --r-mat: var(--color-mat, #1F6A45);
+  --r-accent: var(--color-accent, #D9481E);
+  --r-accent-ink: var(--color-accent-ink, #B93A12);
+  --r-rule: color-mix(in srgb, var(--r-paper) 72%, var(--r-ink));
+  --r-display: var(--font-display, "Bricolage Grotesque Variable", "Bricolage Grotesque", system-ui, sans-serif);
+  --r-mono: var(--font-mono, "IBM Plex Mono", ui-monospace, monospace);
+  --r-edge: 7px;
+  /* One size and one width drive everything: hosts set these, every other measure is in em. */
+  --r-size: 13px;
+  --r-cols: 42;
+
+  position: relative;
+  box-sizing: border-box;
+  width: min(calc(var(--r-cols) * 1ch + 3.4em), 100%);
+  font: 400 var(--r-size)/1.6 var(--r-mono);
+  color: var(--r-ink);
+  text-align: left;
+  /* Untrusted reports can carry long unbroken names: wrap them, never overflow the paper. */
+  overflow-wrap: anywhere;
+  filter: drop-shadow(0 18px 18px rgb(0 0 0 / 0.28)) drop-shadow(0 2px 2px rgb(0 0 0 / 0.18));
+}
+.fettle-receipt *,
+.fettle-receipt *::before,
+.fettle-receipt *::after { box-sizing: border-box; }
+
+/* Paper: faint thermal grain, torn at both ends of the roll. Static, so it costs nothing to scroll. */
+.fettle-receipt .paper {
+  position: relative;
+  padding: calc(var(--r-edge) + 1.4em) 1.7em calc(var(--r-edge) + 2em);
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .45 0 0 0 0 .42 0 0 0 0 .36 0 0 0 .07 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+    var(--r-paper);
+  -webkit-mask:
+    conic-gradient(from 135deg at top, #0000, #000 1deg 89deg, #0000 90deg) top / calc(var(--r-edge) * 2) var(--r-edge) repeat-x,
+    linear-gradient(#000 0 0) center / 100% calc(100% - var(--r-edge) * 2) no-repeat,
+    conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / calc(var(--r-edge) * 2) var(--r-edge) repeat-x;
+  mask:
+    conic-gradient(from 135deg at top, #0000, #000 1deg 89deg, #0000 90deg) top / calc(var(--r-edge) * 2) var(--r-edge) repeat-x,
+    linear-gradient(#000 0 0) center / 100% calc(100% - var(--r-edge) * 2) no-repeat,
+    conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) bottom / calc(var(--r-edge) * 2) var(--r-edge) repeat-x;
+}
+
+.fettle-receipt :is(h2, h3, p, ul, ol, dl, dd) { margin: 0; padding: 0; }
+.fettle-receipt :is(ul, ol) { list-style: none; }
+
+.fettle-receipt .sr-only {
+  position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0;
+  overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+
+/* Header */
+.fettle-receipt .masthead { display: flex; align-items: baseline; justify-content: space-between; gap: 2ch; }
+.fettle-receipt .wordmark { display: block; height: 1.45em; width: auto; color: var(--r-ink); }
+.fettle-receipt .when { font-variant-numeric: tabular-nums; color: var(--r-ink-soft); font-size: 0.923em; }
+.fettle-receipt .machine { margin-top: 0.92em; }
+
+.fettle-receipt .rule { border: 0; border-top: 1px dashed var(--r-rule); margin: 1.08em 0; }
+
+/* Key/value rows with dotted leaders, like a till's item lines */
+.fettle-receipt .kv > div { display: flex; align-items: baseline; gap: 1ch; }
+/* A label is never broken ("Sched / a / madre"): its box can't shrink below it, and a long value wraps instead. */
+.fettle-receipt .kv dt { display: flex; flex: 1 1 auto; gap: 1ch; color: var(--r-ink-soft); }
+.fettle-receipt .kv dt > span { white-space: nowrap; }
+.fettle-receipt .kv dt::after { content: ""; flex: 1 1 2ch; min-width: 2ch; border-bottom: 1px dotted var(--r-rule); transform: translateY(-0.35em); }
+.fettle-receipt .kv dd { flex: 0 1 auto; max-width: 78%; text-align: right; overflow-wrap: anywhere; }
+
+/* Summary: the one line everyone reads */
+.fettle-receipt .r-summary h2 {
+  font: 800 2.08em/1.05 var(--r-display);
+  letter-spacing: -0.025em;
+  color: var(--r-ink);
+  text-wrap: balance;
+}
+.fettle-receipt .steps { margin-top: 0.92em; display: grid; gap: 0.6em; }
+.fettle-receipt .steps li { display: grid; gap: 1px; }
+.fettle-receipt .step-label { font-size: 0.846em; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: var(--r-accent-ink); }
+
+/* Sections */
+.fettle-receipt .r-section { margin-top: 1.4em; }
+.fettle-receipt .r-section h3 {
+  display: flex; align-items: center; gap: 1ch;
+  font: 600 0.923em/1 var(--r-mono); letter-spacing: 0.16em; color: var(--r-ink);
+  text-transform: uppercase; /* written in sentence case, so screen readers say words, not letters */
+  margin-bottom: 0.5em;
+}
+.fettle-receipt .r-section h3::after { content: ""; flex: 1; border-top: 1px dashed var(--r-rule); }
+
+/* A verdict line: text left, tag pinned to the right of the first row */
+.fettle-receipt .line {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 1.5ch;
+  padding: 0.3em 0;
+}
+.fettle-receipt .line .head { grid-column: 1; grid-row: 1; overflow-wrap: anywhere; }
+.fettle-receipt .line .tag { grid-column: 2; grid-row: 1; align-self: start; }
+.fettle-receipt .line .sub,
+.fettle-receipt .line .act { grid-column: 1; overflow-wrap: anywhere; }
+.fettle-receipt .line .sub { color: var(--r-ink-soft); }
+.fettle-receipt .line .act { padding-left: 2ch; text-indent: -2ch; margin-top: 2px; }
+
+/* Status tags: the word is the signal, colour only reinforces it */
+.fettle-receipt .tag {
+  display: inline-block;
+  margin-top: 1px;
+  padding: 0.18em 0.45em 0.09em;
+  border: 1px solid transparent;
+  border-radius: 2px;
+  font: 600 0.846em/1.3 var(--r-mono);
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+.fettle-receipt .tag-fine { color: var(--r-ink-soft); }
+.fettle-receipt .tag-info { color: var(--r-ink-soft); }
+.fettle-receipt .tag-keep_an_eye { color: var(--r-accent-ink); border-color: currentColor; border-width: 1.5px; }
+.fettle-receipt .tag-act_soon { color: var(--r-paper); background: var(--r-accent-ink); border-color: var(--r-accent-ink); }
+.fettle-receipt .tag-couldnt_check { color: var(--r-ink-soft); border-style: dashed; border-color: currentColor; }
+
+/* Details fold */
+.fettle-receipt .fold { margin-top: 4px; }
+.fettle-receipt .fold > summary {
+  display: inline-flex; align-items: center; gap: 0.6ch;
+  min-height: max(24px, 1.85em);
+  cursor: pointer;
+  list-style: none;
+  font-size: 0.923em; font-weight: 600; color: var(--r-mat);
+  border-radius: 2px;
+}
+.fettle-receipt .fold > summary::-webkit-details-marker { display: none; }
+.fettle-receipt .fold > summary::before { content: "▸"; display: inline-block; transition: transform 0.2s ease; }
+.fettle-receipt .fold[open] > summary::before { transform: rotate(90deg); }
+.fettle-receipt .fold > summary:focus-visible { outline: 2px solid var(--r-mat); outline-offset: 2px; }
+.fettle-receipt .fold .group { margin: 0.45em 0 0.15em; padding-left: 2ch; border-left: 1px dashed var(--r-rule); }
+.fettle-receipt .fold .group-title { font-weight: 600; overflow-wrap: anywhere; }
+
+/* Footer, barcode and the one inked stamp */
+.fettle-receipt .r-foot { position: relative; text-align: center; font-size: 0.846em; color: var(--r-ink-soft); }
+.fettle-receipt .barcode {
+  height: 3.1em; margin: 1.45em 0 0; width: 46%;
+  background: repeating-linear-gradient(90deg, var(--r-ink) 0 2px, transparent 2px 4px, var(--r-ink) 4px 5px, transparent 5px 8px, var(--r-ink) 8px 11px, transparent 11px 13px);
+  opacity: 0.82;
+}
+/* The stamp sits beside the barcode, never on top of it, so it stays readable. */
+.fettle-receipt .stamp {
+  position: absolute; right: 4px; bottom: -4px;
+  transform: rotate(-9deg);
+  padding: 0.41em 0.65em 0.3em;
+  border: 3px solid currentColor; border-radius: 6px;
+  background: color-mix(in srgb, var(--r-paper) 55%, transparent);
+  color: var(--r-mat);
+  /* The footer is 0.846em, so 17/11: the stamp stays 17px at the 13px default. */
+  font: 900 1.545em/1 var(--r-display); letter-spacing: 0.08em; text-transform: uppercase;
+  mix-blend-mode: multiply;
+  opacity: 0.9;
+}
+.fettle-receipt .stamp small { display: block; margin-top: 0.2em; font: 600 0.53em/1.2 var(--r-mono); letter-spacing: 0.12em; }
+.fettle-receipt:is([data-tone="some"], [data-tone="attention"]) .stamp { color: var(--r-accent); }
+/* The date is small text, so it takes the darker ink (4.5:1); the big word keeps the stamp red. */
+.fettle-receipt:is([data-tone="some"], [data-tone="attention"]) .stamp small { color: var(--r-accent-ink); }
+.fettle-receipt[data-tone="partial"] .stamp { color: var(--r-ink-soft); }
+
+/* Printing in: the lines arrive one by one, like the till feeding paper */
+.fettle-receipt[data-printing] .line {
+  animation: fettle-print-in 0.32s cubic-bezier(0.2, 0.7, 0.3, 1) both;
+  /* However long the receipt, it finishes printing within about 0.9 s. */
+  animation-delay: min(calc(var(--i, 0) * 40ms), 560ms);
+}
+@keyframes fettle-print-in {
+  from { opacity: 0; transform: translateY(-4px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fettle-receipt[data-printing] .line { animation: none; }
+  .fettle-receipt .fold > summary::before { transition: none; }
+}
+
+/* Paper print: every fold open, no shadow or grain, centred on A4 */
+@media print {
+  @page { size: A4; margin: 18mm; }
+  .fettle-receipt { filter: none; margin-inline: auto; }
+  .fettle-receipt .paper { background: #fff; outline: 1px dashed var(--r-rule); outline-offset: -1px; }
+  .fettle-receipt .fold > summary { display: none; }
+  .fettle-receipt .fold::details-content { content-visibility: visible; display: block; }
+  .fettle-receipt[data-printing] .line { animation: none; }
+  /* Keep headings with their lines, and never split a line, a row or the footer across pages. */
+  .fettle-receipt .r-section h3,
+  .fettle-receipt .fold .group-title { break-after: avoid; }
+  .fettle-receipt :is(.line, .kv > div, .r-summary h2, .r-foot) { break-inside: avoid; }
+  .fettle-receipt :is(.tag, .stamp, .barcode) { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}

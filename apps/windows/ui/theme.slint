@@ -1,0 +1,46 @@
+// Fettle's colours and type, from the app's CSS (themes.css, app.css). Dark is the green mat,
+// Light the pale mat, OLED true black. The receipt stays paper in every theme.
+export global Theme {
+    // "system", "light", "dark" or "oled".
+    in-out property <string> choice: "system";
+    // Windows' light or dark setting, for "system": read by the app (the window's own colour scheme
+    // follows Fettle's theme instead, so its widgets and Slint's badge match).
+    in property <bool> system-dark;
+    out property <bool> dark: choice == "dark" || choice == "oled" || (choice == "system" && system-dark);
+    out property <bool> oled: choice == "oled";
+
+    // The chrome: side panel and status bar (the title bar is Windows' own, tinted to match).
+    out property <color> chrome: oled ? #000000 : dark ? #202422 : #EEF1EF;
+    out property <color> chrome-ink: dark ? #EDEBE4 : #1D1C1A;
+    out property <color> chrome-soft: dark ? #EDEBE4.with-alpha(0.72) : #4E5852;
+    out property <color> chrome-line: oled ? #FFFFFF.with-alpha(0.12) : dark ? #FFFFFF.with-alpha(0.09) : #000000.with-alpha(0.08);
+    out property <color> chrome-card: dark ? #FFFFFF.with-alpha(0.06) : #FFFFFF.with-alpha(0.62);
+    out property <color> chrome-hover: dark ? #FFFFFF.with-alpha(0.08) : #000000.with-alpha(0.05);
+    out property <color> btn: dark ? #2F8A5B : #1F6A45;
+    out property <color> btn-edge: dark ? #1F6A45 : #134A30;
+    out property <color> accent: dark ? #BFE3C8 : #1F6A45;
+
+    // The cutting mat.
+    out property <color> mat: oled ? #000000 : dark ? #1F6A45 : #E8EDE7;
+    out property <color> mat-deep: oled ? #000000 : dark ? #17543A : #DAE2D9;
+    out property <color> mat-line: oled ? #BFE3C8.with-alpha(0.17) : dark ? #E8F4EC.with-alpha(0.26) : #1F6A45.with-alpha(0.26);
+
+    // The paper: dimmed a little in Dark, more in OLED.
+    out property <color> paper: oled ? #CFCCC3 : dark ? #EDEBE4 : #FBFAF6;
+    out property <color> ink: oled ? #111111 : #1D1C1A;
+    out property <color> ink-soft: oled ? #45433E : #5D5A53;
+    out property <color> rule: paper.mix(ink, 0.72);
+    out property <color> stamp-red: #D9481E;
+    out property <color> accent-ink: oled ? #9A2F0E : #B93A12;
+    out property <color> paper-green: oled ? #17543A : #1F6A45;
+
+    out property <string> display: "Fettle Display";
+    out property <string> text: "Fettle Text";
+    out property <string> mono: "Fettle Mono";
+}
+
+// The app's strings, filled from Rust for the chosen language (copy.json, from the TypeScript copy).
+export global Copy {
+    in property <string> lang: "en";
+    pure callback tr(key: string, lang: string) -> string;
+}

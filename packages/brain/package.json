@@ -1,0 +1,31 @@
+{
+  "name": "@fettle/brain",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "description": "The Rust receipt (crates/fettle-wasm) for the website build and the share Worker; copy lookups for both.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./node": "./src/node.ts",
+    "./worker": "./src/worker.ts",
+    "./package.json": "./package.json",
+    "./core": "./src/core.ts",
+    "./fettle.wasm": "./dist/fettle.wasm"
+  },
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "npm run build && vitest run && tsc -p ."
+  },
+  "dependencies": {
+    "@fettle/report-schema": "*",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "typescript": "^7.0.2",
+    "vitest": "^5.0.3",
+    "json-schema-to-zod": "^2.8.1"
+  }
+}

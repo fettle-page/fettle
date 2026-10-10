@@ -1,0 +1,107 @@
+---
+import AnnotatedSample from "../components/AnnotatedSample.astro";
+import DownloadSlip from "../components/DownloadSlip.astro";
+import Legend from "../components/Legend.astro";
+import MoreSlip from "../components/MoreSlip.astro";
+import PrintSheet from "../components/PrintSheet.astro";
+import LiveReceipt from "../components/LiveReceipt.astro";
+import PrivacySlip from "../components/PrivacySlip.astro";
+import QuestionsSlip from "../components/QuestionsSlip.astro";
+import Seal from "../components/Seal.astro";
+import { home } from "../i18n/home.ts";
+import { localePath, type Locale } from "../i18n/paths.ts";
+import Base from "../layouts/Base.astro";
+import { homeSchema } from "../content/schema.ts";
+import { links, release } from "../release.ts";
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const h = home(locale);
+const { source } = links(release);
+const to = (p: string) => localePath(locale, p);
+---
+
+<Base locale={locale} path="/" title={h.title} description={h.description} jsonLd={homeSchema(locale, `https://fettle.page${to("/")}`, h.description)}>
+  <section class="hero wrap" aria-labelledby="hero-title">
+    <div class="hero-copy">
+      <h1 id="hero-title">{h.h1a} <em>{h.h1b}</em></h1>
+      <p class="lede">{h.lede}</p>
+      <div class="ctas">
+        <a class="btn btn-primary" href={to("/download")}>{h.ctaDownload}</a>
+        <a class="btn btn-ghost" href="#sample">{h.ctaSample}</a>
+      </div>
+      <p class="fine">{h.fine}</p>
+    </div>
+    <LiveReceipt locale={locale} />
+  </section>
+
+  <section id="how" class="how wrap" aria-labelledby="how-title">
+    <div class="how-head">
+      <div class="section-head">
+        <p class="kicker">{h.sampleKicker}</p>
+        <h2 id="how-title">{h.sampleH}</h2>
+        <p class="body">{h.sampleP}</p>
+        <p class="body">{h.howP}</p>
+      </div>
+      <Legend locale={locale} />
+    </div>
+    <AnnotatedSample locale={locale} />
+  </section>
+
+  <section class="tech wrap" aria-labelledby="tech-title">
+    <div class="tech-copy">
+      <p class="kicker">{h.techKicker}</p>
+      <h2 id="tech-title">{h.techH}</h2>
+      <p class="body">{h.techP}</p>
+      <ul class="checks" role="list">
+        <li>{h.tech1}</li>
+        <li>{h.tech2}</li>
+        <li>{h.tech3}</li>
+        <li>{h.tech4}</li>
+      </ul>
+      <p class="soon"><span class="tape light">v1.1</span> {h.techSoon}</p>
+    </div>
+    <div class="tech-stack" aria-hidden="true">
+      <div class="sheet sheet-back"></div>
+      <div class="sheet sheet-mid"></div>
+      <PrintSheet locale={locale} />
+    </div>
+  </section>
+
+  <section class="privacy wrap" aria-labelledby="privacy-title">
+    <PrivacySlip locale={locale} />
+    <div class="privacy-copy">
+      <p class="kicker">{h.privKicker}</p>
+      <h2 id="privacy-title">{h.privH}</h2>
+      <p class="body">{h.privP1}</p>
+      <p class="body">{h.privP2}</p>
+      <a class="text-link" href={to("/privacy")}>{h.privLink} →</a>
+    </div>
+  </section>
+
+  <section class="free wrap" aria-labelledby="free-title">
+    <Seal locale={locale} />
+    <div>
+      <h2 id="free-title">{h.sealH}</h2>
+      <p class="body">{h.sealP}</p>
+      {source && <p class="body"><a href={source}>{h.sealSource}</a></p>}
+    </div>
+  </section>
+
+  <section class="faq-teaser wrap" aria-labelledby="faq-title">
+    <div class="section-head">
+      <p class="kicker">{h.faqKicker}</p>
+      <h2 id="faq-title">{h.faqH}</h2>
+    </div>
+    <div class="ending">
+      <QuestionsSlip locale={locale} />
+      <div class="ending-side">
+        <DownloadSlip locale={locale} />
+        <MoreSlip locale={locale} />
+      </div>
+    </div>
+  </section>
+</Base>

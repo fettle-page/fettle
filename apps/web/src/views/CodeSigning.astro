@@ -1,0 +1,34 @@
+---
+// The code signing policy SignPath Foundation asks for (https://signpath.org/terms): how releases
+// are built, who does what, privacy, and SignPath's attribution once it signs (release.signed).
+import Doc from "../components/Doc.astro";
+import { pages } from "../i18n/pages.ts";
+import { localePath, type Locale } from "../i18n/paths.ts";
+import Base from "../layouts/Base.astro";
+import { release } from "../release.ts";
+
+interface Props {
+  locale: Locale;
+}
+const { locale } = Astro.props;
+const c = pages(locale).codeSigning;
+const sections = [release.signed ? c.signed : c.unsigned, ...c.sections];
+---
+
+<Base locale={locale} path="/code-signing" title={c.title} description={c.description}>
+  <Doc kicker={c.kicker} title={c.h1} intro={c.intro}>
+    <article class="prose">
+      {
+        sections.map((s) => (
+          <section>
+            <h2>{s.h}</h2>
+            {s.p.map((p) => (
+              <p>{p}</p>
+            ))}
+          </section>
+        ))
+      }
+      <p><a href={localePath(locale, "/privacy")}>{c.privacyLink}</a></p>
+    </article>
+  </Doc>
+</Base>

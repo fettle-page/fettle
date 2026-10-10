@@ -1,0 +1,63 @@
+---
+// The sample receipt with notes on the mat: on the left, what Fettle reads for each section; on the
+// right, the three principles, each pointing at the line that proves it.
+// The notes sit outside the receipt's masked paper. Where the browser has CSS anchor positioning they
+// line up with their section; elsewhere they stack beside or above it. No JavaScript.
+import { text } from "@fettle/brain";
+import { sampleModel } from "../content/sample.ts";
+import type { Locale } from "../i18n/paths.ts";
+import { home, type HomeKey } from "../i18n/home.ts";
+import SampleReceipt from "./SampleReceipt.astro";
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const h = home(locale);
+const model = sampleModel(locale);
+
+const READS: Record<string, HomeKey> = {
+  storage: "trayStorage",
+  battery: "trayBattery",
+  memory: "trayMemory",
+  windows: "trayWindows",
+  startup: "trayStartup",
+  graphics: "trayGraphics",
+};
+const notes = model.sections.filter((s) => READS[s.id]).map((s) => ({ id: s.id, title: s.title, text: h[READS[s.id]!] }));
+
+const callouts = [
+  { id: "plain", head: h.callPlainH, body: h.callPlainP },
+  { id: "unchecked", head: h.callUncheckedH, body: h.callUncheckedP },
+  { id: "numbers", head: h.callNumbersH, body: h.callNumbersP },
+];
+---
+
+<div class="annotated">
+  <aside class="notes" aria-label={h.notesLabel}>
+    <p class="margin-note note-machine" data-note-for="machine">
+      <span class="note-label"><span class="sr-only">{text("section.system", locale)}: </span>{h.noteLabel}</span>{h.traySystem}
+    </p>
+    {notes.map((n) => (
+      <p class="margin-note" data-note-for={n.id}>
+        <span class="note-label"><span class="sr-only">{n.title}: </span>{h.noteLabel}</span>{n.text}
+      </p>
+    ))}
+  </aside>
+  <div id="sample" class="annotated-receipt">
+    <SampleReceipt locale={locale} />
+  </div>
+  <ul class="callouts" role="list">
+    {callouts.map((c) => (
+      <li class="callout" data-callout={c.id}>
+        <span class="tape light">{c.head}</span>
+        <span class="callout-body">{c.body}</span>
+      </li>
+    ))}
+  </ul>
+</div>
+
+<script>
+  import "../scripts/annotate.ts";
+</script>

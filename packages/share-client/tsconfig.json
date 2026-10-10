@@ -1,0 +1,5 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": { "allowImportingTsExtensions": true, "lib": ["es2024", "dom"], "types": ["node"] },
+  "include": ["src", "test"]
+}

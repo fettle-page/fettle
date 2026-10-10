@@ -1,0 +1,182 @@
+{
+  "battery": {
+    "check": {
+      "status": "ok"
+    },
+    "data": {
+      "cycle_count": 142,
+      "design_capacity_mwh": 35300,
+      "full_charge_capacity_mwh": 30540
+    }
+  },
+  "graphics": {
+    "check": {
+      "status": "ok"
+    },
+    "data": {
+      "adapters": [
+        {
+          "driver_date": "2022-08-16",
+          "driver_version": "31.0.12024.0",
+          "name": "AMD Radeon Graphics",
+          "software": false,
+          "vram_bytes": 521334784
+        },
+        {
+          "driver_date": null,
+          "name": "Microsoft Basic Render Driver",
+          "software": true,
+          "vram_bytes": 0
+        }
+      ]
+    }
+  },
+  "memory": {
+    "check": {
+      "status": "ok"
+    },
+    "data": {
+      "modules": [
+        {
+          "bank_label": "P0 CHANNEL B",
+          "capacity_bytes": 4294967296,
+          "configured_speed_mts": 2400,
+          "configured_voltage_mv": 1200,
+          "device_locator": "DIMM 0",
+          "kind": "ddr4",
+          "manufacturer": "Micron Technology",
+          "part_number": "4ATF51264HZ-2G6E!",
+          "speed_mts": 2400
+        }
+      ],
+      "slots_total": 2
+    }
+  },
+  "startup": {
+    "check": {
+      "status": "ok"
+    },
+    "data": {
+      "items": [
+        {
+          "enabled": false,
+          "location": "run_key",
+          "name": "Teams"
+        },
+        {
+          "enabled": true,
+          "location": "run_key",
+          "name": "RemoteWebControl"
+        },
+        {
+          "location": "run_key",
+          "name": "GoogleDriveFS"
+        },
+        {
+          "location": "run_key",
+          "name": "MicrosoftEdgeAutoLaunch_5EFC0ECB77A7585FE9DCDD0B2E946A2B"
+        },
+        {
+          "location": "run_key",
+          "name": "RiotClient"
+        },
+        {
+          "enabled": true,
+          "location": "run_key",
+          "name": "SecurityHealth"
+        },
+        {
+          "enabled": true,
+          "location": "run_key",
+          "name": "RtkAudUService"
+        },
+        {
+          "enabled": false,
+          "location": "run_key",
+          "name": "Reflect UI"
+        },
+        {
+          "location": "run_key",
+          "name": "Autodesk Access Service"
+        },
+        {
+          "location": "run_key",
+          "name": "Autodesk Access"
+        },
+        {
+          "enabled": false,
+          "location": "run_key",
+          "name": "LocalServiceControl"
+        },
+        {
+          "enabled": true,
+          "location": "run_key",
+          "name": "WebPluginService"
+        },
+        {
+          "location": "run_key",
+          "name": "Autodesk Genuine Service "
+        },
+        {
+          "enabled": false,
+          "location": "folder",
+          "name": "AnyDesk.lnk"
+        }
+      ]
+    }
+  },
+  "storage": {
+    "check": {
+      "status": "ok"
+    },
+    "data": {
+      "disks": [
+        {
+          "bus": "nvme",
+          "media": "ssd",
+          "model": "WDC PC SN520 SDAPMUW-256G-1101",
+          "nvme": {
+            "media_errors": 0,
+            "percentage_used": 1,
+            "power_on_hours": 366,
+            "temperature_c": 36
+          },
+          "size_bytes": 256060514304
+        },
+        {
+          "bus": "usb",
+          "media": "unknown",
+          "model": "Kingston DataTraveler 3.0",
+          "size_bytes": 124117843968
+        }
+      ],
+      "volumes": [
+        {
+          "free_bytes": 45042167808,
+          "letter": "C:",
+          "size_bytes": 254721126400
+        }
+      ]
+    }
+  },
+  "windows": {
+    "check": {
+      "status": "ok"
+    },
+    "data": {
+      "build": 19045,
+      "display_version": "22H2",
+      "edition_id": "ProfessionalEducation",
+      "installation_type": "Client",
+      "last_update_installed": "2026-09-25",
+      "product": "Windows 10 Pro Education",
+      "secure_boot": false,
+      "tpm": {
+        "present": true,
+        "spec_version": "2.0, 0, 1.38"
+      },
+      "ubr": 6466,
+      "uptime_seconds": 15171
+    }
+  }
+}

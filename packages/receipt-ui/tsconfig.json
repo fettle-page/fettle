@@ -1,0 +1,5 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": { "jsx": "react-jsx", "allowImportingTsExtensions": true, "resolveJsonModule": true, "allowJs": true, "types": ["node", "vite/client"] },
+  "include": ["src", "test", "demo"]
+}

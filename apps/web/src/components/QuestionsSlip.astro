@@ -1,0 +1,25 @@
+---
+// The page's last questions, printed open on a paper slip: the three the page hasn't already answered.
+import { PRINTED_QUESTIONS, faqs } from "../content/faq.ts";
+import type { Locale } from "../i18n/paths.ts";
+import { home } from "../i18n/home.ts";
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const h = home(locale);
+const all = faqs(locale);
+const items = PRINTED_QUESTIONS.map((id) => all.find((f) => f.id === id)!);
+---
+
+<figure class="slip questions-slip">
+  <figcaption class="slip-head">{h.askHead}</figcaption>
+  {items.map((f) => (
+    <div class="qa">
+      <h3>{f.q}</h3>
+      {f.a.map((p) => <p>{p}</p>)}
+    </div>
+  ))}
+</figure>

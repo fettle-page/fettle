@@ -1,0 +1,31 @@
+---
+// A tape button that cycles Auto → Light → Dark → OLED. Hidden until the script runs: without
+// JavaScript the page simply follows the device.
+import type { Locale } from "../i18n/paths.ts";
+import { t } from "../i18n/strings.ts";
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+---
+
+<button
+  class="tape theme-toggle"
+  type="button"
+  data-theme-toggle
+  data-label={t(locale, "theme.label")}
+  data-auto={t(locale, "theme.auto")}
+  data-light={t(locale, "theme.light")}
+  data-dark={t(locale, "theme.dark")}
+  data-oled={t(locale, "theme.oled")}
+  hidden
+>
+  <svg class="theme-icon" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+    <circle cx="8" cy="8" r="6.25" fill="none" stroke="currentColor" stroke-width="1.5"></circle>
+    <path d="M8 1.75a6.25 6.25 0 0 1 0 12.5z" fill="currentColor"></path>
+  </svg>
+  <span data-theme-name>{t(locale, "theme.auto")}</span>
+</button>
+<span class="sr-only" aria-live="polite" data-theme-status></span>

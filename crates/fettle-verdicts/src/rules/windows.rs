@@ -1,0 +1,100 @@
+use super::common::{Action, couldnt_check, line, section_problem};
+use crate::lifecycle::{Esu, last_day, support_end};
+use crate::thresholds::UPTIME_NUDGE_DAYS;
+use crate::{Level, Line, MessageRef, Param, SectionId, SectionVerdict, fmt};
+use fettle_facts::{EsuState, Section, Windows};
+
+/// `cpu_name` is the processor as Windows names it (from the system facts), for Windows 11 readiness.
+pub fn windows_rules(s: Option<&Section<Windows>>, now_ms: i64, elevated: bool, cpu_name: Option<&str>) -> SectionVerdict {
+    let problem = section_problem(SectionId::Windows, s.map(|s| &s.check));
+    let w = s.and_then(|s| s.data.as_ref()).filter(|_| problem.is_none());
+    let Some((w, build)) = w.and_then(|w| w.build.map(|b| (w, b))) else {
+        return SectionVerdict { section: SectionId::Windows, lines: couldnt_check(SectionId::Windows, problem) };
+    };
+
+    let mut lines = vec![support_line(w, build, now_ms)];
+
+    let days = w.uptime_seconds.unwrap_or(0) / 86400;
+    if days >= UPTIME_NUDGE_DAYS {
+        lines.push(line("windows-uptime", Level::Info, "windows.restart_nudge", &[("days", Param::Int(days as i64))], Action::Default));
+    }
+
+    if build < 22000 {
+        lines.extend(readiness_lines(w, elevated, cpu_name));
+    } else if w.secure_boot == Some(false) {
+        // Windows 11 runs with Secure Boot off; say why turning it on helps, without calling it a fault.
+        lines.push(line("windows-secure-boot", Level::Info, "windows.secure_boot_off_w11", &[], Action::Default));
+    }
+    SectionVerdict { section: SectionId::Windows, lines }
+}
+
+fn support_line(w: &Windows, build: u32, now: i64) -> Line {
+    let product: Param = w.product.clone().unwrap_or_else(|| "Windows".into()).into();
+    let product = || ("product", product.clone());
+    // Never guess "act soon" for a version we don't know.
+    let Some(info) = support_end(build, w.display_version.as_deref(), w.edition_id.as_deref()) else {
+        return line("windows-support", Level::Info, "windows.unknown_version", &[product()], Action::Default);
+    };
+
+    if now <= info.end {
+        return line("windows-support", Level::Fine, "windows.supported", &[product(), ("until", last_day(info.end).into())], Action::Default);
+    }
+    // Out of support, and ESU can't help: not 22H2, LTSC, or ESU itself has ended.
+    let esu_over = info.esu_end.is_some_and(|end| now > end);
+    if info.esu == Esu::None || esu_over {
+        // An old Windows 11 release just needs the latest (free) feature update.
+        let key = if build >= 22000 { "windows.unsupported_feature_update" } else { "windows.unsupported" };
+        return line("windows-support", Level::ActSoon, key, &[product()], Action::Default);
+    }
+
+    match esu_state(w, &last_day(info.end)) {
+        Some(EsuState::Enrolled) => match info.esu_end.filter(|_| info.show_esu_end) {
+            Some(end) => line("windows-support", Level::Fine, "windows.esu_enrolled_until", &[product(), ("until", last_day(end).into())], Action::Default),
+            None => line("windows-support", Level::Fine, "windows.esu_enrolled", &[product()], Action::Default),
+        },
+        Some(EsuState::NotEnrolled) => line("windows-support", Level::ActSoon, "windows.unsupported_esu", &[product()], Action::Default),
+        _ => line("windows-support", Level::KeepAnEye, "windows.esu_unknown", &[product()], Action::Default),
+    }
+}
+
+/// Whether ESU is delivering updates. An explicit answer wins; otherwise an update installed after
+/// the last day of support shows enrollment, because only ESU updates arrive after it. (A Windows 10
+/// laptop reported no ESU licence while installing monthly security updates.) An older update
+/// proves nothing either way.
+fn esu_state(w: &Windows, last_supported_day: &str) -> Option<EsuState> {
+    if matches!(w.esu, Some(EsuState::Enrolled | EsuState::NotEnrolled)) {
+        return w.esu;
+    }
+    match w.last_update_installed.as_deref() {
+        Some(day) if fmt::iso_day(day).is_some() && day > last_supported_day => Some(EsuState::Enrolled),
+        _ => w.esu,
+    }
+}
+
+/// Windows 11 readiness, shown only on Windows 10. Informational: these aren't faults.
+fn readiness_lines(w: &Windows, elevated: bool, cpu_name: Option<&str>) -> Vec<Line> {
+    let key = match super::cpu::win11_cpu(cpu_name) {
+        super::cpu::Win11Cpu::Supported => "windows.cpu_ready",
+        super::cpu::Win11Cpu::Unsupported => "windows.cpu_unsupported",
+        super::cpu::Win11Cpu::Unknown => "windows.cpu_unknown",
+    };
+    let mut lines = vec![line("windows-cpu", Level::Info, key, &[], Action::Default)];
+    match &w.tpm {
+        None => {
+            let mut l = line("windows-tpm", if elevated { Level::Info } else { Level::CouldntCheck }, "windows.tpm_unknown", &[], Action::Default);
+            if !elevated {
+                l.action = Some(MessageRef::key("check.needs_admin.action"));
+            }
+            lines.push(l);
+        }
+        Some(tpm) if tpm.present == Some(false) => lines.push(line("windows-tpm", Level::Info, "windows.no_tpm", &[], Action::Default)),
+        Some(tpm) => {
+            let v2 = tpm.spec_version.as_deref().unwrap_or("").trim().starts_with("2.0");
+            lines.push(line("windows-tpm", Level::Info, if v2 { "windows.tpm_ready" } else { "windows.tpm_old" }, &[], Action::Default));
+        }
+    }
+    if let Some(on) = w.secure_boot {
+        lines.push(line("windows-secure-boot", Level::Info, if on { "windows.secure_boot_on" } else { "windows.secure_boot_off" }, &[], Action::Default));
+    }
+    lines
+}

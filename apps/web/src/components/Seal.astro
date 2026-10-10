@@ -1,0 +1,23 @@
+---
+// An inked round stamp: the words run around the ring, MIT in the middle.
+import type { Locale } from "../i18n/paths.ts";
+import { home } from "../i18n/home.ts";
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const ring = home(locale).sealRing.repeat(2);
+const id = `seal-ring-${locale}`;
+---
+
+<svg class="seal" viewBox="0 0 220 220" aria-hidden="true" focusable="false">
+  <defs>
+    <path id={id} d="M110,110 m-84,0 a84,84 0 1,1 168,0 a84,84 0 1,1 -168,0"></path>
+  </defs>
+  <circle cx="110" cy="110" r="104" fill="none" stroke="currentColor" stroke-width="4"></circle>
+  <circle cx="110" cy="110" r="66" fill="none" stroke="currentColor" stroke-width="2"></circle>
+  <text class="seal-ring"><textPath href={`#${id}`} textLength="520">{ring}</textPath></text>
+  <text class="seal-mid" x="110" y="122" text-anchor="middle">MIT</text>
+</svg>

@@ -1,0 +1,28 @@
+---
+// The share shell the Worker fills in for /r/<id>: it fetches this page from the assets binding,
+// puts the report in #fettle-share and adds Open Graph tags. Contract: worker/src/share.ts.
+// Fonts are imported inside share.css: one stylesheet request.
+import "../share/share.css";
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <meta name="theme-color" content="#E8EDE7" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#1F6A45" media="(prefers-color-scheme: dark)" />
+    <script src="/theme.js" is:inline></script>
+    <title>Fettle</title>
+    <link rel="preload" href="/fonts/fettle-mono-400.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script id="fettle-share" type="application/json" is:inline></script>
+    <script>
+      import "../share/main.tsx";
+    </script>
+  </body>
+</html>

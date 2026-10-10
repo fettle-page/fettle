@@ -1,0 +1,41 @@
+/* Bricolage Grotesque, trimmed to three static faces by scripts/fonts/build.py (OFL; licence in
+   public/fonts). Headlines get their own face so the page waits for one 20 KB file, not 77 KB. */
+@font-face {
+  font-family: "Bricolage Display";
+  src: url("/fonts/bricolage-display-800.woff2") format("woff2");
+  font-weight: 700 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Bricolage Text";
+  src: url("/fonts/bricolage-text-500.woff2") format("woff2");
+  font-weight: 300 600;
+  font-display: swap;
+}
+/* IBM Plex Mono (OFL), trimmed to two weights and renamed "Fettle Mono" (IBM reserves "Plex" for
+   modified versions). Browsers use 400 where 500 is asked for, and 600 for 700. */
+@font-face {
+  font-family: "Fettle Mono";
+  src: url("/fonts/fettle-mono-400.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Fettle Mono";
+  src: url("/fonts/fettle-mono-600.woff2") format("woff2");
+  font-weight: 600;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Bricolage Text";
+  src: url("/fonts/bricolage-text-800.woff2") format("woff2");
+  font-weight: 700 900;
+  font-display: swap;
+}
+
+:root {
+  /* Overrides receipt-ui's theme, so receipts use the trimmed faces too. */
+  --font-display: "Bricolage Text", system-ui, sans-serif;
+  --font-headline: "Bricolage Display", "Bricolage Text", system-ui, sans-serif;
+  --font-mono: "Fettle Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+}

@@ -1,0 +1,40 @@
+---
+import Doc from "../components/Doc.astro";
+import { pages } from "../i18n/pages.ts";
+import type { Locale } from "../i18n/paths.ts";
+import Base from "../layouts/Base.astro";
+import { links, release } from "../release.ts";
+
+interface Props {
+  locale: Locale;
+}
+const { locale } = Astro.props;
+const c = pages(locale).privacy;
+const { contact, email } = links(release);
+---
+
+<Base locale={locale} path="/privacy" title={c.title} description={c.description}>
+  <Doc kicker={c.kicker} title={c.h1} intro={c.intro}>
+    <article class="prose">
+      {
+        c.sections.map((s) => (
+          <section>
+            <h2>{s.h}</h2>
+            {s.p.map((p) => (
+              <p>{p}</p>
+            ))}
+            {s.contact &&
+              (contact ? (
+                <p>
+                  {c.contactLine} <a href={contact}>{email}</a>.
+                </p>
+              ) : (
+                <p>{c.noContact}</p>
+              ))}
+          </section>
+        ))
+      }
+      <p class="updated">{c.updated}</p>
+    </article>
+  </Doc>
+</Base>

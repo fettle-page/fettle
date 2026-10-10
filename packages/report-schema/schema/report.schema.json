@@ -1,0 +1,1026 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Report",
+  "type": "object",
+  "properties": {
+    "app_version": {
+      "type": "string"
+    },
+    "collected_at": {
+      "description": "RFC 3339 timestamp.",
+      "type": "string",
+      "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2})$"
+    },
+    "elevated": {
+      "type": "boolean"
+    },
+    "engine_version": {
+      "description": "Version of the verdict engine the app used, so a shared report can show the same verdicts.",
+      "type": [
+        "string",
+        "null"
+      ],
+      "default": null
+    },
+    "facts": {
+      "type": "object",
+      "properties": {
+        "battery": {
+          "description": "One report section: whether it could be read, and what was found.",
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "check": {
+              "type": "object",
+              "properties": {
+                "detail": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "default": null
+                },
+                "status": {
+                  "description": "\"Not present\" (a desktop has no battery) and \"needs admin\" must stay different.",
+                  "type": "string",
+                  "enum": [
+                    "ok",
+                    "needs_admin",
+                    "not_present",
+                    "failed"
+                  ]
+                }
+              },
+              "required": [
+                "status"
+              ]
+            },
+            "data": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "properties": {
+                "cycle_count": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "uint32",
+                  "default": null,
+                  "minimum": 0
+                },
+                "design_capacity_mwh": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "uint32",
+                  "default": null,
+                  "minimum": 0
+                },
+                "full_charge_capacity_mwh": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "uint32",
+                  "default": null,
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          "default": null,
+          "required": [
+            "check"
+          ]
+        },
+        "graphics": {
+          "description": "One report section: whether it could be read, and what was found.",
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "check": {
+              "type": "object",
+              "properties": {
+                "detail": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "default": null
+                },
+                "status": {
+                  "description": "\"Not present\" (a desktop has no battery) and \"needs admin\" must stay different.",
+                  "type": "string",
+                  "enum": [
+                    "ok",
+                    "needs_admin",
+                    "not_present",
+                    "failed"
+                  ]
+                }
+              },
+              "required": [
+                "status"
+              ]
+            },
+            "data": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "properties": {
+                "adapters": {
+                  "type": "array",
+                  "default": [],
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "driver_date": {
+                        "description": "YYYY-MM-DD.",
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "default": null,
+                        "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$"
+                      },
+                      "driver_version": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "default": null
+                      },
+                      "name": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "default": null
+                      },
+                      "software": {
+                        "type": [
+                          "boolean",
+                          "null"
+                        ],
+                        "default": null
+                      },
+                      "temperature_c": {
+                        "type": [
+                          "integer",
+                          "null"
+                        ],
+                        "format": "int32",
+                        "default": null
+                      },
+                      "vram_bytes": {
+                        "type": [
+                          "integer",
+                          "null"
+                        ],
+                        "format": "uint64",
+                        "default": null,
+                        "minimum": 0
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": null,
+          "required": [
+            "check"
+          ]
+        },
+        "memory": {
+          "description": "One report section: whether it could be read, and what was found.",
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "check": {
+              "type": "object",
+              "properties": {
+                "detail": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "default": null
+                },
+                "status": {
+                  "description": "\"Not present\" (a desktop has no battery) and \"needs admin\" must stay different.",
+                  "type": "string",
+                  "enum": [
+                    "ok",
+                    "needs_admin",
+                    "not_present",
+                    "failed"
+                  ]
+                }
+              },
+              "required": [
+                "status"
+              ]
+            },
+            "data": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "properties": {
+                "modules": {
+                  "type": "array",
+                  "default": [],
+                  "items": {
+                    "description": "Speed fields are provisional until a machine with XMP/EXPO off has been seen.",
+                    "type": "object",
+                    "properties": {
+                      "bank_label": {
+                        "description": "Firmware slot labels, e.g. \"P0 CHANNEL A\" + \"DIMM 1\" (AMD) or \"BANK 0\" + \"ChannelA-DIMM0\" (Intel).",
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "default": null
+                      },
+                      "capacity_bytes": {
+                        "type": [
+                          "integer",
+                          "null"
+                        ],
+                        "format": "uint64",
+                        "default": null,
+                        "minimum": 0
+                      },
+                      "configured_speed_mts": {
+                        "type": [
+                          "integer",
+                          "null"
+                        ],
+                        "format": "uint32",
+                        "default": null,
+                        "minimum": 0
+                      },
+                      "configured_voltage_mv": {
+                        "type": [
+                          "integer",
+                          "null"
+                        ],
+                        "format": "uint32",
+                        "default": null,
+                        "minimum": 0
+                      },
+                      "device_locator": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "default": null
+                      },
+                      "form_factor": {
+                        "description": "Desktop (DIMM) or laptop (SODIMM) stick.",
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "default": null,
+                        "enum": [
+                          "dimm",
+                          "sodimm",
+                          "other",
+                          null
+                        ]
+                      },
+                      "kind": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "default": null,
+                        "enum": [
+                          "ddr4",
+                          "ddr5",
+                          "other",
+                          null
+                        ]
+                      },
+                      "manufacturer": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "default": null
+                      },
+                      "part_number": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "default": null
+                      },
+                      "speed_mts": {
+                        "type": [
+                          "integer",
+                          "null"
+                        ],
+                        "format": "uint32",
+                        "default": null,
+                        "minimum": 0
+                      }
+                    }
+                  }
+                },
+                "slots_total": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "uint32",
+                  "default": null,
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          "default": null,
+          "required": [
+            "check"
+          ]
+        },
+        "startup": {
+          "description": "One report section: whether it could be read, and what was found.",
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "check": {
+              "type": "object",
+              "properties": {
+                "detail": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "default": null
+                },
+                "status": {
+                  "description": "\"Not present\" (a desktop has no battery) and \"needs admin\" must stay different.",
+                  "type": "string",
+                  "enum": [
+                    "ok",
+                    "needs_admin",
+                    "not_present",
+                    "failed"
+                  ]
+                }
+              },
+              "required": [
+                "status"
+              ]
+            },
+            "data": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "properties": {
+                "items": {
+                  "type": "array",
+                  "default": [],
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "enabled": {
+                        "description": "Task Manager's enabled flag; `None` when Windows has no record of it.",
+                        "type": [
+                          "boolean",
+                          "null"
+                        ],
+                        "default": null
+                      },
+                      "location": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "default": null,
+                        "enum": [
+                          "run_key",
+                          "run_once",
+                          "folder",
+                          null
+                        ]
+                      },
+                      "name": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "default": null
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": null,
+          "required": [
+            "check"
+          ]
+        },
+        "storage": {
+          "description": "One report section: whether it could be read, and what was found.",
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "check": {
+              "type": "object",
+              "properties": {
+                "detail": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "default": null
+                },
+                "status": {
+                  "description": "\"Not present\" (a desktop has no battery) and \"needs admin\" must stay different.",
+                  "type": "string",
+                  "enum": [
+                    "ok",
+                    "needs_admin",
+                    "not_present",
+                    "failed"
+                  ]
+                }
+              },
+              "required": [
+                "status"
+              ]
+            },
+            "data": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "properties": {
+                "disks": {
+                  "type": "array",
+                  "default": [],
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "bus": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "default": null,
+                        "enum": [
+                          "nvme",
+                          "sata",
+                          "usb",
+                          "other",
+                          null
+                        ]
+                      },
+                      "media": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "default": null,
+                        "enum": [
+                          "ssd",
+                          "hdd",
+                          "unknown",
+                          null
+                        ]
+                      },
+                      "model": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "default": null
+                      },
+                      "nvme": {
+                        "description": "From the NVMe SMART / Health Information log (page 0x02).",
+                        "type": [
+                          "object",
+                          "null"
+                        ],
+                        "properties": {
+                          "available_spare_pct": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "format": "uint8",
+                            "default": null,
+                            "maximum": 255,
+                            "minimum": 0
+                          },
+                          "available_spare_threshold_pct": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "format": "uint8",
+                            "default": null,
+                            "maximum": 255,
+                            "minimum": 0
+                          },
+                          "critical_warning": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "format": "uint8",
+                            "default": null,
+                            "maximum": 255,
+                            "minimum": 0
+                          },
+                          "media_errors": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "format": "uint64",
+                            "default": null,
+                            "minimum": 0
+                          },
+                          "percentage_used": {
+                            "description": "Can exceed 100 (the spec allows up to 255).",
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "format": "uint8",
+                            "default": null,
+                            "maximum": 255,
+                            "minimum": 0
+                          },
+                          "power_on_hours": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "format": "uint64",
+                            "default": null,
+                            "minimum": 0
+                          },
+                          "temperature_c": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "format": "int32",
+                            "default": null
+                          }
+                        },
+                        "default": null
+                      },
+                      "size_bytes": {
+                        "type": [
+                          "integer",
+                          "null"
+                        ],
+                        "format": "uint64",
+                        "default": null,
+                        "minimum": 0
+                      },
+                      "smart": {
+                        "description": "Summary of ATA SMART attributes (provisional: confirm on the HDD test PC).",
+                        "type": [
+                          "object",
+                          "null"
+                        ],
+                        "properties": {
+                          "life_used_pct": {
+                            "description": "From vendor attributes (e.g. Crucial 202, Samsung 177), when known.",
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "format": "uint8",
+                            "default": null,
+                            "maximum": 255,
+                            "minimum": 0
+                          },
+                          "offline_uncorrectable": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "format": "uint64",
+                            "default": null,
+                            "minimum": 0
+                          },
+                          "pending_sectors": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "format": "uint64",
+                            "default": null,
+                            "minimum": 0
+                          },
+                          "power_on_hours": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "format": "uint64",
+                            "default": null,
+                            "minimum": 0
+                          },
+                          "reallocated_sectors": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "format": "uint64",
+                            "default": null,
+                            "minimum": 0
+                          },
+                          "temperature_c": {
+                            "type": [
+                              "integer",
+                              "null"
+                            ],
+                            "format": "int32",
+                            "default": null
+                          }
+                        },
+                        "default": null
+                      }
+                    }
+                  }
+                },
+                "volumes": {
+                  "type": "array",
+                  "default": [],
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "free_bytes": {
+                        "type": [
+                          "integer",
+                          "null"
+                        ],
+                        "format": "uint64",
+                        "default": null,
+                        "minimum": 0
+                      },
+                      "letter": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "default": null
+                      },
+                      "size_bytes": {
+                        "type": [
+                          "integer",
+                          "null"
+                        ],
+                        "format": "uint64",
+                        "default": null,
+                        "minimum": 0
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "default": null,
+          "required": [
+            "check"
+          ]
+        },
+        "system": {
+          "description": "One report section: whether it could be read, and what was found.",
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "check": {
+              "type": "object",
+              "properties": {
+                "detail": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "default": null
+                },
+                "status": {
+                  "description": "\"Not present\" (a desktop has no battery) and \"needs admin\" must stay different.",
+                  "type": "string",
+                  "enum": [
+                    "ok",
+                    "needs_admin",
+                    "not_present",
+                    "failed"
+                  ]
+                }
+              },
+              "required": [
+                "status"
+              ]
+            },
+            "data": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "properties": {
+                "bios_date": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "default": null,
+                  "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$"
+                },
+                "bios_version": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "default": null
+                },
+                "board": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "default": null
+                },
+                "chassis": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "default": null,
+                  "enum": [
+                    "desktop",
+                    "laptop",
+                    "unknown",
+                    null
+                  ]
+                },
+                "cores": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "uint32",
+                  "default": null,
+                  "minimum": 0
+                },
+                "cpu_name": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "default": null
+                },
+                "displays": {
+                  "type": "array",
+                  "default": [],
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "height_cm": {
+                        "type": [
+                          "integer",
+                          "null"
+                        ],
+                        "format": "uint32",
+                        "default": null,
+                        "minimum": 0
+                      },
+                      "name": {
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "default": null
+                      },
+                      "width_cm": {
+                        "type": [
+                          "integer",
+                          "null"
+                        ],
+                        "format": "uint32",
+                        "default": null,
+                        "minimum": 0
+                      }
+                    }
+                  }
+                },
+                "threads": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "uint32",
+                  "default": null,
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          "default": null,
+          "required": [
+            "check"
+          ]
+        },
+        "windows": {
+          "description": "One report section: whether it could be read, and what was found.",
+          "type": [
+            "object",
+            "null"
+          ],
+          "properties": {
+            "check": {
+              "type": "object",
+              "properties": {
+                "detail": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "default": null
+                },
+                "status": {
+                  "description": "\"Not present\" (a desktop has no battery) and \"needs admin\" must stay different.",
+                  "type": "string",
+                  "enum": [
+                    "ok",
+                    "needs_admin",
+                    "not_present",
+                    "failed"
+                  ]
+                }
+              },
+              "required": [
+                "status"
+              ]
+            },
+            "data": {
+              "type": [
+                "object",
+                "null"
+              ],
+              "properties": {
+                "build": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "uint32",
+                  "default": null,
+                  "minimum": 0
+                },
+                "display_version": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "default": null
+                },
+                "edition_id": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "default": null
+                },
+                "esu": {
+                  "description": "Provisional: confirm the signal on the Windows 10 work laptop.",
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "default": null,
+                  "enum": [
+                    "enrolled",
+                    "not_enrolled",
+                    "unknown",
+                    null
+                  ]
+                },
+                "installation_type": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "default": null
+                },
+                "last_update_installed": {
+                  "description": "Date (YYYY-MM-DD) of the most recent installed update.",
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "default": null,
+                  "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$"
+                },
+                "product": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "default": null
+                },
+                "secure_boot": {
+                  "type": [
+                    "boolean",
+                    "null"
+                  ],
+                  "default": null
+                },
+                "tpm": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "present": {
+                      "type": [
+                        "boolean",
+                        "null"
+                      ],
+                      "default": null
+                    },
+                    "spec_version": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "default": null
+                    }
+                  },
+                  "default": null
+                },
+                "ubr": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "uint32",
+                  "default": null,
+                  "minimum": 0
+                },
+                "uptime_seconds": {
+                  "type": [
+                    "integer",
+                    "null"
+                  ],
+                  "format": "uint64",
+                  "default": null,
+                  "minimum": 0
+                }
+              }
+            }
+          },
+          "default": null,
+          "required": [
+            "check"
+          ]
+        }
+      }
+    },
+    "schema_version": {
+      "type": "integer",
+      "format": "uint32",
+      "minimum": 0
+    }
+  },
+  "required": [
+    "schema_version",
+    "app_version",
+    "collected_at",
+    "elevated",
+    "facts"
+  ]
+}

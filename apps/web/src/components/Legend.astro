@@ -1,0 +1,43 @@
+---
+// "How to read it": the receipt's five tags, with the same tag words as the receipt itself
+// (receipt-ui copy) and the verdict level names for screen readers.
+import { text, type Level } from "@fettle/brain";
+import type { Locale } from "../i18n/paths.ts";
+import { home } from "../i18n/home.ts";
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const h = home(locale);
+const legend: { level: Level; meaning: string }[] = [
+  { level: "fine", meaning: h.legendOk },
+  { level: "info", meaning: h.legendNote },
+  { level: "keep_an_eye", meaning: h.legendWatch },
+  { level: "act_soon", meaning: h.legendAct },
+  { level: "couldnt_check", meaning: h.legendUnknown },
+];
+---
+
+<div class="legend">
+  <h3>{h.legendH}</h3>
+  <dl>
+    {legend.map(({ level, meaning }) => (
+      <div>
+        <dt>
+          <button type="button" class="legend-pick" data-level={level} aria-pressed="false" aria-controls="sample">
+            <span class={`tag tag-${level}`} aria-hidden="true">{text(`tag.${level}`, locale)}</span>
+            <span class="sr-only">{text(`level.${level}`, locale)}</span>
+            <span class="sr-only">. {h.legendShow}</span>
+          </button>
+        </dt>
+        <dd>{meaning} <span class="legend-none" hidden>{h.legendNone}</span></dd>
+      </div>
+    ))}
+  </dl>
+</div>
+
+<script>
+  import "../scripts/legend.ts";
+</script>

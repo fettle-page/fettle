@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "app_version": "1.0.0",
+  "collected_at": "2026-10-07T09:12:00+02:00",
+  "elevated": false,
+  "engine_version": "1.0.0",
+  "facts": {
+    "system": {
+      "check": { "status": "ok" },
+      "data": { "cpu_name": "Intel Core i5-8250U", "cores": 4, "threads": 8, "board": "LENOVO 20KN", "bios_version": "N23ET86W (1.61)", "bios_date": "2023-05-18", "chassis": "laptop", "displays": [] }
+    },
+    "storage": {
+      "check": { "status": "ok" },
+      "data": {
+        "disks": [
+          { "model": "Samsung PM981 NVMe 256GB", "bus": "nvme", "media": "ssd", "size_bytes": 256060514304,
+            "nvme": { "percentage_used": 34, "temperature_c": 41, "power_on_hours": 11320, "media_errors": 0, "available_spare_pct": 100, "available_spare_threshold_pct": 10 } },
+          { "model": "ST1000LM035-1RK172", "bus": "sata", "media": "hdd", "size_bytes": 1000204886016 }
+        ],
+        "volumes": [{ "letter": "C:", "size_bytes": 254000000000, "free_bytes": 14000000000 }, { "letter": "D:", "size_bytes": 1000202039296, "free_bytes": 612000000000 }]
+      }
+    },
+    "battery": { "check": { "status": "ok" }, "data": { "design_capacity_mwh": 57000, "full_charge_capacity_mwh": 39900, "cycle_count": 486 } },
+    "memory": {
+      "check": { "status": "ok" },
+      "data": {
+        "modules": [
+          { "capacity_bytes": 8589934592, "kind": "ddr4", "form_factor": "sodimm", "speed_mts": 2400, "configured_speed_mts": 2400,
+            "manufacturer": "Samsung", "part_number": "M471A1K43CB1-CRC", "bank_label": "BANK 0", "device_locator": "ChannelA-DIMM0", "configured_voltage_mv": 1200 }
+        ],
+        "slots_total": 2
+      }
+    },
+    "windows": {
+      "check": { "status": "ok" },
+      "data": { "product": "Windows 11 Home", "edition_id": "Core", "build": 26200, "ubr": 6899, "display_version": "25H2",
+        "uptime_seconds": 1991200, "last_update_installed": "2026-09-23", "secure_boot": true, "tpm": { "present": true, "spec_version": "2.0" } }
+    },
+    "startup": {
+      "check": { "status": "ok" },
+      "data": { "items": [
+        { "name": "OneDrive", "location": "run_key", "enabled": true }, { "name": "Microsoft Teams", "location": "run_key", "enabled": true },
+        { "name": "Spotify", "location": "run_key", "enabled": true }, { "name": "Steam", "location": "run_key", "enabled": true },
+        { "name": "Discord", "location": "run_key", "enabled": true }, { "name": "Adobe Creative Cloud", "location": "run_key", "enabled": true },
+        { "name": "Epic Games Launcher", "location": "run_key", "enabled": true }, { "name": "Dropbox", "location": "run_key", "enabled": true },
+        { "name": "Zoom", "location": "run_key", "enabled": true }, { "name": "Lenovo Vantage", "location": "run_key", "enabled": true },
+        { "name": "McAfee WebAdvisor", "location": "run_key", "enabled": true }, { "name": "Realtek Audio Console", "location": "run_key", "enabled": true },
+        { "name": "Google Drive", "location": "run_key", "enabled": true }, { "name": "WhatsApp", "location": "run_key", "enabled": true },
+        { "name": "EA app", "location": "run_key", "enabled": true }, { "name": "Logitech Options", "location": "run_key", "enabled": true },
+        { "name": "Microsoft Edge", "location": "run_key", "enabled": true }, { "name": "Canva", "location": "folder", "enabled": true },
+        { "name": "Cortana", "location": "run_key", "enabled": false }
+      ] }
+    },
+    "graphics": {
+      "check": { "status": "ok" },
+      "data": { "adapters": [{ "name": "Intel UHD Graphics 620", "driver_version": "31.0.101.2111", "driver_date": "2023-01-12", "vram_bytes": 134217728 }] }
+    }
+  }
+}

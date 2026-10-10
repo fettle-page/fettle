@@ -1,0 +1,8 @@
+{
+  "name": "@fettle/windows",
+  "private": true,
+  "description": "Packaging scripts for the Windows app (the app itself is the Rust crate beside this file)",
+  "scripts": {
+    "test": "node --test \"packaging/test/*.test.mjs\""
+  }
+}

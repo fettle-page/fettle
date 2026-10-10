@@ -1,0 +1,5 @@
+* text=auto eol=lf
+*.png binary
+*.ico binary
+*.bat text eol=crlf
+spike/kit/README.txt text eol=crlf

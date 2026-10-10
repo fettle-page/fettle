@@ -1,0 +1,290 @@
+// The side panel's views opened from the header or the dock: Share this receipt, My shared links.
+import { Theme, Copy } from "theme.slint";
+import { Kicker, Button, Choice, Switch, Focusable } from "panels.slint";
+
+export struct LinkRow { id: string, url: string, until: string }
+
+component Body inherits Text {
+    font-family: Theme.text;
+    font-size: 14px;
+    font-weight: 500;
+    color: Theme.chrome-soft;
+    wrap: word-wrap;
+    line-height-factor: 1.25;
+}
+
+component Hint inherits Text {
+    font-family: Theme.mono;
+    font-size: 12.5px;
+    color: Theme.chrome-soft;
+    wrap: word-wrap;
+}
+
+component FieldLabel inherits Text {
+    text: label.to-uppercase();
+    in property <string> label;
+    font-family: Theme.mono;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    color: Theme.chrome-soft;
+}
+
+// A one-line field: typed into (the password) or read-only and selectable (the links).
+export component Field inherits Rectangle {
+    in property <string> label;
+    in property <bool> read-only;
+    in property <bool> password;
+    in-out property <string> text;
+    height: 36px;
+    border-radius: 5px;
+    border-width: 1px;
+    border-color: input.has-focus ? Theme.accent : Theme.chrome-line;
+    background: Theme.chrome-card;
+    input := TextInput {
+        x: 10px;
+        width: parent.width - 20px;
+        height: parent.height;
+        text <=> root.text;
+        read-only: root.read-only;
+        input-type: root.password ? InputType.password : InputType.text;
+        single-line: true;
+        vertical-alignment: center;
+        font-family: Theme.mono;
+        font-size: 13px;
+        color: Theme.chrome-ink;
+        selection-background-color: Theme.btn;
+        selection-foreground-color: #FFFFFF;
+        accessible-label: root.label;
+        // Esc in a field belongs to the field: it shouldn't throw away what was typed.
+        key-pressed(event) => {
+            if event.text == Key.Escape {
+                return accept;
+            }
+            reject
+        }
+    }
+}
+
+// "Share a link", in the side panel. The receipt on the mat is the preview; the exact JSON sits
+// behind an advanced fold.
+export component ShareView inherits VerticalLayout {
+    // editing, sending, done or failed
+    in property <string> status;
+    in property <string> problem;
+    in property <string> json;
+    in property <string> link;
+    in property <string> delete-link;
+    in property <string> expires-text;
+    in-out property <string> expiry;
+    in-out property <bool> locked;
+    in-out property <string> password;
+    property <bool> show-json;
+    spacing: 24px;
+    if status != "done": VerticalLayout {
+        spacing: 24px;
+        Body { text: Copy.tr("share.intro", Copy.lang); }
+        VerticalLayout {
+            spacing: 10px;
+            Kicker { text: Copy.tr("share.expiry", Copy.lang); }
+            Choice {
+                labels: [Copy.tr("share.7d", Copy.lang), Copy.tr("share.30d", Copy.lang), Copy.tr("share.1y", Copy.lang)];
+                values: ["7d", "30d", "1y"];
+                value: root.expiry;
+                chose(v) => {
+                    root.expiry = v;
+                }
+            }
+        }
+        VerticalLayout {
+            spacing: 12px;
+            Switch {
+                text: Copy.tr("share.lock", Copy.lang);
+                on: root.locked;
+                toggled(v) => {
+                    root.locked = v;
+                }
+            }
+            if root.locked: VerticalLayout {
+                spacing: 6px;
+                FieldLabel { label: Copy.tr("share.password", Copy.lang); }
+                Field {
+                    label: Copy.tr("share.password", Copy.lang);
+                    password: true;
+                    text <=> root.password;
+                }
+                Hint { text: Copy.tr("share.password_note", Copy.lang); }
+            }
+        }
+        VerticalLayout {
+            spacing: 8px;
+            TouchArea {
+                height: 22px;
+                accessible-role: button;
+                accessible-label: Copy.tr("share.json", Copy.lang);
+                accessible-expandable: true;
+                accessible-expanded: root.show-json;
+                accessible-action-default => {
+                    root.show-json = !root.show-json;
+                }
+                json-focus := Focusable {
+                    activate => {
+                        root.show-json = !root.show-json;
+                    }
+                }
+                clicked => {
+                    json-focus.focus();
+                    root.show-json = !root.show-json;
+                }
+                if json-focus.ring: Rectangle {
+                    x: -3px;
+                    width: parent.width + 6px;
+                    border-radius: 4px;
+                    border-width: 2px;
+                    border-color: Theme.accent;
+                }
+                HorizontalLayout {
+                    spacing: 8px;
+                    // The fold's marker, drawn: the trimmed mono font has no triangle glyph.
+                    Rectangle {
+                        width: 8px;
+                        Path {
+                            width: 6px;
+                            height: 8px;
+                            x: 1px;
+                            y: (parent.height - 8px) / 2;
+                            viewbox-width: 6;
+                            viewbox-height: 8;
+                            commands: "M0 0 L6 4 L0 8 Z";
+                            fill: Theme.chrome-soft;
+                            transform-rotation: root.show-json ? 90deg : 0deg;
+                            transform-origin: { x: 3px, y: 4px };
+                        }
+                    }
+                    Text {
+                        text: Copy.tr("share.json", Copy.lang);
+                        font-family: Theme.text;
+                        font-size: 13px;
+                        font-weight: 800;
+                        color: Theme.chrome-soft;
+                        vertical-alignment: center;
+                    }
+                }
+            }
+            if root.show-json: Rectangle {
+                border-radius: 5px;
+                border-width: 1px;
+                border-color: Theme.chrome-line;
+                background: Theme.chrome-card;
+                VerticalLayout {
+                    padding: 12px;
+                    Text {
+                        text: root.json;
+                        font-family: Theme.mono;
+                        font-size: 11.5px;
+                        color: Theme.chrome-soft;
+                        wrap: char-wrap;
+                    }
+                }
+            }
+        }
+        if root.problem != "": Text {
+            text: root.problem;
+            font-family: Theme.mono;
+            font-size: 14px;
+            font-weight: 600;
+            color: Theme.accent;
+            wrap: word-wrap;
+            accessible-role: text;
+            accessible-label: root.problem;
+            accessible-live-region: assertive;
+        }
+    }
+    if status == "done": VerticalLayout {
+        spacing: 22px;
+        VerticalLayout {
+            spacing: 8px;
+            Text {
+                text: Copy.tr("share.done", Copy.lang);
+                font-family: Theme.display;
+                font-size: 26px;
+                font-weight: 800;
+                color: Theme.chrome-ink;
+                wrap: word-wrap;
+            }
+            Body { text: root.expires-text; }
+        }
+        VerticalLayout {
+            spacing: 6px;
+            FieldLabel { label: Copy.tr("share.link", Copy.lang); }
+            Field {
+                label: Copy.tr("share.link", Copy.lang);
+                read-only: true;
+                text: root.link;
+            }
+        }
+        VerticalLayout {
+            spacing: 6px;
+            FieldLabel { label: Copy.tr("share.delete_link", Copy.lang); }
+            Field {
+                label: Copy.tr("share.delete_link", Copy.lang);
+                read-only: true;
+                text: root.delete-link;
+            }
+            Hint { text: Copy.tr("share.delete_note", Copy.lang); }
+        }
+    }
+}
+
+// "My shared links": the links this PC made that haven't expired, each with Delete.
+export component LinksView inherits VerticalLayout {
+    in property <[LinkRow]> links;
+    in property <string> status;
+    in property <bool> failed;
+    in property <bool> busy;
+    callback delete(string);
+    spacing: 16px;
+    if links.length == 0: Body { text: Copy.tr("links.none", Copy.lang); }
+    for l in links: VerticalLayout {
+        spacing: 6px;
+        Text {
+            text: l.url;
+            font-family: Theme.mono;
+            font-size: 13px;
+            font-weight: 600;
+            color: Theme.chrome-ink;
+            wrap: char-wrap;
+        }
+        HorizontalLayout {
+            spacing: 12px;
+            Hint {
+                text: l.until;
+                vertical-alignment: center;
+                horizontal-stretch: 1;
+            }
+            Button {
+                horizontal-stretch: 0;
+                text: Copy.tr("links.delete", Copy.lang);
+                enabled: !root.busy;
+                clicked => {
+                    root.delete(l.id);
+                }
+            }
+        }
+        Rectangle {
+            height: 1px;
+            background: Theme.chrome-line;
+        }
+    }
+    if status != "": Text {
+        text: status;
+        font-family: Theme.mono;
+        font-size: 13px;
+        font-weight: 600;
+        color: Theme.accent;
+        wrap: word-wrap;
+        accessible-role: text;
+        accessible-label: status;
+        accessible-live-region: polite;
+    }
+}

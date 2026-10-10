@@ -1,0 +1,35 @@
+---
+// Questions as native <details>: no JavaScript, keyboard and screen reader friendly.
+import type { Faq } from "../content/faq.ts";
+import type { Locale } from "../i18n/paths.ts";
+import { t } from "../i18n/strings.ts";
+import { links, release } from "../release.ts";
+
+interface Props {
+  items: Faq[];
+  locale: Locale;
+}
+
+const { items, locale } = Astro.props;
+const { contact, email } = links(release);
+---
+
+<div class="faq">
+  {
+    items.map((f) => (
+      <details class="faq-item" id={f.id}>
+        <summary>{f.q}</summary>
+        <div class="faq-answer">
+          {f.a.map((p) => (
+            <p>{p}</p>
+          ))}
+          {f.contact && contact && (
+            <p>
+              {t(locale, "faq.write")} <a href={contact}>{email}</a>.
+            </p>
+          )}
+        </div>
+      </details>
+    ))
+  }
+</div>

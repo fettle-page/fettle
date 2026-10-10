@@ -1,0 +1,167 @@
+/* ------------------------------------------------------------------------------------------
+   Themes (user's decisions, 2026-10-07)
+   Dark  = the green cutting mat (the brand look, and the default for dark devices)
+   Light = a pale cutting mat (the default for light devices)
+   OLED  = true black, only when chosen
+   Receipts stay paper: slightly dimmed in Dark, noticeably dimmed in OLED, always white in print.
+
+   `--t-*` and `--on-mat*` colour the mat and everything laid on it; the `--color-*` paper tokens
+   override receipt-ui's theme so receipts dim with the page. Shared by the website and the app:
+   the host sets data-theme on <html> before first paint when a choice is stored (the website's
+   public/theme.js does).
+   ------------------------------------------------------------------------------------------ */
+
+:root {
+  color-scheme: dark;
+  --t-page: #17543A;
+  --t-mat: #1F6A45;
+  --t-mat-deep: #17543A;
+  --line: rgb(232 244 236 / 0.12);
+  --line-strong: rgb(232 244 236 / 0.26);
+  --t-ruler: rgb(232 244 236 / 0.45);
+  --on-mat: #F3F1EA;
+  --on-mat-soft: rgb(243 241 234 / 0.88);
+  --on-mat-faint: rgb(243 241 234 / 0.84);
+  --t-accent: #BFE3C8;
+  --t-tape: #121513;
+  --t-tape-ink: #F3F1EA;
+  --t-tape-light: #F3F1EA;
+  --t-tape-light-ink: #1D1C1A;
+  --t-tape-light-ring: transparent;
+  --t-btn: #F3F1EA;
+  --t-btn-ink: #1D1C1A;
+  --t-btn-shadow: #0F3826;
+  --t-ghost-ring: rgb(243 241 234 / 0.5);
+  --t-panel: rgb(0 0 0 / 0.16);
+  --color-paper: #EDEBE4;
+  --color-paper-warm: #E7E4DC;
+  --color-ink: #1D1C1A;
+  --color-ink-soft: #5D5A53;
+  --color-accent-ink: #B93A12;
+  --color-mat: #1F6A45;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    color-scheme: light;
+    --t-page: #DAE2D9;
+    --t-mat: #E8EDE7;
+    --t-mat-deep: #DAE2D9;
+    --line: rgb(31 106 69 / 0.13);
+    --line-strong: rgb(31 106 69 / 0.26);
+    --t-ruler: rgb(31 106 69 / 0.6);
+    --on-mat: #1D1C1A;
+    --on-mat-soft: #3E4741;
+    --on-mat-faint: #4E5852;
+    --t-accent: #1F6A45;
+    --t-tape: #1D201E;
+    --t-tape-ink: #F3F1EA;
+    --t-tape-light: #FFFFFF;
+    --t-tape-light-ink: #1D1C1A;
+    --t-tape-light-ring: rgb(29 28 26 / 0.22);
+    --t-btn: #1D1C1A;
+    --t-btn-ink: #FBFAF6;
+    --t-btn-shadow: #0B0B0A;
+    --t-ghost-ring: rgb(29 28 26 / 0.45);
+    --t-panel: rgb(255 255 255 / 0.55);
+    --color-paper: #FBFAF6;
+    --color-paper-warm: #F3F1EA;
+    --color-ink: #1D1C1A;
+    --color-ink-soft: #5D5A53;
+    --color-accent-ink: #B93A12;
+    --color-mat: #1F6A45;
+  }
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+  --t-page: #DAE2D9;
+  --t-mat: #E8EDE7;
+  --t-mat-deep: #DAE2D9;
+  --line: rgb(31 106 69 / 0.13);
+  --line-strong: rgb(31 106 69 / 0.26);
+  --t-ruler: rgb(31 106 69 / 0.6);
+  --on-mat: #1D1C1A;
+  --on-mat-soft: #3E4741;
+  --on-mat-faint: #4E5852;
+  --t-accent: #1F6A45;
+  --t-tape: #1D201E;
+  --t-tape-ink: #F3F1EA;
+  --t-tape-light: #FFFFFF;
+  --t-tape-light-ink: #1D1C1A;
+  --t-tape-light-ring: rgb(29 28 26 / 0.22);
+  --t-btn: #1D1C1A;
+  --t-btn-ink: #FBFAF6;
+  --t-btn-shadow: #0B0B0A;
+  --t-ghost-ring: rgb(29 28 26 / 0.45);
+  --t-panel: rgb(255 255 255 / 0.55);
+  --color-paper: #FBFAF6;
+  --color-paper-warm: #F3F1EA;
+  --color-ink: #1D1C1A;
+  --color-ink-soft: #5D5A53;
+  --color-accent-ink: #B93A12;
+  --color-mat: #1F6A45;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+[data-theme="oled"] {
+  color-scheme: dark;
+  --t-page: #000000;
+  --t-mat: #000000;
+  --t-mat-deep: #000000;
+  --line: rgb(191 227 200 / 0.09);
+  --line-strong: rgb(191 227 200 / 0.17);
+  --t-ruler: rgb(191 227 200 / 0.4);
+  --on-mat: #E8E6DF;
+  --on-mat-soft: rgb(232 230 223 / 0.86);
+  --on-mat-faint: rgb(232 230 223 / 0.78);
+  --t-accent: #BFE3C8;
+  --t-tape: #1C1F1D;
+  --t-tape-ink: #E8E6DF;
+  --t-tape-light: #CFCCC3;
+  --t-tape-light-ink: #111111;
+  --t-btn: #CFCCC3;
+  --t-btn-ink: #111111;
+  --t-btn-shadow: #2A2A28;
+  --t-ghost-ring: rgb(232 230 223 / 0.4);
+  --t-panel: rgb(255 255 255 / 0.04);
+  --color-paper: #CFCCC3;
+  --color-paper-warm: #C6C3BA;
+  --color-ink: #111111;
+  --color-ink-soft: #45433E;
+  --color-accent-ink: #9A2F0E;
+  --color-mat: #17543A;
+}
+
+/* Paper is always light, so native checkboxes and radios on it stay light in Dark and OLED. */
+.fettle-receipt, .fettle-bench, .card, .doc-sheet, .faq-item, .foot-slip, .legend .tag, .slip, .live {
+  color-scheme: light;
+}
+/* Focus rings on paper use the dark green: the pale mat accent would vanish on paper. */
+:is(.fettle-receipt, .fettle-bench, .card, .doc-sheet, .faq-item, .foot-slip, .slip) :focus-visible:focus-visible {
+  outline-color: var(--color-mat);
+}
+
+@media print {
+  :root:root, :root[data-theme] {
+    color-scheme: light;
+    --t-page: #FFFFFF;
+    --t-mat: #FFFFFF;
+    --t-mat-deep: #FFFFFF;
+    --color-paper: #FFFFFF;
+    --color-paper-warm: #FFFFFF;
+    --color-ink: #000000;
+    --color-ink-soft: #3A3A3A;
+    --color-accent-ink: #B93A12;
+    --color-mat: #1F6A45;
+    --on-mat: #000000;
+    --on-mat-soft: #000000;
+    --on-mat-faint: #3A3A3A;
+    --t-accent: #1F6A45;
+    --line: transparent;
+    --line-strong: transparent;
+  }
+}

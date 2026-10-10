@@ -1,0 +1,233 @@
+{
+  "app_version": "0.1.0",
+  "collected_at": "2026-10-07T09:12:00+02:00",
+  "elevated": false,
+  "facts": {
+    "battery": {
+      "check": {
+        "status": "ok"
+      },
+      "data": {
+        "cycle_count": 611,
+        "design_capacity_mwh": 45000,
+        "full_charge_capacity_mwh": 26100
+      }
+    },
+    "graphics": {
+      "check": {
+        "status": "ok"
+      },
+      "data": {
+        "adapters": [
+          {
+            "driver_date": "2023-02-14",
+            "driver_version": "27.20.100.8681",
+            "name": "Intel HD Graphics 520",
+            "vram_bytes": 134217728
+          },
+          {
+            "driver_date": "2026-01-01",
+            "driver_version": "1.0",
+            "name": "<img src=x onerror=alert(1)>"
+          }
+        ]
+      }
+    },
+    "memory": {
+      "check": {
+        "status": "ok"
+      },
+      "data": {
+        "modules": [
+          {
+            "bank_label": "BANK 0",
+            "capacity_bytes": 8589934592,
+            "configured_speed_mts": 2133,
+            "configured_voltage_mv": 1200,
+            "device_locator": "ChannelA-DIMM0",
+            "form_factor": "sodimm",
+            "kind": "ddr4",
+            "manufacturer": "SK Hynix",
+            "part_number": "HMA81GS6AFR8N-UH",
+            "speed_mts": 2400
+          }
+        ],
+        "slots_total": 2
+      }
+    },
+    "startup": {
+      "check": {
+        "status": "ok"
+      },
+      "data": {
+        "items": [
+          {
+            "enabled": true,
+            "location": "run_key",
+            "name": "OneDrive"
+          },
+          {
+            "enabled": true,
+            "location": "run_key",
+            "name": "Microsoft Teams"
+          },
+          {
+            "enabled": true,
+            "location": "run_key",
+            "name": "Spotify"
+          },
+          {
+            "enabled": true,
+            "location": "run_key",
+            "name": "Steam"
+          },
+          {
+            "enabled": true,
+            "location": "run_key",
+            "name": "Discord"
+          },
+          {
+            "enabled": true,
+            "location": "run_key",
+            "name": "Adobe Creative Cloud"
+          },
+          {
+            "enabled": true,
+            "location": "run_key",
+            "name": "Epic Games Launcher"
+          },
+          {
+            "enabled": true,
+            "location": "run_key",
+            "name": "Dropbox"
+          },
+          {
+            "enabled": true,
+            "location": "run_key",
+            "name": "Zoom"
+          },
+          {
+            "enabled": true,
+            "location": "run_key",
+            "name": "Skype"
+          },
+          {
+            "enabled": true,
+            "location": "run_key",
+            "name": "HP Support Assistant"
+          },
+          {
+            "enabled": true,
+            "location": "run_key",
+            "name": "McAfee WebAdvisor"
+          },
+          {
+            "enabled": true,
+            "location": "run_key",
+            "name": "Realtek Audio Console"
+          },
+          {
+            "enabled": true,
+            "location": "run_key",
+            "name": "Google Drive"
+          },
+          {
+            "enabled": true,
+            "location": "run_key",
+            "name": "Opera GX"
+          },
+          {
+            "enabled": true,
+            "location": "run_key",
+            "name": "WhatsApp"
+          },
+          {
+            "enabled": true,
+            "location": "run_key",
+            "name": "EA app"
+          },
+          {
+            "enabled": true,
+            "location": "run_key",
+            "name": "Logitech Options"
+          },
+          {
+            "enabled": true,
+            "location": "run_key",
+            "name": "MicrosoftEdgeAutoLaunch_D381F9995CD4E4E9D3547570FCA4BB36"
+          },
+          {
+            "enabled": false,
+            "location": "run_key",
+            "name": "Cortana"
+          },
+          {
+            "enabled": false,
+            "location": "run_key",
+            "name": "Java Update Scheduler"
+          }
+        ]
+      }
+    },
+    "storage": {
+      "check": {
+        "status": "ok"
+      },
+      "data": {
+        "disks": [
+          {
+            "bus": "nvme",
+            "media": "ssd",
+            "model": "WDC PC SN730 SDBPNTY-1T00-1101",
+            "nvme": {
+              "available_spare_pct": 62,
+              "available_spare_threshold_pct": 10,
+              "media_errors": 4,
+              "percentage_used": 87,
+              "power_on_hours": 19840,
+              "temperature_c": 52
+            },
+            "size_bytes": 1024209543168
+          }
+        ],
+        "volumes": [
+          {
+            "free_bytes": 61000000000,
+            "letter": "C:",
+            "size_bytes": 1023000000000
+          }
+        ]
+      }
+    },
+    "system": {
+      "check": {
+        "status": "ok"
+      },
+      "data": {
+        "bios_date": "2019-03-11",
+        "bios_version": "N75 Ver. 01.42",
+        "board": "HP 8079",
+        "chassis": "laptop",
+        "cpu_name": "Intel Core i5-6200U",
+        "displays": []
+      }
+    },
+    "windows": {
+      "check": {
+        "status": "ok"
+      },
+      "data": {
+        "build": 19045,
+        "display_version": "22H2",
+        "edition_id": "Professional",
+        "esu": "unknown",
+        "last_update_installed": "2026-09-10",
+        "product": "Windows 10 Pro",
+        "secure_boot": false,
+        "ubr": 6332,
+        "uptime_seconds": 1991200
+      }
+    }
+  },
+  "schema_version": 1
+}

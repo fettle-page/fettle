@@ -1,0 +1,374 @@
+//! Share links (packages/share-client, in Rust): upload the redacted report, delete it later.
+//! Never panics; every outcome is a value the panel can word. The limits mirror the Worker's, so a
+//! bad request isn't even sent. The password is sent once, over HTTPS, and kept nowhere.
+
+use fettle_facts::Report;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+
+pub const PASSWORD_MIN: usize = 8;
+pub const PASSWORD_MAX: usize = 128;
+pub const MAX_UPLOAD_BYTES: usize = 262_144;
+
+/// fettle.page, or a local Worker in development (FETTLE_SHARE_ORIGIN).
+pub fn origin() -> String {
+    std::env::var("FETTLE_SHARE_ORIGIN").unwrap_or_else(|_| "https://fettle.page".into())
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Expiry {
+    Week,
+    Month,
+    Year,
+}
+
+impl Expiry {
+    pub fn code(&self) -> &'static str {
+        match self {
+            Expiry::Week => "7d",
+            Expiry::Month => "30d",
+            Expiry::Year => "1y",
+        }
+    }
+}
+
+/// What the Worker returns for a new link.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Shared {
+    pub id: String,
+    pub url: String,
+    pub delete_url: String,
+    pub delete_token: String,
+    pub expires_at: String,
+    pub locked: bool,
+}
+
+/// The Worker's error codes, plus what can go wrong before or around the request.
+#[derive(Debug, Clone, PartialEq)]
+pub struct Failure {
+    pub error: &'static str,
+    /// Seconds, after rate_limited.
+    pub retry_after: Option<u64>,
+    pub detail: Option<String>,
+}
+
+impl Failure {
+    fn new(error: &'static str) -> Failure {
+        Failure { error, retry_after: None, detail: None }
+    }
+}
+
+const SERVER_ERRORS: [&str; 8] = ["invalid_request", "invalid_report", "too_large", "rate_limited", "unauthorized", "forbidden", "unsupported_media_type", "invalid_json"];
+
+pub struct Response {
+    pub status: u16,
+    /// Lower-case names.
+    pub headers: HashMap<String, String>,
+    pub body: Vec<u8>,
+}
+
+/// One HTTPS request. Err means no answer at all (offline, DNS, TLS, timeout).
+pub trait Http: Send + Sync {
+    fn send(&self, method: &str, url: &str, headers: &[(&str, String)], body: Option<Vec<u8>>) -> Result<Response, ()>;
+}
+
+fn endpoint(origin: &str, path: &str) -> String {
+    format!("{}{path}", origin.trim_end_matches('/'))
+}
+
+fn read_json(r: &Response) -> Option<serde_json::Value> {
+    serde_json::from_slice(&r.body).ok()
+}
+
+fn failure(r: &Response) -> Failure {
+    let body = read_json(r);
+    let code = body.as_ref().and_then(|b| b.get("error")).and_then(|e| e.as_str()).unwrap_or("");
+    let Some(error) = SERVER_ERRORS.iter().find(|c| **c == code) else { return Failure::new("bad_response") };
+    let retry_after = r.headers.get("retry-after").and_then(|v| v.trim().parse::<u64>().ok()).filter(|w| *w > 0 && *error == "rate_limited");
+    let detail = body.as_ref().and_then(|b| b.get("detail")).and_then(|d| d.as_str()).map(str::to_string);
+    Failure { error, retry_after, detail }
+}
+
+pub fn share_report(http: &dyn Http, origin: &str, report: &Report, expires: Option<Expiry>, password: Option<&str>) -> Result<Shared, Failure> {
+    let password = password.filter(|p| !p.is_empty());
+    if let Some(p) = password {
+        // Counted as the Worker counts (JavaScript string length).
+        let len = p.encode_utf16().count();
+        if len < PASSWORD_MIN {
+            return Err(Failure::new("password_too_short"));
+        }
+        if len > PASSWORD_MAX {
+            return Err(Failure::new("password_too_long"));
+        }
+    }
+    let mut body = serde_json::json!({ "report": report });
+    if let Some(e) = expires {
+        body["expires"] = e.code().into();
+    }
+    if let Some(p) = password {
+        body["password"] = p.into();
+    }
+    let bytes = body.to_string().into_bytes();
+    if bytes.len() > MAX_UPLOAD_BYTES {
+        return Err(Failure::new("too_large"));
+    }
+    let r = http.send("POST", &endpoint(origin, "/api/reports"), &[("content-type", "application/json".into())], Some(bytes)).map_err(|()| Failure::new("network"))?;
+    if r.status != 201 {
+        return Err(failure(&r));
+    }
+    read_json(&r).and_then(|v| serde_json::from_value::<Shared>(v).ok()).ok_or(Failure::new("bad_response"))
+}
+
+/// A link the Worker says is already gone (expired or deleted elsewhere) counts as deleted. Any
+/// other 404, such as a proxy's page at a wrong address, doesn't: the report may still be public.
+pub fn delete_shared(http: &dyn Http, origin: &str, id: &str, token: &str) -> Result<(), Failure> {
+    // Ids are the Worker's own (letters and digits); anything else is refused rather than sent.
+    if id.is_empty() || !id.chars().all(|c| c.is_ascii_alphanumeric()) {
+        return Err(Failure::new("bad_response"));
+    }
+    let r = http.send("DELETE", &endpoint(origin, &format!("/api/reports/{id}")), &[("authorization", format!("Bearer {token}"))], None).map_err(|()| Failure::new("network"))?;
+    match r.status {
+        204 => Ok(()),
+        404 if read_json(&r).is_some_and(|b| b.get("error").and_then(|e| e.as_str()) == Some("not_found")) => Ok(()),
+        404 => Err(Failure::new("bad_response")),
+        _ => Err(failure(&r)),
+    }
+}
+
+/// A failure as words: an app string key and, for a rate limit, the minutes to wait.
+pub fn problem(f: &Failure) -> (&'static str, Option<i64>) {
+    match f.error {
+        "network" => ("share.e.network", None),
+        "rate_limited" => match f.retry_after {
+            Some(s) => ("share.e.rate_limited_in", Some((s.div_ceil(60)).max(1) as i64)),
+            None => ("share.e.rate_limited", None),
+        },
+        "too_large" => ("share.e.too_large", None),
+        "password_too_short" => ("share.e.password_too_short", None),
+        "password_too_long" => ("share.e.password_too_long", None),
+        _ => ("share.e.other", None),
+    }
+}
+
+/// The real transport: HTTPS with Windows' own TLS (SChannel) and certificate store, Windows'
+/// proxy settings, and a 20-second limit.
+pub struct RealHttp(ureq::Agent);
+
+impl Default for RealHttp {
+    fn default() -> Self {
+        use ureq::tls::{RootCerts, TlsConfig, TlsProvider};
+        let tls = TlsConfig::builder().provider(TlsProvider::NativeTls).root_certs(RootCerts::PlatformVerifier).build();
+        let config = ureq::Agent::config_builder().tls_config(tls).timeout_global(Some(std::time::Duration::from_secs(20))).http_status_as_error(false).build();
+        RealHttp(config.into())
+    }
+}
+
+impl Http for RealHttp {
+    fn send(&self, method: &str, url: &str, headers: &[(&str, String)], body: Option<Vec<u8>>) -> Result<Response, ()> {
+        let mut request = ureq::http::Request::builder().method(method).uri(url);
+        for (k, v) in headers {
+            request = request.header(*k, v);
+        }
+        let request = request.body(body.unwrap_or_default()).map_err(|_| ())?;
+        let mut response = self.0.run(request).map_err(|_| ())?;
+        let status = response.status().as_u16();
+        let headers = response.headers().iter().filter_map(|(k, v)| v.to_str().ok().map(|v| (k.as_str().to_lowercase(), v.to_string()))).collect();
+        // The Worker's answers are small; a runaway body is cut at 1 MB.
+        let body = response.body_mut().with_config().limit(1_048_576).read_to_vec().map_err(|_| ())?;
+        Ok(Response { status, headers, body })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use fettle_facts::Facts;
+    use std::sync::Mutex;
+
+    const ORIGIN: &str = "https://fettle.page";
+
+    fn report() -> Report {
+        Report { schema_version: 1, app_version: "0.1.0".into(), engine_version: None, collected_at: "2026-10-07T21:00:00Z".into(), elevated: false, facts: Facts::default() }
+    }
+
+    fn created() -> serde_json::Value {
+        serde_json::json!({ "id": "m0123456789abcdefg", "url": "https://fettle.page/r/m0123456789abcdefg", "deleteUrl": "https://fettle.page/r/m0123456789abcdefg/delete#tok", "deleteToken": "tok", "expiresAt": "2026-11-06T21:00:00.000Z", "locked": false })
+    }
+
+    #[derive(Debug, Clone)]
+    struct Call {
+        method: String,
+        url: String,
+        headers: Vec<(String, String)>,
+        body: Option<serde_json::Value>,
+    }
+
+    /// Answers every request the same way and records what was asked.
+    struct Fake {
+        answer: Box<dyn Fn() -> Result<Response, ()> + Send + Sync>,
+        calls: Mutex<Vec<Call>>,
+    }
+
+    impl Fake {
+        fn new(answer: impl Fn() -> Result<Response, ()> + Send + Sync + 'static) -> Fake {
+            Fake { answer: Box::new(answer), calls: Mutex::new(Vec::new()) }
+        }
+        fn calls(&self) -> Vec<Call> {
+            self.calls.lock().unwrap().clone()
+        }
+    }
+
+    impl Http for Fake {
+        fn send(&self, method: &str, url: &str, headers: &[(&str, String)], body: Option<Vec<u8>>) -> Result<Response, ()> {
+            self.calls.lock().unwrap().push(Call {
+                method: method.into(),
+                url: url.into(),
+                headers: headers.iter().map(|(k, v)| (k.to_string(), v.clone())).collect(),
+                body: body.map(|b| serde_json::from_slice(&b).unwrap()),
+            });
+            (self.answer)()
+        }
+    }
+
+    fn json(status: u16, body: serde_json::Value) -> Result<Response, ()> {
+        Ok(Response { status, headers: HashMap::from([("content-type".into(), "application/json".into())]), body: body.to_string().into_bytes() })
+    }
+
+    #[test]
+    fn posts_the_envelope_as_json_and_returns_the_links() {
+        let f = Fake::new(|| json(201, created()));
+        let shared = share_report(&f, ORIGIN, &report(), Some(Expiry::Month), None).expect("shared");
+        assert_eq!(serde_json::to_value(&shared).unwrap(), created());
+        let call = &f.calls()[0];
+        assert_eq!((call.method.as_str(), call.url.as_str()), ("POST", "https://fettle.page/api/reports"));
+        assert!(call.headers.contains(&("content-type".into(), "application/json".into())));
+        assert_eq!(call.body, Some(serde_json::json!({ "report": serde_json::to_value(report()).unwrap(), "expires": "30d" })));
+    }
+
+    #[test]
+    fn sends_the_password_only_when_there_is_one() {
+        let f = Fake::new(|| json(201, serde_json::json!({ "locked": true }).as_object().map(|_| created()).unwrap()));
+        let _ = share_report(&f, ORIGIN, &report(), None, Some("hunter22"));
+        let _ = share_report(&f, ORIGIN, &report(), None, Some(""));
+        assert_eq!(f.calls()[0].body.as_ref().unwrap()["password"], "hunter22");
+        assert!(f.calls()[1].body.as_ref().unwrap().get("password").is_none());
+    }
+
+    #[test]
+    fn refuses_a_short_or_long_password_before_sending_anything() {
+        let f = Fake::new(|| json(201, created()));
+        assert_eq!(share_report(&f, ORIGIN, &report(), None, Some("short")).unwrap_err().error, "password_too_short");
+        assert_eq!(share_report(&f, ORIGIN, &report(), None, Some(&"x".repeat(129))).unwrap_err().error, "password_too_long");
+        // Counted as JavaScript does: an emoji is two.
+        assert_eq!(share_report(&f, ORIGIN, &report(), None, Some("🔒🔒🔒")).unwrap_err().error, "password_too_short");
+        assert!(f.calls().is_empty());
+    }
+
+    #[test]
+    fn refuses_a_report_over_256_kb_before_sending_it() {
+        let f = Fake::new(|| json(201, created()));
+        let big = Report { app_version: "x".repeat(262_144), ..report() };
+        assert_eq!(share_report(&f, ORIGIN, &big, None, None).unwrap_err().error, "too_large");
+        assert!(f.calls().is_empty());
+    }
+
+    #[test]
+    fn passes_on_the_servers_error_code_and_the_wait_after_a_rate_limit() {
+        let limited = Fake::new(|| {
+            let mut r = json(429, serde_json::json!({ "error": "rate_limited" }))?;
+            r.headers.insert("retry-after".into(), "60".into());
+            Ok(r)
+        });
+        assert_eq!(share_report(&limited, ORIGIN, &report(), None, None).unwrap_err(), Failure { error: "rate_limited", retry_after: Some(60), detail: None });
+        let invalid = Fake::new(|| json(400, serde_json::json!({ "error": "invalid_report", "detail": "facts: bad" })));
+        assert_eq!(share_report(&invalid, ORIGIN, &report(), None, None).unwrap_err(), Failure { error: "invalid_report", retry_after: None, detail: Some("facts: bad".into()) });
+    }
+
+    #[test]
+    fn reports_no_connection_and_odd_answers_without_panicking() {
+        let offline = Fake::new(|| Err(()));
+        assert_eq!(share_report(&offline, ORIGIN, &report(), None, None).unwrap_err().error, "network");
+        let html = Fake::new(|| Ok(Response { status: 502, headers: HashMap::new(), body: b"<h1>Bad gateway</h1>".to_vec() }));
+        assert_eq!(share_report(&html, ORIGIN, &report(), None, None).unwrap_err().error, "bad_response");
+        let partial = Fake::new(|| json(201, serde_json::json!({ "id": "x" })));
+        assert_eq!(share_report(&partial, ORIGIN, &report(), None, None).unwrap_err().error, "bad_response");
+    }
+
+    #[test]
+    fn accepts_an_origin_with_a_trailing_slash() {
+        let f = Fake::new(|| json(201, created()));
+        let _ = share_report(&f, "https://fettle.page/", &report(), None, None);
+        assert_eq!(f.calls()[0].url, "https://fettle.page/api/reports");
+    }
+
+    #[test]
+    fn sends_the_delete_token_as_a_bearer_token() {
+        let f = Fake::new(|| Ok(Response { status: 204, headers: HashMap::new(), body: vec![] }));
+        assert_eq!(delete_shared(&f, ORIGIN, "m0123456789abcdefg", "tok"), Ok(()));
+        let call = &f.calls()[0];
+        assert_eq!((call.method.as_str(), call.url.as_str()), ("DELETE", "https://fettle.page/api/reports/m0123456789abcdefg"));
+        assert!(call.headers.contains(&("authorization".into(), "Bearer tok".into())));
+    }
+
+    #[test]
+    fn treats_a_link_that_is_already_gone_as_deleted() {
+        let f = Fake::new(|| json(404, serde_json::json!({ "error": "not_found" })));
+        assert_eq!(delete_shared(&f, ORIGIN, "id", "tok"), Ok(()));
+    }
+
+    #[test]
+    fn does_not_take_someone_elses_404_page_for_a_deleted_link() {
+        let f = Fake::new(|| Ok(Response { status: 404, headers: HashMap::from([("content-type".into(), "text/html".into())]), body: b"<h1>Not Found</h1>".to_vec() }));
+        assert_eq!(delete_shared(&f, ORIGIN, "id", "tok").unwrap_err().error, "bad_response");
+    }
+
+    #[test]
+    fn reports_a_wrong_token_and_a_lost_connection() {
+        let f = Fake::new(|| json(403, serde_json::json!({ "error": "forbidden" })));
+        assert_eq!(delete_shared(&f, ORIGIN, "id", "tok").unwrap_err().error, "forbidden");
+        let offline = Fake::new(|| Err(()));
+        assert_eq!(delete_shared(&offline, ORIGIN, "id", "tok").unwrap_err().error, "network");
+    }
+
+    #[test]
+    fn failures_read_as_words() {
+        assert_eq!(problem(&Failure::new("network")), ("share.e.network", None));
+        assert_eq!(problem(&Failure { error: "rate_limited", retry_after: Some(61), detail: None }), ("share.e.rate_limited_in", Some(2)));
+        assert_eq!(problem(&Failure { error: "rate_limited", retry_after: Some(5), detail: None }), ("share.e.rate_limited_in", Some(1)));
+        assert_eq!(problem(&Failure::new("rate_limited")), ("share.e.rate_limited", None));
+        assert_eq!(problem(&Failure::new("too_large")), ("share.e.too_large", None));
+        assert_eq!(problem(&Failure::new("password_too_short")), ("share.e.password_too_short", None));
+        assert_eq!(problem(&Failure::new("password_too_long")), ("share.e.password_too_long", None));
+        assert_eq!(problem(&Failure::new("forbidden")), ("share.e.other", None));
+    }
+}
+
+/// Live checks of the real transport, run by hand:
+/// `FETTLE_SHARE_ORIGIN=http://localhost:8788 cargo test -p fettle-windows --lib live_ -- --ignored`
+#[cfg(test)]
+mod live {
+    use super::*;
+
+    #[test]
+    #[ignore]
+    fn live_share_and_delete_against_a_local_worker() {
+        let origin = std::env::var("FETTLE_SHARE_ORIGIN").expect("FETTLE_SHARE_ORIGIN");
+        let report: Report = crate::store::tests::dump_report();
+        let report = Report { engine_version: Some(fettle_verdicts::ENGINE_VERSION.into()), ..report };
+        let http = RealHttp::default();
+        let shared = share_report(&http, &origin, &report, Some(Expiry::Week), Some("hunter2222")).expect("shared");
+        assert!(shared.locked);
+        assert!(shared.url.contains("/r/"));
+        assert_eq!(delete_shared(&http, &origin, &shared.id, &shared.delete_token), Ok(()));
+        // Deleting again: already gone counts as deleted.
+        assert_eq!(delete_shared(&http, &origin, &shared.id, &shared.delete_token), Ok(()));
+    }
+
+    #[test]
+    #[ignore]
+    fn live_https_through_windows_tls() {
+        let r = RealHttp::default().send("GET", "https://example.com/", &[], None).expect("an HTTPS answer");
+        assert_eq!(r.status, 200);
+    }
+}

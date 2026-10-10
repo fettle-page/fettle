@@ -1,0 +1,67 @@
+# A version tag (v1.0.0) builds the downloads here, in the open, from that tag's source:
+# the installer, the portable zip and SHA256SUMS.txt, with a build attestation for each download.
+# It makes a draft release; a maintainer reads it and publishes it, together with the website
+# (the site's /app/latest.json tells the app which version is newest).
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+jobs:
+  release:
+    runs-on: windows-2025
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # Nothing here pushes, so the token needn't stay where npm and cargo build scripts can read it.
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm run release:check
+      - run: rustup target add wasm32-unknown-unknown
+      - run: npm ci
+      - run: npm test
+      # Every test program runs, so one run shows every failure.
+      - run: cargo test --workspace --no-fail-fast
+
+      - name: Install Inno Setup 6.7.3
+        shell: pwsh
+        run: |
+          $exe = Join-Path $env:RUNNER_TEMP "innosetup-6.7.3.exe"
+          Invoke-WebRequest -Uri "https://github.com/jrsoftware/issrc/releases/download/is-6_7_3/innosetup-6.7.3.exe" -OutFile $exe
+          $hash = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLower()
+          if ($hash -ne "9c73c3bae7ed48d44112a0f48e66742c00090bdb5bef71d9d3c056c66e97b732") { throw "The Inno Setup download doesn't match its known hash ($hash)" }
+          $dir = Join-Path $env:RUNNER_TEMP "inno"
+          Start-Process -FilePath $exe -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/CURRENTUSER", "/DIR=$dir" -Wait
+          "ISCC=$dir\ISCC.exe" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+      - run: npm run package:windows
+
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: |
+            target/package/Fettle-Setup-*.exe
+            target/package/Fettle-*-portable.zip
+
+      - name: Draft the release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          $version = $env:GITHUB_REF_NAME.TrimStart("v")
+          $files = @(
+            "target/package/Fettle-Setup-$version.exe",
+            "target/package/Fettle-$version-portable.zip",
+            "target/package/SHA256SUMS.txt"
+          )
+          gh release create $env:GITHUB_REF_NAME --draft --title "Fettle $version" --notes "What's new: https://fettle.page/changelog" @files

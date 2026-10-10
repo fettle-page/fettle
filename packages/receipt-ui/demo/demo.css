@@ -1,0 +1,66 @@
+@import "tailwindcss";
+@import "../src/theme.css";
+@import "../src/receipt.css";
+@import "../src/view.css";
+@source "../src";
+
+/* The test page sits on the cutting mat from concept 1: 1 cm grid, 5 cm major lines. */
+:root {
+  --line: rgb(232 244 236 / 0.13);
+  --line-strong: rgb(232 244 236 / 0.28);
+}
+html, body { margin: 0; }
+body { background: var(--color-mat); color: var(--color-paper-warm); font-family: var(--font-display); }
+
+.mat {
+  position: relative;
+  min-height: 100vh;
+  overflow-x: clip; /* not hidden: that would make .mat a scroll box and break the sticky workbench */
+  background:
+    linear-gradient(var(--line-strong) 1px, transparent 1px) 0 0 / 190px 190px,
+    linear-gradient(90deg, var(--line-strong) 1px, transparent 1px) 0 0 / 190px 190px,
+    linear-gradient(var(--line) 1px, transparent 1px) 0 0 / 38px 38px,
+    linear-gradient(90deg, var(--line) 1px, transparent 1px) 0 0 / 38px 38px,
+    radial-gradient(120% 90% at 30% 20%, var(--color-mat) 40%, var(--color-mat-deep));
+}
+.ruler {
+  position: absolute; inset: 0 0 auto; height: 10px; pointer-events: none;
+  background: repeating-linear-gradient(90deg, var(--line-strong) 0 1px, transparent 1px 38px);
+}
+
+.bar { display: flex; align-items: center; gap: 16px; padding: 36px 5vw 0; }
+.brand { height: 30px; width: auto; color: var(--color-paper-warm); }
+
+/* Label-maker tape controls */
+.controls { display: flex; flex-wrap: wrap; gap: 10px; padding: 22px 5vw 0; }
+.tape {
+  display: inline-flex; align-items: center; min-height: 32px;
+  padding: 7px 12px 6px;
+  border: 0; border-radius: 2px;
+  background: #121513; color: var(--color-paper-warm);
+  font: 700 12px/1 var(--font-mono); letter-spacing: 0.14em; text-transform: uppercase;
+  text-shadow: 0 1px 0 rgb(255 255 255 / 0.18), 0 -1px 0 rgb(0 0 0 / 0.6);
+  box-shadow: 0 2px 0 rgb(0 0 0 / 0.25);
+  clip-path: polygon(0 0, 100% 0, 98.5% 50%, 100% 100%, 0 100%, 1.5% 50%);
+  cursor: pointer;
+}
+.tape.quiet { cursor: default; opacity: 0.8; }
+.tape.light { background: var(--color-paper-warm); color: var(--color-ink); text-shadow: none; }
+.tape:focus-visible, .tape:has(select:focus-visible) { outline: 2px solid var(--color-soft); outline-offset: 3px; }
+.tape select { all: unset; cursor: pointer; }
+.tape option { color: var(--color-ink); text-transform: none; }
+
+.stage { padding: 48px 16px 96px; }
+/* A slight tilt, as if laid on the mat, only while the receipt stands alone */
+@media (min-width: 640px) {
+  @container fettle-view (max-width: 1099.98px) {
+    .stage .fettle-receipt { transform: rotate(0.8deg); }
+  }
+}
+
+@media print {
+  body, .mat { background: #fff; }
+  .ruler, .bar, .controls { display: none; }
+  .stage { padding: 0; }
+  .stage .fettle-receipt { transform: none; }
+}

@@ -1,0 +1,458 @@
+{
+  "Receipt": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "properties": {
+      "engineVersion": {
+        "type": "string"
+      },
+      "sections": {
+        "items": {
+          "properties": {
+            "lines": {
+              "items": {
+                "properties": {
+                  "action": {
+                    "description": "Required for keep_an_eye and act_soon: every warning comes with a next step.",
+                    "properties": {
+                      "key": {
+                        "type": "string"
+                      },
+                      "params": {
+                        "additionalProperties": {
+                          "anyOf": [
+                            {
+                              "format": "int64",
+                              "type": "integer"
+                            },
+                            {
+                              "format": "double",
+                              "type": "number"
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ],
+                          "description": "A message parameter: TypeScript's `string | number`, with integers kept integral in JSON."
+                        },
+                        "type": [
+                          "object",
+                          "null"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "key"
+                    ],
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "detail": {
+                    "description": "A pointer into the copy catalogs; rendered per locale by `render`.",
+                    "properties": {
+                      "key": {
+                        "type": "string"
+                      },
+                      "params": {
+                        "additionalProperties": {
+                          "anyOf": [
+                            {
+                              "format": "int64",
+                              "type": "integer"
+                            },
+                            {
+                              "format": "double",
+                              "type": "number"
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ],
+                          "description": "A message parameter: TypeScript's `string | number`, with integers kept integral in JSON."
+                        },
+                        "type": [
+                          "object",
+                          "null"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "key"
+                    ],
+                    "type": [
+                      "object",
+                      "null"
+                    ]
+                  },
+                  "headline": {
+                    "description": "A pointer into the copy catalogs; rendered per locale by `render`.",
+                    "properties": {
+                      "key": {
+                        "type": "string"
+                      },
+                      "params": {
+                        "additionalProperties": {
+                          "anyOf": [
+                            {
+                              "format": "int64",
+                              "type": "integer"
+                            },
+                            {
+                              "format": "double",
+                              "type": "number"
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ],
+                          "description": "A message parameter: TypeScript's `string | number`, with integers kept integral in JSON."
+                        },
+                        "type": [
+                          "object",
+                          "null"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "key"
+                    ],
+                    "type": "object"
+                  },
+                  "id": {
+                    "type": "string"
+                  },
+                  "level": {
+                    "description": "Verdict levels. `Info` is for neutral notes that never affect the summary.",
+                    "enum": [
+                      "fine",
+                      "keep_an_eye",
+                      "act_soon",
+                      "couldnt_check",
+                      "info"
+                    ],
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "level",
+                  "headline"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "section": {
+              "enum": [
+                "storage",
+                "battery",
+                "memory",
+                "windows",
+                "startup",
+                "graphics",
+                "system"
+              ],
+              "type": "string"
+            }
+          },
+          "required": [
+            "section",
+            "lines"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "summary": {
+        "properties": {
+          "actions": {
+            "items": {
+              "description": "A pointer into the copy catalogs; rendered per locale by `render`.",
+              "properties": {
+                "key": {
+                  "type": "string"
+                },
+                "params": {
+                  "additionalProperties": {
+                    "anyOf": [
+                      {
+                        "format": "int64",
+                        "type": "integer"
+                      },
+                      {
+                        "format": "double",
+                        "type": "number"
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ],
+                    "description": "A message parameter: TypeScript's `string | number`, with integers kept integral in JSON."
+                  },
+                  "type": [
+                    "object",
+                    "null"
+                  ]
+                }
+              },
+              "required": [
+                "key"
+              ],
+              "type": "object"
+            },
+            "type": "array"
+          },
+          "key": {
+            "description": "summary.fine, summary.some, summary.attention or summary.partial.",
+            "enum": [
+              "summary.fine",
+              "summary.some",
+              "summary.attention",
+              "summary.partial"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "key",
+          "actions"
+        ],
+        "type": "object"
+      }
+    },
+    "required": [
+      "summary",
+      "sections",
+      "engineVersion"
+    ],
+    "title": "Receipt",
+    "type": "object"
+  },
+  "ReceiptModel": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "properties": {
+      "actions": {
+        "items": {
+          "type": "string"
+        },
+        "type": "array"
+      },
+      "labels": {
+        "properties": {
+          "details": {
+            "type": "string"
+          },
+          "machine": {
+            "type": "string"
+          },
+          "nextStep": {
+            "type": "string"
+          },
+          "stamp": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "details",
+          "nextStep",
+          "machine",
+          "stamp"
+        ],
+        "type": "object"
+      },
+      "locale": {
+        "enum": [
+          "en",
+          "it"
+        ],
+        "type": "string"
+      },
+      "machine": {
+        "items": {
+          "properties": {
+            "label": {
+              "type": "string"
+            },
+            "value": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "label",
+            "value"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "meta": {
+        "properties": {
+          "collectedAt": {
+            "description": "The raw timestamp: it identifies the report whatever the language.",
+            "type": "string"
+          },
+          "deep": {
+            "type": "boolean"
+          },
+          "footer": {
+            "type": "string"
+          },
+          "scan": {
+            "type": "string"
+          },
+          "when": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "when",
+          "collectedAt",
+          "deep",
+          "footer",
+          "scan"
+        ],
+        "type": "object"
+      },
+      "sections": {
+        "items": {
+          "properties": {
+            "details": {
+              "items": {
+                "properties": {
+                  "rows": {
+                    "items": {
+                      "properties": {
+                        "label": {
+                          "type": "string"
+                        },
+                        "value": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "label",
+                        "value"
+                      ],
+                      "type": "object"
+                    },
+                    "type": "array"
+                  },
+                  "title": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "rows"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "id": {
+              "enum": [
+                "storage",
+                "battery",
+                "memory",
+                "windows",
+                "startup",
+                "graphics",
+                "system"
+              ],
+              "type": "string"
+            },
+            "lines": {
+              "items": {
+                "properties": {
+                  "action": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "detail": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  },
+                  "headline": {
+                    "type": "string"
+                  },
+                  "id": {
+                    "type": "string"
+                  },
+                  "level": {
+                    "description": "Verdict levels. `Info` is for neutral notes that never affect the summary.",
+                    "enum": [
+                      "fine",
+                      "keep_an_eye",
+                      "act_soon",
+                      "couldnt_check",
+                      "info"
+                    ],
+                    "type": "string"
+                  },
+                  "levelText": {
+                    "type": "string"
+                  },
+                  "tag": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "id",
+                  "level",
+                  "tag",
+                  "levelText",
+                  "headline"
+                ],
+                "type": "object"
+              },
+              "type": "array"
+            },
+            "title": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "title",
+            "lines",
+            "details"
+          ],
+          "type": "object"
+        },
+        "type": "array"
+      },
+      "summary": {
+        "type": "string"
+      },
+      "tone": {
+        "description": "fine, some, attention or partial.",
+        "enum": [
+          "fine",
+          "some",
+          "attention",
+          "partial"
+        ],
+        "type": "string"
+      }
+    },
+    "required": [
+      "locale",
+      "tone",
+      "summary",
+      "actions",
+      "machine",
+      "sections",
+      "meta",
+      "labels"
+    ],
+    "title": "ReceiptModel",
+    "type": "object"
+  }
+}

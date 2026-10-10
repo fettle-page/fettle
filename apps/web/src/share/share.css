@@ -1,0 +1,91 @@
+@import "tailwindcss";
+@import "@fettle/receipt-ui/theme.css";
+@import "@fettle/receipt-ui/receipt.css";
+@import "@fettle/receipt-ui/view.css";
+@import "@fettle/receipt-ui/themes.css";
+@import "../styles/fonts.css";
+@source "./";
+@source "../../../../packages/receipt-ui/src";
+
+/* The share page sits on the cutting mat, like the site: 1 cm grid, 5 cm major lines. Colours: themes.css. */
+html, body { margin: 0; }
+[hidden] { display: none !important; } /* beats .tape's display */
+body { background: var(--t-page); color: var(--on-mat); font-family: var(--font-display); }
+::selection { background: var(--color-soft); color: var(--color-ink); } /* the site's green highlighter */
+
+.mat {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  overflow-x: clip; /* not hidden: that would make .mat a scroll box and break the sticky workbench */
+  background:
+    linear-gradient(var(--line-strong) 1px, transparent 1px) 0 0 / 190px 190px,
+    linear-gradient(90deg, var(--line-strong) 1px, transparent 1px) 0 0 / 190px 190px,
+    linear-gradient(var(--line) 1px, transparent 1px) 0 0 / 38px 38px,
+    linear-gradient(90deg, var(--line) 1px, transparent 1px) 0 0 / 38px 38px,
+    radial-gradient(120% 90% at 30% 20%, var(--t-mat) 40%, var(--t-mat-deep));
+}
+
+.bar { display: flex; align-items: center; gap: 16px; padding: 36px 5vw 0; }
+.home { display: inline-flex; color: var(--on-mat); border-radius: 2px; }
+.home:focus-visible { outline: 2px solid var(--t-accent); outline-offset: 4px; }
+.brand { height: 30px; width: auto; }
+
+/* Label-maker tape, as on the test page */
+.tape {
+  display: inline-flex; align-items: center; min-height: 32px;
+  padding: 7px 12px 6px;
+  border: 0; border-radius: 2px;
+  background: var(--t-tape); color: var(--t-tape-ink);
+  font: 700 12px/1 var(--font-mono); letter-spacing: 0.14em; text-transform: uppercase;
+  text-decoration: none;
+  text-shadow: 0 1px 0 rgb(255 255 255 / 0.18), 0 -1px 0 rgb(0 0 0 / 0.6);
+  box-shadow: 0 2px 0 rgb(0 0 0 / 0.25);
+  clip-path: polygon(0 0, 100% 0, 98.5% 50%, 100% 100%, 0 100%, 1.5% 50%);
+  cursor: pointer;
+}
+.tape.quiet { cursor: default; opacity: 0.8; }
+.theme-toggle { margin-left: auto; gap: 7px; }
+.theme-icon { width: 13px; height: 13px; flex: none; }
+.tape.light { background: var(--t-tape-light); color: var(--t-tape-light-ink); text-shadow: none; box-shadow: 0 2px 0 rgb(0 0 0 / 0.25), inset 0 0 0 1px var(--t-tape-light-ring); }
+.tape:disabled { cursor: progress; opacity: 0.6; }
+.tape:focus-visible { outline: 2px solid var(--t-accent); outline-offset: 3px; }
+
+.stage { flex: 1; padding: 48px 16px 64px; }
+/* The receipt feeds out once: transform only, so it's visible (and counted as painted) from the start. */
+@keyframes share-feed { from { transform: translateY(-14px); } to { transform: none; } }
+.stage .fettle-view-layout > .fettle-receipt { animation: share-feed 0.45s cubic-bezier(0.2, 0.7, 0.3, 1) both; }
+@media (prefers-reduced-motion: reduce) { .stage .fettle-view-layout > .fettle-receipt { animation: none; } }
+.note { margin: 20px auto 0; max-width: 40ch; text-align: center; font: 500 13px/1.5 var(--font-mono); color: var(--t-accent); }
+
+/* A paper slip for the short pages: missing, locked, delete */
+.card {
+  max-width: 34rem; margin: 6vh auto 0; padding: 32px 28px 28px;
+  background: var(--color-paper); color: var(--color-ink);
+  box-shadow: 0 1px 0 rgb(0 0 0 / 0.08), 0 18px 40px -18px rgb(0 0 0 / 0.55);
+  font: 400 15px/1.55 var(--font-mono);
+}
+.card h1 { margin: 0 0 12px; font: 800 clamp(24px, 4vw, 30px)/1.1 var(--font-display); letter-spacing: -0.02em; }
+.card p { margin: 0 0 16px; color: var(--color-ink-soft); }
+.card [role="status"] { color: var(--color-ink); font-weight: 600; }
+.unlock { display: grid; gap: 10px; justify-items: start; }
+.unlock label { font-weight: 600; }
+.unlock input {
+  width: 100%; box-sizing: border-box; padding: 10px 12px;
+  border: 1.5px solid var(--color-ink); border-radius: 2px; background: color-mix(in srgb, var(--color-paper) 55%, #fff); color: var(--color-ink);
+  font: 400 16px/1.2 var(--font-mono);
+}
+.unlock input:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
+.unlock input[aria-invalid] { border-color: var(--color-accent-ink); }
+
+.foot {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px 20px;
+  padding: 0 5vw 40px; font: 500 13px/1.5 var(--font-mono); color: var(--on-mat);
+}
+.foot p { margin: 0; }
+
+@media print {
+  body, .mat { background: #fff; }
+  .bar, .note, .foot { display: none; }
+  .stage { padding: 0; }
+}

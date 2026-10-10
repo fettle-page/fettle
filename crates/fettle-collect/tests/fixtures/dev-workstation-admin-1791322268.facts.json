@@ -1,0 +1,228 @@
+{
+  "battery": {
+    "check": {
+      "status": "not_present"
+    }
+  },
+  "graphics": {
+    "check": {
+      "status": "ok"
+    },
+    "data": {
+      "adapters": [
+        {
+          "driver_date": "2026-09-25",
+          "driver_version": "32.0.21045.11001",
+          "name": "AMD Radeon RX 6900 XT",
+          "software": false,
+          "vram_bytes": 17130815488
+        },
+        {
+          "driver_date": null,
+          "name": "Microsoft Basic Render Driver",
+          "software": true,
+          "vram_bytes": 0
+        }
+      ]
+    }
+  },
+  "memory": {
+    "check": {
+      "status": "ok"
+    },
+    "data": {
+      "modules": [
+        {
+          "bank_label": "P0 CHANNEL A",
+          "capacity_bytes": 17179869184,
+          "configured_speed_mts": 6000,
+          "configured_voltage_mv": 1100,
+          "device_locator": "DIMM 1",
+          "form_factor": "dimm",
+          "kind": "ddr5",
+          "manufacturer": "G.SKILL",
+          "part_number": "F5-6000J2836G16G",
+          "speed_mts": 6000
+        },
+        {
+          "bank_label": "P0 CHANNEL B",
+          "capacity_bytes": 17179869184,
+          "configured_speed_mts": 6000,
+          "configured_voltage_mv": 1100,
+          "device_locator": "DIMM 1",
+          "form_factor": "dimm",
+          "kind": "ddr5",
+          "manufacturer": "G.SKILL",
+          "part_number": "F5-6000J2836G16G",
+          "speed_mts": 6000
+        }
+      ],
+      "slots_total": 4
+    }
+  },
+  "startup": {
+    "check": {
+      "status": "ok"
+    },
+    "data": {
+      "items": [
+        {
+          "enabled": true,
+          "location": "run_key",
+          "name": "GoogleDriveFS"
+        },
+        {
+          "enabled": true,
+          "location": "run_key",
+          "name": "Everything"
+        },
+        {
+          "enabled": false,
+          "location": "run_key",
+          "name": "AMDNoiseSuppression"
+        },
+        {
+          "enabled": true,
+          "location": "run_key",
+          "name": "MicrosoftEdgeAutoLaunch_D381F9995CD4E4E9D3547570FCA4BB36"
+        },
+        {
+          "enabled": false,
+          "location": "run_key",
+          "name": "SecurityHealth"
+        },
+        {
+          "location": "run_once",
+          "name": "msedge_cleanup_{56EB18F8-B008-4CBD-B6D2-8C97FE7E9062}"
+        },
+        {
+          "enabled": true,
+          "location": "folder",
+          "name": "Fosi Audio USB Audio Device Control Panel Autostart.lnk"
+        }
+      ]
+    }
+  },
+  "storage": {
+    "check": {
+      "status": "ok"
+    },
+    "data": {
+      "disks": [
+        {
+          "bus": "sata",
+          "media": "ssd",
+          "model": "CT1000MX500SSD1",
+          "size_bytes": 1000204886016,
+          "smart": {
+            "life_used_pct": 4,
+            "offline_uncorrectable": 0,
+            "pending_sectors": 0,
+            "power_on_hours": 32614,
+            "reallocated_sectors": 0,
+            "temperature_c": 35
+          }
+        },
+        {
+          "bus": "nvme",
+          "media": "ssd",
+          "model": "Samsung SSD 9100 PRO 1TB",
+          "nvme": {
+            "media_errors": 0,
+            "percentage_used": 0,
+            "power_on_hours": 426,
+            "temperature_c": 45
+          },
+          "size_bytes": 1000204886016
+        },
+        {
+          "bus": "nvme",
+          "media": "ssd",
+          "model": "WDC PC SN730 SDBPNTY-1T00-1101",
+          "nvme": {
+            "media_errors": 0,
+            "percentage_used": 0,
+            "power_on_hours": 3607,
+            "temperature_c": 45
+          },
+          "size_bytes": 1024209543168
+        },
+        {
+          "bus": "sata",
+          "media": "ssd",
+          "model": "Samsung SSD 860 EVO 1TB",
+          "size_bytes": 1000204886016,
+          "smart": {
+            "life_used_pct": 2,
+            "power_on_hours": 35415,
+            "reallocated_sectors": 0
+          }
+        },
+        {
+          "bus": "nvme",
+          "media": "ssd",
+          "model": "CT1000T500SSD8",
+          "nvme": {
+            "media_errors": 0,
+            "percentage_used": 0,
+            "power_on_hours": 1490,
+            "temperature_c": 42
+          },
+          "size_bytes": 1000204886016
+        }
+      ],
+      "volumes": [
+        {
+          "free_bytes": 787526496256,
+          "letter": "C:",
+          "size_bytes": 999075868672
+        },
+        {
+          "free_bytes": 986183569408,
+          "letter": "D:",
+          "size_bytes": 1000185262080
+        },
+        {
+          "free_bytes": 999359123456,
+          "letter": "E:",
+          "size_bytes": 1000203087872
+        },
+        {
+          "free_bytes": 474917806080,
+          "letter": "F:",
+          "size_bytes": 1024208138240
+        },
+        {
+          "free_bytes": 258747310080,
+          "letter": "G:",
+          "size_bytes": 1000203087872
+        },
+        {
+          "free_bytes": 748150169600,
+          "letter": "X:",
+          "size_bytes": 999075868672
+        }
+      ]
+    }
+  },
+  "windows": {
+    "check": {
+      "status": "ok"
+    },
+    "data": {
+      "build": 26300,
+      "display_version": "26H2",
+      "edition_id": "ProfessionalWorkstation",
+      "installation_type": "Client",
+      "last_update_installed": "2026-09-29",
+      "product": "Windows 11 Pro for Workstations",
+      "secure_boot": true,
+      "tpm": {
+        "present": true,
+        "spec_version": "2.0, 0, 1.59"
+      },
+      "ubr": 9550,
+      "uptime_seconds": 36946
+    }
+  }
+}

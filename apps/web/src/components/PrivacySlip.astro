@@ -1,0 +1,34 @@
+---
+// A receipt slip showing what Fettle leaves out.
+import type { Locale } from "../i18n/paths.ts";
+import { home } from "../i18n/home.ts";
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const h = home(locale);
+const hidden = [h.slipSerial, h.slipPc, h.slipUser, h.slipNet];
+---
+
+<div class="slip-feed"><span class="slip-slot" aria-hidden="true"></span><figure class="slip privacy-slip">
+  <figcaption class="slip-head">{h.slipHead}</figcaption>
+  <dl>
+    {
+      hidden.map((label) => (
+        <div class="slip-row">
+          <dt>{label}</dt>
+          <dd>
+            <span class="redact" aria-hidden="true" />
+            <span>{h.slipHidden}</span>
+          </dd>
+        </div>
+      ))
+    }
+    <div class="slip-row">
+      <dt>{h.slipKey}</dt>
+      <dd><strong>{h.slipNever}</strong></dd>
+    </div>
+  </dl>
+</figure></div>

@@ -56,9 +56,16 @@ writeFileSync(
   [
     "Fettle keeps its settings, the remembered check and your shared links in this folder,",
     "so it leaves nothing on the PC it runs on. Keep it next to fettle.exe.",
+    "To remove Fettle, delete this folder together with fettle.exe.",
+    "The only thing Fettle sends on its own is the update check (the newest version number,",
+    "nothing about your PC). Turn it off in Settings. Privacy policy: https://fettle.page/privacy",
     "",
     "Fettle tiene qui le impostazioni, l'ultimo controllo ricordato e i link condivisi,",
     "così non lascia nulla sul PC su cui gira. Tienila accanto a fettle.exe.",
+    "Per rimuovere Fettle, elimina questa cartella insieme a fettle.exe.",
+    "L'unica cosa che Fettle invia da solo è il controllo degli aggiornamenti (il numero",
+    "dell'ultima versione, nulla sul tuo PC). Si disattiva nelle Impostazioni.",
+    "Informativa sulla privacy: https://fettle.page/it/privacy",
     "",
   ].join("\r\n"),
 );

@@ -3,3 +3,4 @@
 *.ico binary
 *.bat text eol=crlf
 spike/kit/README.txt text eol=crlf
+apps/windows/packaging/privacy/*.txt text eol=crlf

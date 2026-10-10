@@ -1,0 +1,9 @@
+﻿Privacy
+
+Fettle legge ciò che Windows sa già di questo PC e te lo mostra. Non invia nulla da solo, con una sola eccezione: il controllo degli aggiornamenti.
+
+Il controllo degli aggiornamenti chiede a fettle.page il numero dell'ultima versione, una volta al giorno se non lo cambi. Non invia nulla sul tuo PC. Puoi disattivarlo più avanti in questa installazione, o quando vuoi nelle Impostazioni di Fettle ("Controlla se c'è una nuova versione").
+
+Uno scontrino lascia questo PC solo quando lo condividi con un link. Scegli tu quanto dura il link, e puoi eliminarlo quando vuoi.
+
+Informativa sulla privacy: https://fettle.page/it/privacy

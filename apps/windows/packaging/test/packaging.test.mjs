@@ -20,7 +20,63 @@ describe("fettle.iss", () => {
   });
 });
 
+// SignPath's terms: software that contacts other systems on its own describes it in a privacy
+// policy, shows that during installation, and offers an installation option to turn it off.
+describe("fettle.iss: privacy during installation", () => {
+  const note = (lang) => readFileSync(join(dir, "privacy", `privacy-${lang}.txt`));
+
+  it("shows the privacy note before installing, in English and Italian", () => {
+    assert.match(iss, /^Name: "en"; MessagesFile: "compiler:Default\.isl"; InfoBeforeFile: "privacy\\privacy-en\.txt"$/m);
+    assert.match(iss, /^Name: "it"; MessagesFile: "compiler:Languages\\Italian\.isl"; InfoBeforeFile: "privacy\\privacy-it\.txt"$/m);
+  });
+
+  it("writes the notes so Inno Setup reads them right: UTF-8 with a BOM, Windows line ends", () => {
+    for (const lang of ["en", "it"]) {
+      const bytes = note(lang);
+      assert.deepEqual([...bytes.subarray(0, 3)], [0xef, 0xbb, 0xbf], lang);
+      const text = bytes.toString("utf8");
+      assert.ok(!/[^\r]\n/.test(text), `${lang}: every line ends in CRLF`);
+    }
+  });
+
+  it("says what leaves the PC: only the update check, and a receipt you choose to share", () => {
+    const en = note("en").toString("utf8");
+    const it_ = note("it").toString("utf8");
+    assert.match(en, /update check/);
+    assert.match(en, /nothing about your PC/);
+    assert.match(en, /share/);
+    assert.match(en, /https:\/\/fettle\.page\/privacy/);
+    assert.match(it_, /controllo degli aggiornamenti/);
+    assert.match(it_, /nulla sul tuo PC/);
+    assert.match(it_, /condividi/);
+    assert.match(it_, /https:\/\/fettle\.page\/it\/privacy/);
+  });
+
+  it("offers the update check as a box, ticked by default, in both languages", () => {
+    const task = /^Name: "updatecheck"; Description: "\{cm:UpdateCheck\}"; GroupDescription: "\{cm:UpdatesGroup\}"(.*)$/m.exec(iss);
+    assert.ok(task, "no updatecheck task");
+    assert.doesNotMatch(task[1], /unchecked/);
+    for (const key of ["UpdateCheck", "UpdatesGroup"]) {
+      assert.match(iss, new RegExp(`^en\\.${key}=.+$`, "m"));
+      assert.match(iss, new RegExp(`^it\\.${key}=.+$`, "m"));
+    }
+  });
+
+  it("turns the app's update check off when the box is cleared, keeping the other settings", () => {
+    assert.match(iss, /not WizardIsTaskSelected\('updatecheck'\)/);
+    assert.match(iss, /\{localappdata\}\\Fettle\\settings\.json/);
+    assert.match(iss, /'"updates":true', '"updates":false'/);
+    assert.match(iss, /'\{"updates":false\}'/);
+  });
+});
+
 describe("build.mjs", () => {
+  it("tells portable users how to remove Fettle and how to turn off the update check", () => {
+    assert.match(build, /delete this folder together with fettle\.exe/);
+    assert.match(build, /elimina questa cartella insieme a fettle\.exe/);
+    assert.match(build, /Settings/);
+  });
+
   it("writes the notices and Fettle's licence, and hands their folder to Inno Setup", () => {
     assert.match(build, /writeNotices\(.*, \{ skiaProfile: "release" \}\);/);
     assert.match(build, /LICENSE\.txt/);

@@ -222,6 +222,24 @@ pub(crate) mod tests {
         assert_eq!(FileStore::new(dir).load_settings(), Settings::default());
     }
 
+    // The installer's "check for updates" box (fettle.iss): cleared, it writes {"updates":false} on a
+    // first install, or swaps "updates":true for false in the settings an older install saved.
+    #[test]
+    fn the_installer_can_turn_the_update_check_off() {
+        let dir = temp_dir();
+        std::fs::create_dir_all(&dir).unwrap();
+        std::fs::write(dir.join("settings.json"), r#"{"updates":false}"#).unwrap();
+        assert_eq!(FileStore::new(dir.clone()).load_settings(), Settings { updates: false, ..Settings::default() });
+
+        let saved = Settings { remember: false, theme: ThemeChoice::Oled, ..Settings::default() };
+        let store = FileStore::new(dir.clone());
+        store.save_settings(&saved);
+        let text = std::fs::read_to_string(dir.join("settings.json")).unwrap();
+        assert_eq!(text.matches(r#""updates":true"#).count(), 1, "the installer looks for exactly this: {text}");
+        std::fs::write(dir.join("settings.json"), text.replace(r#""updates":true"#, r#""updates":false"#)).unwrap();
+        assert_eq!(store.load_settings(), Settings { updates: false, ..saved });
+    }
+
     #[test]
     fn the_last_check_round_trips_and_clears() {
         let store = FileStore::new(temp_dir());

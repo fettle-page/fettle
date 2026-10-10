@@ -1,0 +1,9 @@
+﻿Privacy
+
+Fettle reads what Windows already knows about this PC and shows it to you. It sends nothing on its own, with one exception: the update check.
+
+The update check asks fettle.page for the newest version number, once a day unless you change it. It sends nothing about your PC. You can turn it off further on in this installer, or at any time in Fettle's Settings ("Check for a new version").
+
+A receipt leaves this PC only when you share it as a link. You choose how long the link lasts, and you can delete it whenever you like.
+
+Privacy policy: https://fettle.page/privacy

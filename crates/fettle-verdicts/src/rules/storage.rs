@@ -1,7 +1,7 @@
 use super::common::{Action, couldnt_check, int, line, plural, section_problem};
 use crate::thresholds::{DISK_TEMP_KEEP_AN_EYE_C, FREE_SPACE_KEEP_AN_EYE, SSD_WEAR_ACT_SOON, SSD_WEAR_KEEP_AN_EYE};
 use crate::{Level, Line, Param, SectionId, SectionVerdict};
-use fettle_facts::{Bus, Disk, NvmeHealth, Section, SmartSummary, Storage};
+use fettle_facts::{Bus, Disk, Media, NvmeHealth, Section, SmartSummary, Storage};
 
 pub fn storage_rules(s: Option<&Section<Storage>>, elevated: bool) -> SectionVerdict {
     let problem = section_problem(SectionId::Storage, s.map(|s| &s.check));
@@ -34,8 +34,10 @@ pub fn storage_rules(s: Option<&Section<Storage>>, elevated: bool) -> SectionVer
 fn has_nvme_health(n: &NvmeHealth) -> bool {
     n.percentage_used.is_some() || n.critical_warning.is_some() || n.media_errors.is_some() || n.available_spare_pct.is_some()
 }
-fn has_smart_health(m: &SmartSummary) -> bool {
-    m.reallocated_sectors.is_some() || m.pending_sectors.is_some() || m.offline_uncorrectable.is_some() || m.life_used_pct.is_some()
+/// `ssd`: whether the life-used value counts. On some hard drives that SMART attribute means
+/// something else (202 is data address mark errors there).
+fn has_smart_health(m: &SmartSummary, ssd: bool) -> bool {
+    m.reallocated_sectors.is_some() || m.pending_sectors.is_some() || m.offline_uncorrectable.is_some() || (ssd && m.life_used_pct.is_some())
 }
 
 /// A wear warning for an SSD that has used `used`% of its rated life (NVMe or SATA), or none yet.
@@ -54,6 +56,7 @@ fn disk_lines(disk: &Disk, id: &str, elevated: bool) -> Vec<Line> {
     let model: Param = disk.model.clone().unwrap_or_else(|| "?".into()).into();
     let mut issues = Vec::new();
     let mut wear_pct: Option<u8> = None;
+    let ssd = disk.media == Some(Media::Ssd);
 
     if let Some(n) = disk.nvme.as_ref().filter(|n| has_nvme_health(n)) {
         // The drive's own verdict: any critical-warning bit, or spare capacity below its threshold.
@@ -68,7 +71,7 @@ fn disk_lines(disk: &Disk, id: &str, elevated: bool) -> Vec<Line> {
         if let Some(errors) = n.media_errors.filter(|e| *e > 0) {
             issues.push(line(format!("{id}-media"), Level::KeepAnEye, &plural("storage.media_errors", errors), &[("model", model.clone()), ("count", int(errors))], Action::Key("storage.media_errors.action")));
         }
-    } else if let Some(m) = disk.smart.as_ref().filter(|m| has_smart_health(m)) {
+    } else if let Some(m) = disk.smart.as_ref().filter(|m| has_smart_health(m, ssd)) {
         if let Some(pending) = m.pending_sectors.filter(|p| *p > 0) {
             issues.push(line(format!("{id}-pending"), Level::ActSoon, &plural("storage.pending_sectors", pending), &[("model", model.clone()), ("count", int(pending))], Action::Key("storage.pending_sectors.action")));
         }
@@ -76,7 +79,7 @@ fn disk_lines(disk: &Disk, id: &str, elevated: bool) -> Vec<Line> {
             issues.push(line(format!("{id}-realloc"), Level::KeepAnEye, &plural("storage.reallocated_sectors", realloc), &[("model", model.clone()), ("count", int(realloc))], Action::Key("storage.reallocated_sectors.action")));
         }
         // SATA SSDs report wear through vendor SMART attributes: the same points as NVMe.
-        if let Some(life) = m.life_used_pct {
+        if let Some(life) = m.life_used_pct.filter(|_| ssd) {
             wear_pct = Some(life.min(100));
             issues.extend(wear_line(id, &model, life));
         }

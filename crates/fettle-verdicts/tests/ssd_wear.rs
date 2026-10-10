@@ -46,3 +46,16 @@ fn nvme_wear_keeps_its_points_under_the_shared_name() {
     assert_eq!((l.level, l.headline.key.as_str()), (Level::KeepAnEye, "storage.ssd_wearing"));
 }
 
+// On some hard drives the SMART attribute read as wear means something else (202: data address mark
+// errors), so only an SSD's value counts as wear.
+#[test]
+fn a_hard_drive_smart_value_is_never_read_as_wear() {
+    let hdd = |smart: Value| json!({ "storage": ok(json!({ "disks": [{ "bus": "sata", "media": "hdd", "model": "ST2000DM008", "smart": smart }] })) });
+    let r = judge(hdd(json!({ "life_used_pct": 100, "reallocated_sectors": 0, "pending_sectors": 0 })), "2026-10-11T10:00:00Z", true);
+    assert!(lines(&r).iter().all(|l| l.id != "disk-0-wear"), "no wear line for a hard drive");
+    assert_eq!(find(&r, "disk-0").headline.key, "storage.disk_fine");
+
+    // With nothing else read, the drive's health is still unknown, not fine.
+    let only = judge(hdd(json!({ "life_used_pct": 100 })), "2026-10-11T10:00:00Z", true);
+    assert_eq!(find(&only, "disk-0-health").level, Level::CouldntCheck);
+}

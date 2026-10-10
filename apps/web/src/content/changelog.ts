@@ -9,8 +9,8 @@ export const releases: Release[] = [
     version: "1.0.1",
     date: null,
     notes: {
-      en: ["Before it installs anything, the installer shows what Fettle sends (only the update check) and offers a box to turn the update check off.", "Opening the JSON in Share no longer spreads the view apart."],
-      it: ["Prima di installare, l'installer mostra cosa invia Fettle (solo il controllo degli aggiornamenti) e offre una casella per disattivarlo.", "Aprire il JSON in Condividi non allarga più la vista."],
+      en: ["Before it installs anything, the installer shows what Fettle sends (only the update check) and offers a box to turn the update check off.", "Opening the JSON in Share no longer spreads the view apart.", "A receipt with three next steps no longer draws the first section over the third step.", "After a check, the side panel says “This check” instead of “Last check”."],
+      it: ["Prima di installare, l'installer mostra cosa invia Fettle (solo il controllo degli aggiornamenti) e offre una casella per disattivarlo.", "Aprire il JSON in Condividi non allarga più la vista.", "Uno scontrino con tre passi successivi non disegna più la prima sezione sopra il terzo.", "Dopo un controllo, il pannello laterale dice «Questo controllo» invece di «Ultimo controllo»."],
     },
   },
   {

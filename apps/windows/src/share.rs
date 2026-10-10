@@ -161,15 +161,43 @@ pub fn share_report(http: &dyn Http, origin: &str, report: &Report, expires: Opt
 
 /// A link the Worker says is already gone (expired or deleted elsewhere) counts as deleted. Any
 /// other 404, such as a proxy's page at a wrong address, doesn't: the report may still be public.
-pub fn delete_shared(http: &dyn Http, origin: &str, id: &str, token: &str) -> Result<(), Failure> {
+/// How a Delete went: deleted now, or it was already gone (deleted on the website, say).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Deleted {
+    Now,
+    AlreadyGone,
+}
+
+/// The server's own report ids: letters and digits. Anything else is refused rather than sent.
+fn sane_id(id: &str) -> bool {
+    !id.is_empty() && id.chars().all(|c| c.is_ascii_alphanumeric())
+}
+
+/// Whether a shared link still exists: open or locked, the server knows it; deleted or expired, it
+/// says "not found". A plain GET (no token, nothing sent); any other answer is an error, never "gone".
+pub fn link_exists(http: &dyn Http, origin: &str, id: &str) -> Result<bool, Failure> {
+    if !sane_id(id) {
+        return Err(Failure::new("bad_response"));
+    }
+    let r = http.send("GET", &endpoint(origin, &format!("/api/reports/{id}")), &[], None).map_err(|()| Failure::new("network"))?;
+    let error = read_json(&r).and_then(|b| b.get("error").and_then(|e| e.as_str()).map(String::from));
+    match (r.status, error.as_deref()) {
+        (200, _) | (401, Some("password_required")) => Ok(true),
+        (404, Some("not_found")) => Ok(false),
+        (404, _) => Err(Failure::new("bad_response")),
+        _ => Err(failure(&r)),
+    }
+}
+
+pub fn delete_shared(http: &dyn Http, origin: &str, id: &str, token: &str) -> Result<Deleted, Failure> {
     // Ids are the Worker's own (letters and digits); anything else is refused rather than sent.
-    if id.is_empty() || !id.chars().all(|c| c.is_ascii_alphanumeric()) {
+    if !sane_id(id) {
         return Err(Failure::new("bad_response"));
     }
     let r = http.send("DELETE", &endpoint(origin, &format!("/api/reports/{id}")), &[("authorization", format!("Bearer {token}"))], None).map_err(|()| Failure::new("network"))?;
     match r.status {
-        204 => Ok(()),
-        404 if read_json(&r).is_some_and(|b| b.get("error").and_then(|e| e.as_str()) == Some("not_found")) => Ok(()),
+        204 => Ok(Deleted::Now),
+        404 if read_json(&r).is_some_and(|b| b.get("error").and_then(|e| e.as_str()) == Some("not_found")) => Ok(Deleted::AlreadyGone),
         404 => Err(Failure::new("bad_response")),
         _ => Err(failure(&r)),
     }
@@ -367,16 +395,35 @@ mod tests {
     #[test]
     fn sends_the_delete_token_as_a_bearer_token() {
         let f = Fake::new(|| Ok(Response { status: 204, headers: HashMap::new(), body: vec![] }));
-        assert_eq!(delete_shared(&f, ORIGIN, "m0123456789abcdefg", "tok"), Ok(()));
+        assert_eq!(delete_shared(&f, ORIGIN, "m0123456789abcdefg", "tok"), Ok(Deleted::Now));
         let call = &f.calls()[0];
         assert_eq!((call.method.as_str(), call.url.as_str()), ("DELETE", "https://fettle.page/api/reports/m0123456789abcdefg"));
         assert!(call.headers.contains(&("authorization".into(), "Bearer tok".into())));
     }
 
     #[test]
-    fn treats_a_link_that_is_already_gone_as_deleted() {
+    fn treats_a_link_that_is_already_gone_as_deleted_and_says_so() {
         let f = Fake::new(|| json(404, serde_json::json!({ "error": "not_found" })));
-        assert_eq!(delete_shared(&f, ORIGIN, "id", "tok"), Ok(()));
+        assert_eq!(delete_shared(&f, ORIGIN, "id", "tok"), Ok(Deleted::AlreadyGone));
+    }
+
+    #[test]
+    fn asks_the_server_whether_a_link_still_exists() {
+        let open = Fake::new(|| json(200, serde_json::json!({ "report": {}, "expiresAt": "x" })));
+        assert_eq!(link_exists(&open, ORIGIN, "m0123456789abcdefg"), Ok(true));
+        let call = &open.calls()[0];
+        assert_eq!((call.method.as_str(), call.url.as_str()), ("GET", "https://fettle.page/api/reports/m0123456789abcdefg"));
+        assert!(call.headers.is_empty() && call.body.is_none(), "a plain GET: no token, nothing sent");
+        // Locked links exist too: the server only wants the password to show them.
+        let locked = Fake::new(|| json(401, serde_json::json!({ "error": "password_required" })));
+        assert_eq!(link_exists(&locked, ORIGIN, "id"), Ok(true));
+        let gone = Fake::new(|| json(404, serde_json::json!({ "error": "not_found" })));
+        assert_eq!(link_exists(&gone, ORIGIN, "id"), Ok(false));
+        // Anything else is no answer, never "gone".
+        let html = Fake::new(|| Ok(Response { status: 404, headers: HashMap::from([("content-type".into(), "text/html".into())]), body: b"<h1>Not Found</h1>".to_vec() }));
+        assert!(link_exists(&html, ORIGIN, "id").is_err());
+        assert_eq!(link_exists(&Fake::new(|| Err(())), ORIGIN, "id").unwrap_err().error, "network");
+        assert!(link_exists(&open, ORIGIN, "../etc").is_err(), "only the server's own ids are asked about");
     }
 
     #[test]
@@ -422,9 +469,9 @@ mod live {
         let shared = share_report(&http, &origin, &report, Some(Expiry::Week), Some("hunter2222")).expect("shared");
         assert!(shared.locked);
         assert!(shared.url.contains("/r/"));
-        assert_eq!(delete_shared(&http, &origin, &shared.id, &shared.delete_token), Ok(()));
+        assert!(delete_shared(&http, &origin, &shared.id, &shared.delete_token).is_ok());
         // Deleting again: already gone counts as deleted.
-        assert_eq!(delete_shared(&http, &origin, &shared.id, &shared.delete_token), Ok(()));
+        assert!(delete_shared(&http, &origin, &shared.id, &shared.delete_token).is_ok());
     }
 
     #[test]

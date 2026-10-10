@@ -192,6 +192,10 @@ pub struct State {
     pub links_status: Option<(&'static str, bool)>,
     /// A link being deleted (its id): other Delete buttons wait.
     pub deleting: Option<String>,
+    /// The links are being checked against the server (Delete waits meanwhile).
+    pub checking_links: bool,
+    /// How many links the last check found deleted on the website (for its message).
+    pub links_gone: usize,
     /// The Share view's last message after the link was made (copied, or a failure).
     pub share_note: Option<&'static str>,
     /// Whether the last copy was the delete link (so the note says which link was copied).
@@ -234,7 +238,11 @@ pub enum Event {
     OpenLink,
     LinkCopied(bool),
     DeleteLink(String),
-    LinkDeleted(Result<String, ()>),
+    LinkDeleted(Result<(String, crate::share::Deleted), ()>),
+    /// "Check which still work" in My shared links.
+    CheckLinks,
+    /// The ids the server said are gone (Err: it couldn't be asked).
+    LinksChecked(Result<Vec<String>, ()>),
     Exported(Option<&'static str>),
     ShareBusy(bool),
     /// What this PC remembers of the last update check, at launch.
@@ -270,6 +278,8 @@ pub enum Effect {
     CopyText(String),
     OpenUrl(String),
     Delete(SavedLink),
+    /// Ask the server which of these links still exist.
+    CheckLinks(Vec<SavedLink>),
     /// Ask the website for the latest version, if a day has passed since the last answer.
     CheckUpdates,
     SaveUpdate(UpdateRecord),
@@ -294,6 +304,8 @@ impl Default for State {
             links: Vec::new(),
             links_status: None,
             deleting: None,
+            checking_links: false,
+            links_gone: 0,
             share_note: None,
             copied_delete: false,
             update: UpdateRecord::default(),
@@ -537,7 +549,7 @@ impl State {
                 vec![]
             }
             Event::DeleteLink(id) => {
-                if self.deleting.is_some() {
+                if self.deleting.is_some() || self.checking_links {
                     return vec![];
                 }
                 let Some(link) = self.links.iter().find(|l| l.id == id).cloned() else { return vec![] };
@@ -548,13 +560,45 @@ impl State {
             Event::LinkDeleted(result) => {
                 self.deleting = None;
                 match result {
-                    Ok(id) => {
+                    Ok((id, how)) => {
                         self.links.retain(|l| l.id != id);
-                        self.links_status = Some(("links.deleted", false));
+                        let key = if how == crate::share::Deleted::AlreadyGone { "links.already_gone" } else { "links.deleted" };
+                        self.links_status = Some((key, false));
                         vec![Effect::SaveLinks(self.links.clone())]
                     }
                     Err(()) => {
                         self.links_status = Some(("links.delete_failed", true));
+                        vec![]
+                    }
+                }
+            }
+            Event::CheckLinks => {
+                if self.links.is_empty() || self.checking_links || self.deleting.is_some() {
+                    return vec![];
+                }
+                self.checking_links = true;
+                self.links_status = None;
+                vec![Effect::CheckLinks(self.links.clone())]
+            }
+            Event::LinksChecked(result) => {
+                self.checking_links = false;
+                match result {
+                    Ok(gone) => {
+                        let before = self.links.len();
+                        self.links.retain(|l| !gone.contains(&l.id));
+                        self.links_gone = before - self.links.len();
+                        self.links_status = Some((
+                            match self.links_gone {
+                                0 => "links.all_work",
+                                1 => "links.one_gone",
+                                _ => "links.some_gone",
+                            },
+                            false,
+                        ));
+                        if self.links_gone > 0 { vec![Effect::SaveLinks(self.links.clone())] } else { vec![] }
+                    }
+                    Err(()) => {
+                        self.links_status = Some(("links.check_failed", true));
                         vec![]
                     }
                 }
@@ -931,13 +975,62 @@ mod tests {
         s.update(Event::Open(Panel::Links));
         assert!(matches!(s.update(Event::DeleteLink("a".into())).as_slice(), [Effect::Delete(l)] if l.id == "a"));
         assert_eq!(s.update(Event::DeleteLink("b".into())), vec![], "one at a time");
-        s.update(Event::LinkDeleted(Ok("a".into())));
+        s.update(Event::LinkDeleted(Ok(("a".into(), crate::share::Deleted::Now))));
         assert_eq!(s.links.iter().map(|l| l.id.as_str()).collect::<Vec<_>>(), vec!["b"]);
         assert_eq!(s.links_status, Some(("links.deleted", false)));
         s.update(Event::DeleteLink("b".into()));
         s.update(Event::LinkDeleted(Err(())));
         assert_eq!(s.links.len(), 1, "kept: it may still be public");
         assert_eq!(s.links_status, Some(("links.delete_failed", true)));
+    }
+
+    fn with_links(ids: &[&str]) -> State {
+        let mut s = checked_state();
+        for id in ids {
+            s.update(Event::Open(Panel::Share));
+            s.update(Event::CreateLink { expires: Expiry::Week, password: None });
+            s.update(Event::LinkCreated(Ok(shared(id))));
+        }
+        s.update(Event::Open(Panel::Links));
+        s
+    }
+
+    #[test]
+    fn checking_drops_the_links_deleted_on_the_website() {
+        let mut s = with_links(&["a", "b", "c"]);
+        let asked = s.update(Event::CheckLinks);
+        assert!(matches!(asked.as_slice(), [Effect::CheckLinks(l)] if l.len() == 3), "{asked:?}");
+        assert_eq!(s.update(Event::CheckLinks), vec![], "one check at a time");
+        assert!(s.update(Event::DeleteLink("a".into())).is_empty(), "no deleting while checking");
+        let done = s.update(Event::LinksChecked(Ok(vec!["a".into(), "c".into()])));
+        assert_eq!(s.links.iter().map(|l| l.id.as_str()).collect::<Vec<_>>(), vec!["b"]);
+        assert!(matches!(done.as_slice(), [Effect::SaveLinks(l)] if l.len() == 1));
+        assert_eq!((s.links_status, s.links_gone), (Some(("links.some_gone", false)), 2));
+        s.update(Event::CheckLinks);
+        assert_eq!(s.update(Event::LinksChecked(Ok(vec![]))), vec![], "nothing gone, nothing to save");
+        assert_eq!(s.links_status, Some(("links.all_work", false)));
+        s.update(Event::CheckLinks);
+        s.update(Event::LinksChecked(Ok(vec!["b".into()])));
+        assert_eq!(s.links_status, Some(("links.one_gone", false)));
+        assert_eq!(State::default().update(Event::CheckLinks), vec![], "nothing to check");
+    }
+
+    #[test]
+    fn a_check_that_cant_reach_the_server_keeps_every_link() {
+        let mut s = with_links(&["a"]);
+        s.update(Event::CheckLinks);
+        assert_eq!(s.update(Event::LinksChecked(Err(()))), vec![]);
+        assert_eq!(s.links.len(), 1);
+        assert_eq!(s.links_status, Some(("links.check_failed", true)));
+    }
+
+    #[test]
+    fn deleting_a_link_already_deleted_on_the_website_says_so() {
+        let mut s = with_links(&["a"]);
+        s.update(Event::DeleteLink("a".into()));
+        s.update(Event::LinkDeleted(Ok(("a".into(), crate::share::Deleted::AlreadyGone))));
+        assert!(s.links.is_empty());
+        assert_eq!(s.links_status, Some(("links.already_gone", false)));
     }
 
     #[test]

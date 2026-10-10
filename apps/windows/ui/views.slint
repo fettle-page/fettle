@@ -440,9 +440,23 @@ export component LinksView inherits VerticalLayout {
     in property <string> status;
     in property <bool> failed;
     in property <bool> busy;
+    in property <bool> checking;
     callback delete(string);
+    callback check();
     spacing: 16px;
     if links.length == 0: Body { text: Copy.tr("links.none", Copy.lang); }
+    // A link deleted on the website stays here until the app asks: one GET per link, only on request.
+    if links.length > 0: HorizontalLayout {
+        alignment: start;
+        Button {
+            text: root.checking ? Copy.tr("links.checking", Copy.lang) : Copy.tr("links.check", Copy.lang);
+            label: Copy.tr("links.check", Copy.lang);
+            enabled: !root.busy;
+            clicked => {
+                root.check();
+            }
+        }
+    }
     for l in links: VerticalLayout {
         spacing: 6px;
         Text {

@@ -230,6 +230,8 @@ export component AppWindow inherits Window {
     in property <string> share-locked-note;
     callback open-link();
     callback delete-link(string);
+    callback check-links();
+    in property <bool> links-checking;
     callback back();
     // The window's shortcuts listen from the start; a view that closes hands the keyboard back.
     init => {
@@ -563,8 +565,12 @@ export component AppWindow inherits Window {
                                     status: root.links-status;
                                     failed: root.links-failed;
                                     busy: root.links-busy;
+                                    checking: root.links-checking;
                                     delete(id) => {
                                         root.delete-link(id);
+                                    }
+                                    check => {
+                                        root.check-links();
                                     }
                                 }
                                 if root.view == "preview": VerticalLayout {

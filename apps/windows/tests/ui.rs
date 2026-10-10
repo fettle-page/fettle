@@ -1092,3 +1092,39 @@ fn the_ready_link_comes_on_a_ticket_with_a_qr_code_and_both_links_copy() {
     press(&h.app, "Done");
     assert!(has(&h.app, "Share a link"), "back to the receipt");
 }
+
+/// The share server for links made before: the ones whose id starts with "gone" were deleted on the
+/// website.
+struct LinkServer(std::sync::Mutex<Vec<String>>);
+
+impl Http for LinkServer {
+    fn send(&self, method: &str, url: &str, _headers: &[(&str, String)], _body: Option<Vec<u8>>) -> Result<Response, ()> {
+        self.0.lock().unwrap().push(format!("{method} {url}"));
+        let json = |status: u16, v: serde_json::Value| Response { status, headers: [("content-type".to_string(), "application/json".to_string())].into(), body: v.to_string().into_bytes() };
+        Ok(if url.ends_with("/app/latest.json") {
+            Response { status: 404, headers: Default::default(), body: vec![] }
+        } else if url.contains("/api/reports/gone") {
+            json(404, serde_json::json!({ "error": "not_found" }))
+        } else {
+            json(200, serde_json::json!({ "report": {}, "expiresAt": "2026-10-20T00:00:00Z" }))
+        })
+    }
+}
+
+#[test]
+fn my_shared_links_can_check_which_still_work() {
+    let dir = temp_dir();
+    let saved = |id: &str| fettle_windows::store::SavedLink { id: id.into(), url: format!("https://fettle.page/r/{id}"), delete_token: "t".into(), expires_at: "2026-10-20T00:00:00Z".into() };
+    FileStore::new(dir.clone()).save_links(&[saved("alive1234567890abcd"), saved("gone12345678901abcd")]);
+    let server = Arc::new(LinkServer(Default::default()));
+    let s = server.clone();
+    let h = harness_with(Locale::En, dir.clone(), move |deps| deps.http = s);
+    press(&h.app, "Shared links · 2");
+    assert!(server.0.lock().unwrap().iter().all(|r| !r.contains("/api/reports/")), "nothing asked until the button");
+    press(&h.app, "Check which still work");
+    h.background.run_all(&h.app);
+    assert!(has(&h.app, "1 link was deleted on the website, so it's gone from this list."));
+    assert!(!has(&h.app, "https://fettle.page/r/gone12345678901abcd"));
+    assert!(has(&h.app, "https://fettle.page/r/alive1234567890abcd"));
+    assert_eq!(FileStore::new(dir).load_links(0).len(), 1, "remembered");
+}

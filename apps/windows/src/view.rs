@@ -319,9 +319,10 @@ pub fn apply(w: &AppWindow, s: &State, ctx: &Ctx, cache: &mut Cache) {
     let links: Vec<LinkRow> = s.links.iter().map(|l| LinkRow { id: l.id.clone().into(), url: l.url.clone().into(), until: t("links.until", lang, &[("date", long_local_date(&l.expires_at).into())]).into() }).collect();
     changed(&mut cache.links, links.iter().map(|l| format!("{}={}", l.id, l.until)).collect::<Vec<_>>().join("|"), || w.set_links(model(links.clone())));
     w.set_links_label(t("title.links", lang, &[("count", Param::Int(s.links.len() as i64))]).into());
-    w.set_links_status(s.links_status.map(|(k, _)| t(k, lang, &[])).unwrap_or_default().into());
+    w.set_links_status(s.links_status.map(|(k, _)| t(k, lang, &[("count", Param::Int(s.links_gone as i64))])).unwrap_or_default().into());
     w.set_links_failed(s.links_status.is_some_and(|(_, failed)| failed));
-    w.set_links_busy(s.deleting.is_some());
+    w.set_links_busy(s.deleting.is_some() || s.checking_links);
+    w.set_links_checking(s.checking_links);
 
     // The status bar: what happened, which Windows, and the shortcuts that work right now.
     let (items, hints) = match (main, &current, &last) {

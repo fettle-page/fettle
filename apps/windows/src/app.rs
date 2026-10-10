@@ -315,7 +315,25 @@ impl Fettle {
                 let (http, origin, post) = (self.0.deps.http.clone(), self.0.deps.share_origin.clone(), self.poster());
                 self.0.deps.background.spawn(Box::new(move || {
                     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| crate::share::delete_shared(&*http, &origin, &link.id, &link.delete_token))).unwrap_or(Err(crate::share::Failure { error: "bad_response", retry_after: None, detail: None }));
-                    post(Event::LinkDeleted(result.map(|()| link.id.clone()).map_err(|_| ())));
+                    post(Event::LinkDeleted(result.map(|how| (link.id.clone(), how)).map_err(|_| ())));
+                }));
+            }
+            Effect::CheckLinks(links) => {
+                let (http, origin, post) = (self.0.deps.http.clone(), self.0.deps.share_origin.clone(), self.poster());
+                self.0.deps.background.spawn(Box::new(move || {
+                    // One GET per link; any link that can't be asked about makes the whole check fail,
+                    // so a lost connection never looks like "deleted".
+                    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                        let mut gone = Vec::new();
+                        for link in &links {
+                            if !crate::share::link_exists(&*http, &origin, &link.id).map_err(|_| ())? {
+                                gone.push(link.id.clone());
+                            }
+                        }
+                        Ok(gone)
+                    }))
+                    .unwrap_or(Err(()));
+                    post(Event::LinksChecked(result));
                 }));
             }
             Effect::Print if !self.0.deps.printer.available() => {
@@ -440,6 +458,7 @@ impl Fettle {
         });
         let o = on.clone();
         w.on_delete_link(move |id| o(Event::DeleteLink(id.to_string())));
+        w.on_check_links(send(Event::CheckLinks));
         w.on_back(send(Event::Back));
         let o = on.clone();
         w.on_theme_chosen(move |v| {

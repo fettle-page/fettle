@@ -58,6 +58,8 @@ pub fn build_report(raw: &Raw, collected_at: SystemTime, elevated: bool, redacto
         facts: map::facts(raw, collected_at),
     };
     redactor.report(&mut report);
+    // The share server refuses text over the schema's limits.
+    fettle_facts::fit::fit_limits(&mut report);
     report
 }
 
@@ -76,5 +78,23 @@ mod options_tests {
     #[test]
     fn a_scan_names_this_crate_s_version_unless_the_caller_gives_its_own() {
         assert_eq!(Options::default().app_version, env!("CARGO_PKG_VERSION"));
+    }
+}
+
+#[cfg(test)]
+mod limits_tests {
+    use super::*;
+
+    // The share server refuses text over its schema's limits, so a scan never produces any.
+    #[test]
+    fn a_scan_s_text_fits_the_report_limits() {
+        let long = "🙂".repeat(200);
+        let raw: Raw = serde_json::from_value(serde_json::json!({
+            "physical_disks": { "ok": true, "ms": 1, "error": null, "data": [{ "DeviceId": "0", "FriendlyName": long, "BusType": 17, "MediaType": 4, "Size": 1 }] },
+        }))
+        .unwrap();
+        let report = build_report(&raw, UNIX_EPOCH, false, &Redactor::default(), "1.0.1");
+        let model = report.facts.storage.unwrap().data.unwrap().disks[0].model.clone().unwrap();
+        assert!(model.encode_utf16().count() <= fettle_facts::limits::NAME);
     }
 }

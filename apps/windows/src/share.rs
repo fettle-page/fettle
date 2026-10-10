@@ -141,6 +141,9 @@ pub fn share_report(http: &dyn Http, origin: &str, report: &Report, expires: Opt
             return Err(Failure::new("password_too_long"));
         }
     }
+    // A check remembered from an older version may hold text over today's upload limits.
+    let mut report = report.clone();
+    fettle_facts::fit::fit_limits(&mut report);
     let mut body = serde_json::json!({ "report": report });
     if let Some(e) = expires {
         body["expires"] = e.code().into();
@@ -336,6 +339,17 @@ mod tests {
         assert_eq!(call.body, Some(serde_json::json!({ "report": serde_json::to_value(report()).unwrap(), "expires": "30d" })));
     }
 
+    // A check remembered from an older version could hold text over today's limits: it's shortened
+    // before upload instead of being refused by the server.
+    #[test]
+    fn shortens_overlong_text_to_the_upload_limits() {
+        let f = Fake::new(|| json(201, created()));
+        let long = Report { app_version: "9".repeat(500), ..report() };
+        let _ = share_report(&f, ORIGIN, &long, None, None);
+        let sent = f.calls()[0].body.as_ref().unwrap()["report"]["app_version"].as_str().unwrap().to_string();
+        assert_eq!(sent.len(), fettle_facts::limits::SHORT);
+    }
+
     #[test]
     fn sends_the_password_only_when_there_is_one() {
         let f = Fake::new(|| json(201, serde_json::json!({ "locked": true }).as_object().map(|_| created()).unwrap()));
@@ -358,7 +372,10 @@ mod tests {
     #[test]
     fn refuses_a_report_over_256_kb_before_sending_it() {
         let f = Fake::new(|| json(201, created()));
-        let big = Report { app_version: "x".repeat(262_144), ..report() };
+        // Long text is shortened to the limits first, so it takes many entries to pass 256 KB.
+        let item = fettle_facts::StartupItem { name: Some("x".repeat(100)), location: None, enabled: Some(true) };
+        let startup = fettle_facts::Section { check: fettle_facts::Check { status: fettle_facts::CheckStatus::Ok, detail: None }, data: Some(fettle_facts::Startup { items: vec![item; 3000] }) };
+        let big = Report { facts: Facts { startup: Some(startup), ..Facts::default() }, ..report() };
         assert_eq!(share_report(&f, ORIGIN, &big, None, None).unwrap_err().error, "too_large");
         assert!(f.calls().is_empty());
     }

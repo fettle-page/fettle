@@ -5,6 +5,7 @@
 //! Data structs use `#[serde(default)]`: any single source can fail, so every
 //! fact is optional. The report envelope and each section's `check` are required.
 
+pub mod fit;
 pub mod redact;
 pub mod startup_names;
 

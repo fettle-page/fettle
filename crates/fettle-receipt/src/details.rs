@@ -74,7 +74,9 @@ fn storage(d: &Storage, locale: Locale) -> Vec<DetailGroup> {
             let kind = [bus, media].into_iter().flatten().collect::<Vec<_>>().join(" ");
             let n = disk.nvme.as_ref();
             let s = disk.smart.as_ref();
-            let wear = n.and_then(|n| n.percentage_used).or_else(|| s.and_then(|s| s.life_used_pct));
+            // SMART's life-used value is wear only on an SSD (on some hard drives it means something else).
+            let smart_wear = s.and_then(|s| s.life_used_pct).filter(|_| disk.media == Some(Media::Ssd));
+            let wear = n.and_then(|n| n.percentage_used).or(smart_wear);
             let t = n.and_then(|n| n.temperature_c).or_else(|| s.and_then(|s| s.temperature_c));
             let hours = n.and_then(|n| n.power_on_hours).or_else(|| s.and_then(|s| s.power_on_hours));
             DetailGroup {

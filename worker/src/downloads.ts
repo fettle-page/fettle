@@ -1,9 +1,9 @@
-// The download count, on a tape stuck to the main download button of the home and download pages: GitHub's own total for the installer and the zip
+// The download count, as a section of the main download button on the home and download pages: GitHub's own total for the installer and the zip
 // of every published release. Asked for at most once an hour (per isolate) and written into the page's
 // empty line, so visitors' browsers never contact GitHub and nothing about who downloaded is kept.
 import { release } from "@fettle/web/release";
 
-/** The pages with a download count tape (apps/web DownloadCount.astro); wrangler.jsonc runs the Worker first on them. */
+/** The pages with a download count (apps/web DownloadCount.astro); wrangler.jsonc runs the Worker first on them. */
 export const DOWNLOAD_PAGES = new Set(["/", "/it", "/download", "/it/download"]);
 
 const HOUR = 3_600_000;
@@ -59,7 +59,7 @@ export async function downloadCount(env: Env): Promise<number | null> {
   return known.count;
 }
 
-/** A home or download page with its count tape filled in (or left hidden when there's no count). */
+/** A home or download page with its download count filled in (or left hidden when there's no count). */
 export async function withDownloadCount(request: Request, env: Env): Promise<Response> {
   if (request.method !== "GET" && request.method !== "HEAD") return env.ASSETS.fetch(request);
   // A bare request: the visitor's conditional headers would otherwise get a 304 that keeps an old count.
@@ -71,15 +71,26 @@ export async function withDownloadCount(request: Request, env: Env): Promise<Res
   const count = request.method === "GET" ? await downloadCount(env) : null;
   const plain = new Response(page.body, { status: page.status, headers });
   if (count === null) return plain;
+  // The section shows the number; screen readers get the whole phrase ("1,234 downloads").
+  let shown = "";
+  let said = "";
   return new HTMLRewriter()
     .on("[data-download-count]", {
       element(el) {
         const intl = el.getAttribute("data-locale") === "it" ? "it-IT" : "en-GB";
-        const n = new Intl.NumberFormat(intl, { useGrouping: "always" }).format(count);
-        const text = count === 1 ? el.getAttribute("data-one") : el.getAttribute("data-many")?.replace("{n}", n);
-        if (!text) return;
-        el.setInnerContent(text);
-        el.removeAttribute("hidden");
+        shown = new Intl.NumberFormat(intl, { useGrouping: "always" }).format(count);
+        said = (count === 1 ? el.getAttribute("data-one") : el.getAttribute("data-many")?.replace("{n}", shown)) ?? "";
+        if (said) el.removeAttribute("hidden");
+      },
+    })
+    .on("[data-download-count] [data-download-n]", {
+      element(el) {
+        if (said) el.setInnerContent(shown);
+      },
+    })
+    .on("[data-download-count] [data-download-said]", {
+      element(el) {
+        if (said) el.setInnerContent(said);
       },
     })
     .transform(plain);

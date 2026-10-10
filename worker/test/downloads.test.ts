@@ -3,7 +3,7 @@ import raw from "../wrangler.jsonc?raw";
 import { downloadCount, resetDownloadCount } from "../src/downloads.ts";
 import { call } from "./helpers.ts";
 
-// The download count, on a tape stuck to the download button of the home and download pages: GitHub's own total for the installer and the
+// The download count, as a section of the main download button on the home and download pages: GitHub's own total for the installer and the
 // zip of every published release, asked for at most once an hour, filled in by the Worker. Visitors'
 // browsers never contact GitHub, and nothing about who downloaded is stored.
 const release = (draft: boolean, assets: [string, number][]) => ({ draft, assets: assets.map(([name, download_count]) => ({ name, download_count })) });
@@ -14,7 +14,11 @@ const RELEASES = [
 const github = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 let fetchSpy: ReturnType<typeof vi.spyOn>;
 const answer = (r: () => Response | Promise<Response>) => fetchSpy.mockImplementation(async () => r());
-const line = (html: string) => /<span class="dl-tape"[^>]*>([^<]*)<\/span>/.exec(html);
+/** The count section: [whole tag, the number shown, the words for screen readers], or null. */
+const line = (html: string) => {
+  const m = /<span class="dl-count"([^>]*)>[\s\S]*?<span data-download-n[^>]*>([^<]*)<\/span><span class="sr-only" data-download-said>([^<]*)<\/span>/.exec(html);
+  return m ? ([m[1]!, m[2]!, m[3]!] as const) : null;
+};
 
 beforeEach(() => {
   resetDownloadCount();
@@ -42,21 +46,24 @@ describe("the download count", () => {
 
   it("shows on the home page's download button, in each language", async () => {
     const en = line(await (await call("/")).text());
-    expect(en![0]).not.toMatch(/\shidden[\s>]/);
-    expect(en![1]).toBe("8 downloads");
-    expect(line(await (await call("/it")).text())![1]).toBe("8 download");
+    expect(en![0]).not.toMatch(/\shidden(\s|$)/);
+    expect(en![1]).toBe("8");
+    expect(en![2]).toBe("8 downloads");
+    expect(line(await (await call("/it")).text())![2]).toBe("8 download");
   });
 
   it("shows on the download pages, with each language's thousands separator", async () => {
     answer(() => github([release(false, [["Fettle-Setup-1.0.0.exe", 1000], ["Fettle-1.0.0-portable.zip", 234]])]));
-    expect(line(await (await call("/download")).text())![1]).toBe("1,234 downloads");
-    expect(line(await (await call("/it/download")).text())![1]).toBe("1.234 download");
+    const en = line(await (await call("/download")).text())!;
+    expect([en[1], en[2]]).toEqual(["1,234", "1,234 downloads"]);
+    const it_ = line(await (await call("/it/download")).text())!;
+    expect([it_[1], it_[2]]).toEqual(["1.234", "1.234 download"]);
   });
 
   it("says 1 download, not 1 downloads", async () => {
     answer(() => github([release(false, [["Fettle-Setup-1.0.0.exe", 1]])]));
-    expect(line(await (await call("/")).text())![1]).toBe("1 download");
-    expect(line(await (await call("/it/download")).text())![1]).toBe("1 download");
+    expect(line(await (await call("/")).text())!.slice(1)).toEqual(["1", "1 download"]);
+    expect(line(await (await call("/it/download")).text())!.slice(1)).toEqual(["1", "1 download"]);
   });
 
   it("asks GitHub once, not on every visit", async () => {
@@ -73,8 +80,8 @@ describe("the download count", () => {
       const res = await call("/");
       expect(res.status).toBe(200);
       const l = line(await res.text());
-      expect(l![0]).toMatch(/\shidden[\s>]/);
-      expect(l![1]).toBe("");
+      expect(l![0]).toMatch(/\shidden(\s|$)/);
+      expect([l![1], l![2]]).toEqual(["", ""]);
     }
   });
 

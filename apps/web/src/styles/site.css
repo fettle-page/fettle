@@ -231,19 +231,17 @@ section.hero {
 .btn-ghost { color: var(--on-mat); box-shadow: inset 0 0 0 1.5px var(--t-ghost-ring); }
 .btn-ghost:active { translate: 0 2px; }
 .fine { margin: 18px 0 0; font: 500 12px/1.5 var(--font-mono); letter-spacing: 0.08em; text-transform: uppercase; color: var(--on-mat-faint); }
-/* The download count: a strip of label tape stuck on the main download button's corner, in the
-   button's colours reversed so it always stands out from it (filled in by the Worker; hidden until then). */
-.dl-cta { position: relative; display: inline-block; }
-.dl-tape {
-  position: absolute; top: -14px; right: -20px; z-index: 1; pointer-events: none; white-space: nowrap;
-  padding: 6px 10px 5px; background: var(--t-btn-ink); color: var(--t-btn);
-  font: 700 11px/1 var(--font-mono); letter-spacing: 0.12em; text-transform: uppercase;
-  box-shadow: 0 2px 0 rgb(0 0 0 / 0.25), inset 0 0 0 1px color-mix(in srgb, currentColor 30%, transparent);
-  clip-path: polygon(0 0, 100% 0, 97% 50%, 100% 100%, 0 100%, 3% 50%);
-  transform: rotate(4deg);
+/* The download count: a quieter section of the main download button, like a star count on a button
+   (filled in by the Worker; until then it's hidden and the button is plain). */
+.dl-btn { padding: 0; align-items: stretch; }
+.dl-label { display: inline-flex; align-items: center; padding: 16px 22px; }
+.dl-count {
+  display: inline-flex; align-items: center; gap: 8px; padding: 0 18px;
+  border-left: 1px solid color-mix(in srgb, currentColor 22%, transparent);
+  font: 600 14px/1 var(--font-mono); letter-spacing: 0.02em; opacity: 0.86;
 }
-.dl-tape[hidden] { display: none; }
-.doc-sheet .dl-tape { background: var(--color-paper); color: var(--color-ink); } /* that button is ink on paper in every theme */
+.dl-count[hidden] { display: none; }
+.dl-count svg { width: 14px; height: 14px; flex: none; }
 
 /* The desk: knife, live receipt, stamp */
 .desk { position: relative; justify-self: center; width: 100%; max-width: 400px; }

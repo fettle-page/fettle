@@ -1,15 +1,17 @@
 ---
-// The main download button with a strip of label tape stuck on its corner: how many times Fettle was
-// downloaded. The share Worker fills the tape in with GitHub's own total (worker/src/downloads.ts);
-// served without the Worker, or when GitHub doesn't answer, it stays hidden.
+// The main download button, with a quieter section for how many times Fettle was downloaded (like a
+// star count on a button). The share Worker fills it in with GitHub's own total (worker/src/downloads.ts);
+// served without the Worker, or when GitHub doesn't answer, it stays hidden and the button is plain.
 import type { Locale } from "../i18n/paths.ts";
 import { t } from "../i18n/strings.ts";
 
 interface Props {
   locale: Locale;
+  href: string;
+  label: string;
 }
 
-const { locale } = Astro.props;
+const { locale, href, label } = Astro.props;
 ---
 
-<span class="dl-cta"><slot /><span class="dl-tape" data-download-count data-locale={locale} data-one={t(locale, "downloads.one")} data-many={t(locale, "downloads.many")} hidden></span></span>
+<a class="btn btn-primary dl-btn" href={href}><span class="dl-label">{label}</span><span class="dl-count" data-download-count data-locale={locale} data-one={t(locale, "downloads.one")} data-many={t(locale, "downloads.many")} hidden><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M8 2v8M4.5 6.5 8 10l3.5-3.5M3 13h10" /></svg><span data-download-n aria-hidden="true"></span><span class="sr-only" data-download-said></span></span></a>

@@ -110,7 +110,7 @@ fn harness_with(lang: Locale, dir: PathBuf, change: impl FnOnce(&mut Deps)) -> H
         http: Arc::new(FakeServer::default()),
         share_origin: "https://fettle.page".into(),
         open_url: Rc::new(|_| true),
-        relaunch: Arc::new(|_| Ok(())),
+        deep_scan: Arc::new(|_| Err(fettle_windows::state::DeepError::Failed)),
         system_dark: Rc::new(|| None),
         // A4, whatever this PC's region says (a US machine measures in inches and would get Letter).
         paper: Rc::new(|| PageSize::A4),
@@ -644,7 +644,7 @@ fn a_declined_deep_check_keeps_the_quick_receipt_and_says_so() {
     let asked = Arc::new(AtomicUsize::new(0));
     let a = asked.clone();
     let h = harness_with(Locale::En, temp_dir(), move |deps| {
-        deps.relaunch = Arc::new(move |_owner| {
+        deps.deep_scan = Arc::new(move |_owner| {
             a.fetch_add(1, Ordering::Relaxed);
             Err(fettle_windows::state::DeepError::Cancelled)
         })
@@ -1138,4 +1138,33 @@ fn italian_link_dates_read_naturally() {
     h.app.dispatch(fettle_windows::state::Event::Open(fettle_windows::state::Panel::Links));
     assert!(has(&h.app, "Fino all'8 novembre 2026"));
     assert!(has(&h.app, "Fino al 1° novembre 2026"));
+}
+
+#[test]
+fn a_deep_check_shows_the_users_own_startup_apps_in_the_same_window() {
+    use fettle_facts::{Section, Startup, StartupItem};
+    // The elevated scan ran as an administrator's account: its startup list is someone else's.
+    let mut admin = dump_report();
+    admin.elevated = true;
+    let items = ["AdminTool", "Backup Agent", "VPN Client", "Remote Desk", "Updater", "Sync"].iter().map(|n| StartupItem { name: Some(n.to_string()), enabled: Some(true), ..Default::default() }).collect();
+    admin.facts.startup = Some(Section { check: fettle_facts::Check { status: fettle_facts::CheckStatus::Ok, detail: None }, data: Some(Startup { items }) });
+    let a = admin.clone();
+    let h = harness_with(Locale::En, temp_dir(), move |deps| deps.deep_scan = Arc::new(move |_owner| Ok(a.clone())));
+    // Tall enough that the whole receipt is on screen (the testing API only finds that).
+    h.app.window().window().set_size(slint::LogicalSize::new(1240.0, 3000.0));
+    press(&h.app, "Check this PC");
+    h.background.run_all(&h.app);
+    let line = |r: &Report| {
+        let m = fettle_receipt::receipt_for(r, Locale::En, fettle_receipt::Zone::Utc).unwrap().1;
+        m.sections.iter().find(|s| s.title == "Startup").unwrap().lines[0].headline.clone()
+    };
+    let (mine, theirs) = (line(&dump_report()), line(&admin));
+    assert_ne!(mine, theirs);
+    press(&h.app, "Run a Deep check");
+    h.background.run_all(&h.app);
+    assert!(has(&h.app, &mine), "the user's own startup apps: {mine}");
+    assert!(!has(&h.app, &theirs), "not the administrator's: {theirs}");
+    let status: Vec<String> = { use slint::Model; h.app.window().get_status_items().iter().map(|s| s.to_string()).collect() };
+    assert!(status.iter().any(|s| s.starts_with("Deep check · ")), "the rest is the Deep check: {status:?}");
+    assert!(has(&h.app, "Share a link"), "still this window, on the receipt");
 }

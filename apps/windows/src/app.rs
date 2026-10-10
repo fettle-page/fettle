@@ -71,9 +71,9 @@ pub struct Deps {
     /// Whether Windows' apps are set to dark, for the Auto theme (None: Windows doesn't say). Read at
     /// launch and every few seconds, so Auto follows a change made while Fettle is open.
     pub system_dark: Rc<dyn Fn() -> Option<bool>>,
-    /// Restarts Fettle as administrator for a Deep check: Windows asks first, in a prompt owned by
-    /// the window (its HWND, 0 for none). Runs off the window's thread; Err says why it didn't happen.
-    pub relaunch: Arc<dyn Fn(isize) -> Result<(), crate::state::DeepError> + Send + Sync>,
+    /// The Deep check's elevated scan: Windows asks first (in a prompt owned by the window, its HWND,
+    /// 0 for none), then the helper's report. Runs off the window's thread; Err says why there's none.
+    pub deep_scan: Arc<dyn Fn(isize) -> Result<Report, crate::state::DeepError> + Send + Sync>,
 }
 
 thread_local! {
@@ -108,7 +108,10 @@ impl Default for Deps {
             http: Arc::new(crate::share::RealHttp::default()),
             share_origin: crate::share::origin(),
             open_url: Rc::new(crate::exports::open_in_browser),
-            relaunch: Arc::new(crate::elevate::start_elevated_copy),
+            #[cfg(windows)]
+            deep_scan: Arc::new(crate::elevate::deep_scan),
+            #[cfg(not(windows))]
+            deep_scan: Arc::new(|_| Err(crate::state::DeepError::Failed)),
             #[cfg(windows)]
             system_dark: Rc::new(crate::win::system_dark),
             #[cfg(not(windows))]
@@ -355,19 +358,23 @@ impl Fettle {
                     _ => Some("export.failed"),
                 }));
             }
-            Effect::RelaunchElevated => {
-                // Windows' prompt waits on another thread, so this window keeps drawing meanwhile.
+            Effect::DeepCheck => {
+                // Windows' prompt and the helper wait on another thread, so this window keeps drawing.
                 #[cfg(windows)]
                 let owner = crate::win::hwnd(self.0.window.window()).map(|h| h.0 as isize).unwrap_or(0);
                 #[cfg(not(windows))]
                 let owner = 0;
-                let (relaunch, post) = (self.0.deps.relaunch.clone(), self.poster());
+                let (deep_scan, scanner, post) = (self.0.deps.deep_scan.clone(), self.0.deps.scanner.clone(), self.poster());
                 self.0.deps.background.spawn(Box::new(move || {
-                    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| relaunch(owner))).unwrap_or(Err(crate::state::DeepError::Failed));
-                    post(match result {
-                        Ok(()) => Event::DeepStarted,
-                        Err(e) => Event::DeepRefused(e),
-                    });
+                    let start = Instant::now();
+                    let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| {
+                        let elevated = deep_scan(owner)?;
+                        // The user's own scan, for what belongs to them (their startup apps).
+                        let user = scanner.scan(&|_| {});
+                        Ok(crate::elevate::merge_deep(user, elevated))
+                    }))
+                    .unwrap_or(Err(crate::state::DeepError::Failed));
+                    post(Event::DeepFinished(result, start.elapsed().as_secs_f64()));
                 }));
             }
             Effect::RenderPreview => {
@@ -398,9 +405,6 @@ impl Fettle {
                 if let Some(page) = page {
                     (self.0.deps.open_url)(&page);
                 }
-            }
-            Effect::Quit => {
-                let _ = slint::quit_event_loop();
             }
         }
     }

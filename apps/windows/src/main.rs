@@ -22,6 +22,10 @@ fn next_renderer(current: &str) -> Option<&'static str> {
 }
 
 fn main() -> Result<(), slint::PlatformError> {
+    // The Deep check's helper (elevated, no window): scan, write the report, done.
+    if let Some(path) = fettle_windows::elevate::helper_target(std::env::args()) {
+        std::process::exit(fettle_windows::elevate::run_helper(&path));
+    }
     let result = run();
     // A process can choose its renderer only once: if the window can't open (no usable graphics
     // card in a virtual machine, a broken driver), start again on the next one down.
@@ -37,10 +41,6 @@ fn main() -> Result<(), slint::PlatformError> {
 }
 
 fn run() -> Result<(), slint::PlatformError> {
-    // The elevated copy for a Deep check waits for the window that started it to close.
-    if let Some(pid) = fettle_windows::elevate::parent_pid(std::env::args()) {
-        fettle_windows::elevate::wait_for_parent(pid);
-    }
     let dev = DevArgs::parse(std::env::args().skip(1));
     select_backend(dev.hidden(), dev.unfocused())?;
     let mut deps = Deps::default();
@@ -53,8 +53,8 @@ fn run() -> Result<(), slint::PlatformError> {
     }
     let app = Fettle::new(deps)?;
     tint_title_bar_when_ready(&app);
-    // Started for a Deep check (or a development check): check straight away.
-    if dev.check || fettle_windows::elevate::wants_deep(std::env::args()) {
+    // A development check: check straight away.
+    if dev.check {
         app.dispatch(fettle_windows::state::Event::Start);
     }
     if let Some(panel) = dev.open.as_deref() {

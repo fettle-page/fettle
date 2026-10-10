@@ -18,6 +18,11 @@ fn options() -> fettle_collect::Options {
     fettle_collect::Options { app_version: env!("CARGO_PKG_VERSION").to_string(), ..Default::default() }
 }
 
+/// A whole scan without progress (the Deep check's helper runs it before any window exists).
+pub fn scan_quietly() -> Report {
+    fettle_collect::collect(&options())
+}
+
 /// Each job on a new thread: a scan or an upload at a time, so no pool is needed.
 pub struct Threads;
 

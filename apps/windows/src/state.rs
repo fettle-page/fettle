@@ -222,9 +222,10 @@ pub enum Event {
     /// The details arrived; the app keeps the card, the state only notes it's shown.
     PrivateLoaded(PrivateCard),
     DeepAsked,
-    /// Windows started the elevated copy: this window closes.
-    DeepStarted,
     DeepRefused(DeepError),
+    /// The Deep check's report (elevated, with the user's own startup apps) and how long it took,
+    /// or why there's none.
+    DeepFinished(Result<Report, DeepError>, f64),
     SaveAsked,
     CopyAsked,
     PrintAsked,
@@ -261,9 +262,8 @@ pub enum Effect {
     SaveLast(Report),
     ClearLast,
     SaveSettings(Settings),
-    RelaunchElevated,
-    /// Close the app (the elevated copy has taken over).
-    Quit,
+    /// Run the Deep check: the elevated helper's scan, merged with the user's own.
+    DeepCheck,
     LoadPrivate,
     ForgetPrivate,
     /// Save this check (PDF or JSON, as the user picks), copy its markdown, or print it.
@@ -359,7 +359,8 @@ impl State {
                 vec![]
             }
             Event::Start => {
-                if self.scan == Scan::Running {
+                // A Deep check is under way: its result will show in a moment.
+                if self.scan == Scan::Running || self.deep == Deep::Asking {
                     return vec![];
                 }
                 self.scan = Scan::Running;
@@ -471,9 +472,14 @@ impl State {
                     return vec![];
                 }
                 self.deep = Deep::Asking;
-                vec![Effect::RelaunchElevated]
+                vec![Effect::DeepCheck]
             }
-            Event::DeepStarted => vec![Effect::Quit],
+            // Shown like any check, in this window.
+            Event::DeepFinished(Ok(report), seconds) => {
+                self.deep = Deep::Idle;
+                self.update(Event::Finished(Ok(report), seconds))
+            }
+            Event::DeepFinished(Err(error), _) => self.update(Event::DeepRefused(error)),
             Event::DeepRefused(error) => {
                 self.deep = Deep::Problem(match error {
                     DeepError::Cancelled => "deep.cancelled",
@@ -801,7 +807,7 @@ mod tests {
     #[test]
     fn the_deep_check_asks_once_and_says_what_went_wrong() {
         let mut s = checked_state();
-        assert_eq!(s.update(Event::DeepAsked), vec![Effect::RelaunchElevated]);
+        assert_eq!(s.update(Event::DeepAsked), vec![Effect::DeepCheck]);
         assert_eq!(s.deep, Deep::Asking);
         // A second click while Windows' prompt is open asks nothing more.
         assert_eq!(s.update(Event::DeepAsked), vec![]);
@@ -863,10 +869,20 @@ mod tests {
     }
 
     #[test]
-    fn once_windows_starts_the_deep_check_this_window_closes() {
+    fn the_deep_check_shows_its_receipt_in_this_window() {
         let mut s = checked_state();
         s.update(Event::DeepAsked);
-        assert_eq!(s.update(Event::DeepStarted), vec![Effect::Quit]);
+        let mut deep = report("2026-10-09T11:00:00Z");
+        deep.elevated = true;
+        let effects = s.update(Event::DeepFinished(Ok(deep.clone()), 1.4));
+        assert_eq!((s.main_view(), s.mat()), (MainView::Result, Mat::Live));
+        assert_eq!(s.current.as_ref().map(|c| c.report.clone()), Some(deep.clone()));
+        assert_eq!(s.deep, Deep::Idle);
+        assert!(effects.contains(&Effect::SaveLast(deep)), "{effects:?}");
+        // A refused or failed one keeps the quick receipt and says why.
+        s.update(Event::DeepAsked);
+        s.update(Event::DeepFinished(Err(DeepError::Cancelled), 0.0));
+        assert_eq!(s.deep, Deep::Problem("deep.cancelled"));
     }
 
     #[test]

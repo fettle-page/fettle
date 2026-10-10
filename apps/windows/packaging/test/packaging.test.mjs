@@ -62,11 +62,19 @@ describe("fettle.iss: privacy during installation", () => {
     }
   });
 
-  it("turns the app's update check off when the box is cleared, keeping the other settings", () => {
+  it("turns the app's update check off when the box is cleared, but never undoes a user's choice", () => {
     assert.match(iss, /not WizardIsTaskSelected\('updatecheck'\)/);
     assert.match(iss, /\{localappdata\}\\Fettle\\settings\.json/);
-    assert.match(iss, /'"updates":true', '"updates":false'/);
+    // Only when the user hasn't chosen yet: no settings, or settings without "updates".
+    assert.match(iss, /Pos\('"updates"', Text\) = 0/);
     assert.match(iss, /'\{"updates":false\}'/);
+    // A choice made in Settings ("updates":true) is never turned back off by an upgrade.
+    assert.doesNotMatch(iss, /'"updates":true', '"updates":false'/);
+  });
+
+  it("an all-users install leaves per-user settings alone (they'd land in the installing account's profile)", () => {
+    const step = /procedure CurStepChanged[\s\S]*?\nend;/.exec(iss)[0];
+    assert.match(step, /not IsAdminInstallMode/);
   });
 
   it("for all users, a cleared box turns the update check off for every account on the PC", () => {

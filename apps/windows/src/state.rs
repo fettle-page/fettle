@@ -81,11 +81,15 @@ pub struct Settings {
     /// None: follow Windows.
     pub lang: Option<Locale>,
     pub theme: ThemeChoice,
+    /// Whether the user has chosen about the update check in Settings (or their settings say so).
+    /// Until then "updates" isn't saved, so the PC's default (an all-users install's) still decides.
+    #[serde(skip)]
+    pub updates_chosen: bool,
 }
 
 impl Default for Settings {
     fn default() -> Self {
-        Settings { remember: true, updates: true, update_every: UpdateEvery::Daily, show_private: false, lang: None, theme: ThemeChoice::Auto }
+        Settings { remember: true, updates: true, update_every: UpdateEvery::Daily, show_private: false, lang: None, theme: ThemeChoice::Auto, updates_chosen: false }
     }
 }
 
@@ -453,6 +457,7 @@ impl State {
             }
             Event::SetUpdates(on) => {
                 self.settings.updates = on;
+                self.settings.updates_chosen = true;
                 let mut effects = vec![self.save_settings()];
                 effects.extend(self.check_updates());
                 effects
@@ -838,6 +843,14 @@ mod tests {
         assert_eq!(s.settings.update_every, UpdateEvery::Daily);
         let effects = s.update(Event::SetUpdateEvery(UpdateEvery::Weekly));
         assert!(matches!(effects.as_slice(), [Effect::SaveSettings(st), Effect::CheckUpdates] if st.update_every == UpdateEvery::Weekly), "{effects:?}");
+    }
+
+    #[test]
+    fn turning_the_update_check_on_or_off_is_a_choice_that_gets_saved() {
+        let mut s = State::default();
+        assert!(!s.settings.updates_chosen);
+        s.update(Event::SetUpdates(false));
+        assert!(s.settings.updates_chosen);
     }
 
     #[test]

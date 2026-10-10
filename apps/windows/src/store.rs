@@ -111,11 +111,20 @@ impl Store for FileStore {
             show_private: field(&o, "show_private", d.show_private),
             lang: field(&o, "lang", d.lang),
             theme: field(&o, "theme", d.theme),
+            updates_chosen: o.get("updates").is_some_and(serde_json::Value::is_boolean),
         }
     }
 
+    /// Saved whole, except "updates" until the user has chosen: changing only the theme mustn't
+    /// turn the PC's default into this user's choice.
     fn save_settings(&self, settings: &Settings) {
-        self.write(SETTINGS, settings);
+        let Ok(mut value) = serde_json::to_value(settings) else { return };
+        if !settings.updates_chosen
+            && let Some(o) = value.as_object_mut()
+        {
+            o.remove("updates");
+        }
+        self.write(SETTINGS, &value);
     }
 
     fn load_last(&self) -> Option<Report> {
@@ -227,6 +236,26 @@ pub(crate) mod tests {
     }
 
     #[test]
+    fn updates_are_saved_only_once_the_user_chooses() {
+        // An all-users install turned the check off for the PC; this user changes only the theme.
+        let dir = temp_dir();
+        let store = FileStore::new(dir.clone()).with_machine_updates(Some(false));
+        let mut s = store.load_settings();
+        s.theme = ThemeChoice::Dark;
+        store.save_settings(&s);
+        let saved: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(dir.join("settings.json")).unwrap()).unwrap();
+        assert!(saved.get("updates").is_none(), "no choice made, none saved: {saved}");
+        // So the machine-wide default still decides, whatever it becomes later.
+        assert!(FileStore::new(dir.clone()).with_machine_updates(None).load_settings().updates);
+        // Once the user chooses in Settings, it's theirs and saved.
+        s.updates = false;
+        s.updates_chosen = true;
+        store.save_settings(&s);
+        assert!(!FileStore::new(dir.clone()).with_machine_updates(None).load_settings().updates);
+        assert!(FileStore::new(dir).load_settings().updates_chosen);
+    }
+
+    #[test]
     fn settings_round_trip_and_start_from_defaults() {
         let store = FileStore::new(temp_dir());
         assert_eq!(store.load_settings(), Settings::default());
@@ -253,15 +282,18 @@ pub(crate) mod tests {
         let dir = temp_dir();
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("settings.json"), r#"{"updates":false}"#).unwrap();
-        assert_eq!(FileStore::new(dir.clone()).load_settings(), Settings { updates: false, ..Settings::default() });
+        assert_eq!(FileStore::new(dir.clone()).load_settings(), Settings { updates: false, updates_chosen: true, ..Settings::default() });
 
+        // Settings saved without a choice about updates have no "updates" field, so the installer
+        // (which only writes when there's none) adds one right after the "{", keeping the rest.
         let saved = Settings { remember: false, theme: ThemeChoice::Oled, ..Settings::default() };
         let store = FileStore::new(dir.clone());
         store.save_settings(&saved);
         let text = std::fs::read_to_string(dir.join("settings.json")).unwrap();
-        assert_eq!(text.matches(r#""updates":true"#).count(), 1, "the installer looks for exactly this: {text}");
-        std::fs::write(dir.join("settings.json"), text.replace(r#""updates":true"#, r#""updates":false"#)).unwrap();
-        assert_eq!(store.load_settings(), Settings { updates: false, ..saved });
+        assert!(!text.contains(r#""updates""#), "no choice made, none saved: {text}");
+        assert!(text.starts_with('{'), "the installer adds its field after the opening brace: {text}");
+        std::fs::write(dir.join("settings.json"), text.replacen('{', r#"{"updates":false,"#, 1)).unwrap();
+        assert_eq!(store.load_settings(), Settings { updates: false, updates_chosen: true, ..saved });
     }
 
     #[test]

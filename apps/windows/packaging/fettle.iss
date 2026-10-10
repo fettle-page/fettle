@@ -86,9 +86,11 @@ Filename: "{app}\fettle.exe"; Description: "{cm:LaunchProgram,Fettle}"; Flags: n
 Root: HKLM; Subkey: "Software\Fettle"; ValueType: dword; ValueName: "UpdateCheck"; ValueData: 0; Tasks: not updatecheck; Check: IsAdminInstallMode; Flags: uninsdeletevalue uninsdeletekeyifempty
 
 [Code]
-// A cleared "Check for a new version" box turns the app's setting off. The app reads its settings
-// field by field, so a first install writes just that field; an earlier install's settings keep
-// everything else. A ticked box changes nothing, so it never undoes a choice made in the app.
+// A cleared "Check for a new version" box turns the app's setting off, for a user who hasn't chosen
+// yet: no settings, or settings without "updates" (the field is added, the rest kept). A choice made
+// in Settings survives every upgrade, silent ones and restored task boxes included. An all-users
+// install leaves per-user settings alone: they'd land in the installing account's profile (or
+// SYSTEM's, under deployment tools); the machine-wide value in [Registry] covers every account.
 procedure CurStepChanged(CurStep: TSetupStep);
 var
   Path: String;
@@ -98,18 +100,21 @@ begin
   // Installing again for all users with the box ticked takes back an earlier machine-wide "off".
   if (CurStep = ssPostInstall) and IsAdminInstallMode and WizardIsTaskSelected('updatecheck') then
     RegDeleteValue(HKLM, 'Software\Fettle', 'UpdateCheck');
-  if (CurStep = ssPostInstall) and not WizardIsTaskSelected('updatecheck') then
+  if (CurStep = ssPostInstall) and not IsAdminInstallMode and not WizardIsTaskSelected('updatecheck') then
   begin
     Path := ExpandConstant('{localappdata}\Fettle\settings.json');
     Text := '';
     if LoadStringFromFile(Path, Saved) then
       Text := String(Saved);
-    if Pos('"updates":true', Text) > 0 then
-      StringChangeEx(Text, '"updates":true', '"updates":false', True)
-    else if Pos('"updates":false', Text) = 0 then
-      Text := '{"updates":false}';
-    ForceDirectories(ExtractFileDir(Path));
-    SaveStringToFile(Path, AnsiString(Text), False);
+    if Pos('"updates"', Text) = 0 then
+    begin
+      if (Pos('{', Text) = 0) or (Pos('{}', Text) > 0) then
+        Text := '{"updates":false}'
+      else
+        Insert('"updates":false,', Text, Pos('{', Text) + 1);
+      ForceDirectories(ExtractFileDir(Path));
+      SaveStringToFile(Path, AnsiString(Text), False);
+    end;
   end;
 end;
 

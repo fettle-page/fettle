@@ -90,6 +90,45 @@ fn failure(r: &Response) -> Failure {
     Failure { error, retry_after, detail }
 }
 
+/// A QR code of a link, to open it on a phone: its side in modules (quiet zone included) and the
+/// dark modules as a Slint path, one rectangle per run of dark modules in a row.
+pub struct Qr {
+    pub size: u32,
+    pub path: String,
+    runs: Vec<(u32, u32, u32)>,
+}
+
+impl Qr {
+    /// The dark runs: (x, y, width) in modules.
+    pub fn runs(&self) -> impl Iterator<Item = (u32, u32, u32)> + '_ {
+        self.runs.iter().copied()
+    }
+}
+
+/// The QR code for `text` (medium error correction, the usual 4-module quiet zone around it).
+pub fn qr_code(text: &str) -> Option<Qr> {
+    use qrcodegen::{QrCode, QrCodeEcc};
+    let code = QrCode::encode_text(text, QrCodeEcc::Medium).ok()?;
+    let (n, quiet) = (code.size(), 4);
+    let mut runs = Vec::new();
+    for y in 0..n {
+        let mut x = 0;
+        while x < n {
+            if code.get_module(x, y) {
+                let start = x;
+                while x < n && code.get_module(x, y) {
+                    x += 1;
+                }
+                runs.push(((start + quiet) as u32, (y + quiet) as u32, (x - start) as u32));
+            } else {
+                x += 1;
+            }
+        }
+    }
+    let path = runs.iter().map(|&(x, y, w)| format!("M{x} {y}L{} {y}L{} {}L{x} {}Z", x + w, x + w, y + 1, y + 1)).collect::<String>();
+    Some(Qr { size: (n + 2 * quiet) as u32, path, runs })
+}
+
 pub fn share_report(http: &dyn Http, origin: &str, report: &Report, expires: Option<Expiry>, password: Option<&str>) -> Result<Shared, Failure> {
     let password = password.filter(|p| !p.is_empty());
     if let Some(p) = password {
@@ -183,6 +222,29 @@ impl Http for RealHttp {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_qr_code_reads_back_as_the_link() {
+        let url = "https://fettle.page/r/wpgckxjm0upqsgxrp";
+        let qr = qr_code(url).expect("a QR code");
+        // Draw the path's squares into a picture, 8 px a module, and read it as a phone would.
+        let scale = 8usize;
+        let side = qr.size as usize * scale;
+        let mut px = vec![255u8; side * side];
+        for (x, y, w) in qr.runs() {
+            for yy in y as usize * scale..(y as usize + 1) * scale {
+                for xx in x as usize * scale..(x as usize + w as usize) * scale {
+                    px[yy * side + xx] = 0;
+                }
+            }
+        }
+        let mut img = rqrr::PreparedImage::prepare_from_greyscale(side, side, |x, y| px[y * side + x]);
+        let grids = img.detect_grids();
+        assert_eq!(grids.len(), 1);
+        let (_, content) = grids[0].decode().expect("it decodes");
+        assert_eq!(content, url);
+        assert!(qr.path.starts_with('M') && qr.path.contains('Z'), "a Slint path");
+    }
     use fettle_facts::Facts;
     use std::sync::Mutex;
 

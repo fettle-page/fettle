@@ -1075,3 +1075,20 @@ fn a_fresh_check_is_headed_this_check_not_last_check() {
     it.background.run_all(&it.app);
     assert!(has(&it.app, "QUESTO CONTROLLO"));
 }
+
+#[test]
+fn the_ready_link_comes_on_a_ticket_with_a_qr_code_and_both_links_copy() {
+    let (h, _) = share_harness();
+    press(&h.app, "Share a link");
+    press(&h.app, "Create the link");
+    h.background.run_all(&h.app);
+    assert!(has(&h.app, "Your link is ready."));
+    assert!(has(&h.app, "QR code of the link"), "a code to open it on a phone");
+    assert_eq!(value_of(&h.app, "Link"), "https://fettle.page/r/m0123456789abcdefg", "the whole link, readable");
+    press(&h.app, "Copy the delete link");
+    assert!(has(&h.app, "Delete link copied."));
+    press(&h.app, "Copy the link");
+    assert!(has(&h.app, "Copied."));
+    press(&h.app, "Done");
+    assert!(has(&h.app, "Share a link"), "back to the receipt");
+}

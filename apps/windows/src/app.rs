@@ -423,6 +423,7 @@ impl Fettle {
         w.on_open_share(send(Event::Open(Panel::Share)));
         w.on_open_links(send(Event::Open(Panel::Links)));
         w.on_copy_link(send(Event::CopyLink));
+        w.on_copy_delete_link(send(Event::CopyDeleteLink));
         w.on_run_deep(send(Event::DeepAsked));
         w.on_open_link(send(Event::OpenLink));
         w.on_open_update(send(Event::OpenUpdate));

@@ -302,6 +302,11 @@ pub fn apply(w: &AppWindow, s: &State, ctx: &Ctx, cache: &mut Cache) {
     });
     if let ShareStatus::Done(shared) = &s.share {
         w.set_share_link(shared.url.clone().into());
+        if let Some(qr) = crate::share::qr_code(&shared.url) {
+            w.set_share_qr(qr.path.into());
+            w.set_share_qr_size(qr.size as i32);
+        }
+        w.set_share_locked_note(if shared.locked { t("share.locked_note", lang, &[]) } else { String::new() }.into());
         w.set_share_delete_link(shared.delete_url.clone().into());
         w.set_share_expires(t("share.expires", lang, &[("date", long_local_date(&shared.expires_at).into())]).into());
     }

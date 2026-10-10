@@ -19,7 +19,7 @@ component RText inherits Text {
 
 // Dashed rules, dotted leaders and dashed boxes, drawn as marks in the paper's rule colour
 // (Slint has no dashed borders).
-component Marks inherits Rectangle {
+export component Marks inherits Rectangle {
     in property <length> on: 3px;
     in property <length> period: 6px;
     in property <color> tint: Theme.rule;

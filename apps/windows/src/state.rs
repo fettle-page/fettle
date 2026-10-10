@@ -194,6 +194,8 @@ pub struct State {
     pub deleting: Option<String>,
     /// The Share view's last message after the link was made (copied, or a failure).
     pub share_note: Option<&'static str>,
+    /// Whether the last copy was the delete link (so the note says which link was copied).
+    pub copied_delete: bool,
     /// When the website was last asked about updates, and what it said.
     pub update: UpdateRecord,
 }
@@ -227,6 +229,8 @@ pub enum Event {
     CreateLink { expires: Expiry, password: Option<Secret> },
     LinkCreated(Result<Shared, (&'static str, Option<i64>)>),
     CopyLink,
+    /// Copy the delete link (shown only once, so it has its own Copy).
+    CopyDeleteLink,
     OpenLink,
     LinkCopied(bool),
     DeleteLink(String),
@@ -291,6 +295,7 @@ impl Default for State {
             links_status: None,
             deleting: None,
             share_note: None,
+            copied_delete: false,
             update: UpdateRecord::default(),
         }
     }
@@ -511,13 +516,24 @@ impl State {
                     }
                 }
             }
+            Event::CopyDeleteLink => {
+                let ShareStatus::Done(shared) = &self.share else { return vec![] };
+                self.share_note = None;
+                self.copied_delete = true;
+                vec![Effect::CopyText(shared.delete_url.clone())]
+            }
             Event::CopyLink | Event::OpenLink => {
                 let ShareStatus::Done(shared) = &self.share else { return vec![] };
                 self.share_note = None;
+                self.copied_delete = false;
                 vec![if event == Event::CopyLink { Effect::CopyText(shared.url.clone()) } else { Effect::OpenUrl(shared.url.clone()) }]
             }
             Event::LinkCopied(ok) => {
-                self.share_note = Some(if ok { "share.copied" } else { "export.failed" });
+                self.share_note = Some(match (ok, self.copied_delete) {
+                    (false, _) => "export.failed",
+                    (true, true) => "share.delete_copied",
+                    (true, false) => "share.copied",
+                });
                 vec![]
             }
             Event::DeleteLink(id) => {
@@ -850,6 +866,19 @@ mod tests {
 
     fn shared(id: &str) -> Shared {
         Shared { id: id.into(), url: format!("https://fettle.page/r/{id}"), delete_url: format!("https://fettle.page/r/{id}/delete#t"), delete_token: "t".into(), expires_at: "2026-11-08T10:00:00Z".into(), locked: false }
+    }
+
+    #[test]
+    fn either_link_can_be_copied_and_the_note_says_which() {
+        let mut s = checked_state();
+        s.update(Event::CreateLink { expires: crate::share::Expiry::Week, password: None });
+        s.update(Event::LinkCreated(Ok(shared("m1"))));
+        assert_eq!(s.update(Event::CopyDeleteLink), vec![Effect::CopyText("https://fettle.page/r/m1/delete#t".into())]);
+        s.update(Event::LinkCopied(true));
+        assert_eq!(s.share_note, Some("share.delete_copied"));
+        assert_eq!(s.update(Event::CopyLink), vec![Effect::CopyText("https://fettle.page/r/m1".into())]);
+        s.update(Event::LinkCopied(true));
+        assert_eq!(s.share_note, Some("share.copied"));
     }
 
     #[test]

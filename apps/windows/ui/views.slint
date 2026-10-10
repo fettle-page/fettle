@@ -2,6 +2,7 @@
 import { Theme, Copy } from "theme.slint";
 import { ScrollView } from "std-widgets.slint";
 import { Kicker, Button, Choice, Switch, Focusable } from "panels.slint";
+import { Marks } from "receipt.slint";
 
 export struct LinkRow { id: string, url: string, until: string }
 
@@ -67,6 +68,45 @@ export component Field inherits Rectangle {
     }
 }
 
+// A small button on the paper ticket: ink on paper in every theme.
+component TicketButton inherits Rectangle {
+    in property <string> text;
+    in property <string> label;
+    callback clicked();
+    width: t.preferred-width + 26px;
+    height: 32px;
+    border-radius: 5px;
+    border-width: 1.5px;
+    border-color: focus.ring ? Theme.accent-ink : Theme.ink.with-alpha(0.55);
+    background: touch.has-hover ? Theme.ink.with-alpha(0.06) : transparent;
+    accessible-role: button;
+    accessible-label: root.label != "" ? root.label : root.text;
+    accessible-action-default => {
+        root.clicked();
+    }
+    focus := Focusable {
+        activate => {
+            root.clicked();
+        }
+    }
+    touch := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            focus.focus();
+            root.clicked();
+        }
+    }
+    t := Text {
+        text: root.text;
+        font-family: Theme.text;
+        font-size: 13px;
+        font-weight: 800;
+        color: Theme.ink;
+        vertical-alignment: center;
+        horizontal-alignment: center;
+    }
+}
+
 // "Share a link", in the side panel. The receipt on the mat is the preview; the exact JSON sits
 // behind an advanced fold.
 export component ShareView inherits VerticalLayout {
@@ -77,6 +117,13 @@ export component ShareView inherits VerticalLayout {
     in property <string> link;
     in property <string> delete-link;
     in property <string> expires-text;
+    // The link as a QR code (a path in a square of qr-size modules), and the lock note if it has one.
+    in property <string> qr;
+    in property <int> qr-size: 1;
+    in property <string> locked-note;
+    callback copy-link();
+    callback open-link();
+    callback copy-delete-link();
     in-out property <string> expiry;
     in-out property <bool> locked;
     in-out property <string> password;
@@ -213,37 +260,176 @@ export component ShareView inherits VerticalLayout {
         }
     }
     if status == "done": VerticalLayout {
-        spacing: 22px;
-        VerticalLayout {
-            spacing: 8px;
-            Text {
-                text: Copy.tr("share.done", Copy.lang);
-                font-family: Theme.display;
-                font-size: 26px;
-                font-weight: 800;
-                color: Theme.chrome-ink;
-                wrap: word-wrap;
+        spacing: 20px;
+        // A tick, the news, and how long the link works.
+        HorizontalLayout {
+            spacing: 12px;
+            Rectangle {
+                width: 30px;
+                height: 30px;
+                y: 2px;
+                border-radius: 15px;
+                background: Theme.btn;
+                Path {
+                    width: 14px;
+                    height: 11px;
+                    viewbox-width: 14;
+                    viewbox-height: 11;
+                    commands: "M1 5.5 L5 9.5 L13 1.5";
+                    stroke: #FFFFFF;
+                    stroke-width: 2.4px;
+                    fill: transparent;
+                }
             }
-            Body { text: root.expires-text; }
+            VerticalLayout {
+                spacing: 4px;
+                horizontal-stretch: 1;
+                Text {
+                    text: Copy.tr("share.done", Copy.lang);
+                    font-family: Theme.display;
+                    font-size: 24px;
+                    font-weight: 800;
+                    color: Theme.chrome-ink;
+                    wrap: word-wrap;
+                }
+                Body { text: root.expires-text + (root.locked-note != "" ? " " + root.locked-note : ""); }
+            }
         }
-        VerticalLayout {
-            spacing: 6px;
-            FieldLabel { label: Copy.tr("share.link", Copy.lang); }
-            Field {
-                label: Copy.tr("share.link", Copy.lang);
-                read-only: true;
-                text: root.link;
+        // The link on a paper ticket, torn at the foot: the whole address, Copy and Open, and a QR code.
+        Rectangle {
+            Rectangle {
+                height: parent.height - 7px;
+                y: 0;
+                background: Theme.paper;
+                border-top-left-radius: 3px;
+                border-top-right-radius: 3px;
+                drop-shadow-offset-y: 3px;
+                drop-shadow-blur: 10px;
+                drop-shadow-color: #000000.with-alpha(0.22);
+            }
+            Path {
+                y: parent.height - 7px;
+                height: 7px;
+                width: parent.width;
+                viewbox-width: 320;
+                viewbox-height: 7;
+                fill: Theme.paper;
+                commands: "M0 0 L7 7 L14 0 L21 7 L28 0 L35 7 L42 0 L49 7 L56 0 L63 7 L70 0 L77 7 L84 0 L91 7 L98 0 L105 7 L112 0 L119 7 L126 0 L133 7 L140 0 L147 7 L154 0 L161 7 L168 0 L175 7 L182 0 L189 7 L196 0 L203 7 L210 0 L217 7 L224 0 L231 7 L238 0 L245 7 L252 0 L259 7 L266 0 L273 7 L280 0 L287 7 L294 0 L301 7 L308 0 L315 7 L320 0 Z";
+            }
+            VerticalLayout {
+                padding: 18px;
+                padding-bottom: 24px;
+                spacing: 12px;
+                Text {
+                    text: Copy.tr("share.link", Copy.lang).to-uppercase();
+                    font-family: Theme.mono;
+                    font-size: 11px;
+                    font-weight: 600;
+                    letter-spacing: 1.5px;
+                    color: Theme.ink-soft;
+                }
+                Text {
+                    text: root.link;
+                    font-family: Theme.mono;
+                    font-size: 14px;
+                    font-weight: 600;
+                    color: Theme.ink;
+                    wrap: char-wrap;
+                    accessible-role: text;
+                    accessible-label: Copy.tr("share.link", Copy.lang);
+                    accessible-value: root.link;
+                }
+                HorizontalLayout {
+                    spacing: 8px;
+                    alignment: start;
+                    TicketButton {
+                        text: Copy.tr("share.copy", Copy.lang);
+                        label: Copy.tr("share.copy_link", Copy.lang);
+                        clicked => {
+                            root.copy-link();
+                        }
+                    }
+                    TicketButton {
+                        text: Copy.tr("share.open_short", Copy.lang);
+                        label: Copy.tr("share.open", Copy.lang);
+                        clicked => {
+                            root.open-link();
+                        }
+                    }
+                }
+                // A dashed tear line, then the code, for a phone.
+                Marks {
+                    on: 3px;
+                    period: 6px;
+                    tint: Theme.rule;
+                }
+                HorizontalLayout {
+                    spacing: 14px;
+                    Rectangle {
+                        width: 112px;
+                        height: 112px;
+                        background: #FFFFFF;
+                        accessible-role: image;
+                        accessible-label: Copy.tr("share.qr", Copy.lang);
+                        Path {
+                            width: parent.width;
+                            height: parent.height;
+                            viewbox-width: root.qr-size;
+                            viewbox-height: root.qr-size;
+                            commands: root.qr;
+                            fill: #000000;
+                        }
+                    }
+                    Text {
+                        text: Copy.tr("share.qr_hint", Copy.lang);
+                        font-family: Theme.mono;
+                        font-size: 12px;
+                        color: Theme.ink-soft;
+                        wrap: word-wrap;
+                        vertical-alignment: center;
+                        horizontal-stretch: 1;
+                    }
+                }
             }
         }
-        VerticalLayout {
-            spacing: 6px;
-            FieldLabel { label: Copy.tr("share.delete_link", Copy.lang); }
-            Field {
-                label: Copy.tr("share.delete_link", Copy.lang);
-                read-only: true;
-                text: root.delete-link;
+        // The delete link: quieter, and the one to keep.
+        Rectangle {
+            border-radius: 6px;
+            border-width: 1px;
+            border-color: Theme.chrome-line;
+            background: Theme.chrome-card;
+            VerticalLayout {
+                padding: 14px;
+                spacing: 8px;
+                // Its heading and its Copy on one row, so Copy is in view without scrolling.
+                HorizontalLayout {
+                    spacing: 8px;
+                    FieldLabel {
+                        label: Copy.tr("share.delete_link", Copy.lang);
+                        vertical-alignment: center;
+                        horizontal-stretch: 1;
+                    }
+                    Button {
+                        horizontal-stretch: 0;
+                        text: Copy.tr("share.copy", Copy.lang);
+                        label: Copy.tr("share.copy_delete", Copy.lang);
+                        clicked => {
+                            root.copy-delete-link();
+                        }
+                    }
+                }
+                Text {
+                    text: root.delete-link;
+                    font-family: Theme.mono;
+                    font-size: 12.5px;
+                    color: Theme.chrome-ink;
+                    wrap: char-wrap;
+                    accessible-role: text;
+                    accessible-label: Copy.tr("share.delete_link", Copy.lang);
+                    accessible-value: root.delete-link;
+                }
+                Hint { text: Copy.tr("share.delete_keep", Copy.lang) + " " + Copy.tr("share.delete_note", Copy.lang); }
             }
-            Hint { text: Copy.tr("share.delete_note", Copy.lang); }
         }
     }
 }

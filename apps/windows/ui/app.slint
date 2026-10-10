@@ -223,6 +223,11 @@ export component AppWindow inherits Window {
     callback open-links();
     callback create-link(string, bool, string);
     callback copy-link();
+    callback copy-delete-link();
+    // The new link as a QR code (a path in a square of this many modules) and, if it's locked, a note.
+    in property <string> share-qr;
+    in property <int> share-qr-size: 1;
+    in property <string> share-locked-note;
     callback open-link();
     callback delete-link(string);
     callback back();
@@ -537,6 +542,18 @@ export component AppWindow inherits Window {
                                     link: root.share-link;
                                     delete-link: root.share-delete-link;
                                     expires-text: root.share-expires;
+                                    qr: root.share-qr;
+                                    qr-size: root.share-qr-size;
+                                    locked-note: root.share-locked-note;
+                                    copy-link => {
+                                        root.copy-link();
+                                    }
+                                    open-link => {
+                                        root.open-link();
+                                    }
+                                    copy-delete-link => {
+                                        root.copy-delete-link();
+                                    }
                                     expiry <=> root.share-expiry;
                                     locked <=> root.share-locked;
                                     password <=> root.share-password;
@@ -624,15 +641,9 @@ export component AppWindow inherits Window {
                                 }
                             }
                             if root.share-status == "done": PrimaryButton {
-                                text: Copy.tr("share.copy_link", Copy.lang);
+                                text: Copy.tr("share.finish", Copy.lang);
                                 clicked => {
-                                    root.copy-link();
-                                }
-                            }
-                            if root.share-status == "done": Button {
-                                text: Copy.tr("share.open", Copy.lang);
-                                clicked => {
-                                    root.open-link();
+                                    root.back();
                                 }
                             }
                             if root.share-note != "": Text {

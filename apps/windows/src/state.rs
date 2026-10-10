@@ -349,6 +349,16 @@ impl State {
         if self.settings.updates { vec![Effect::CheckUpdates] } else { vec![] }
     }
 
+    /// What a new check clears from the last one: its problem, its progress, the dock's message, the
+    /// Deep check's state and the private card (read again for the new check).
+    fn clear_for_a_new_check(&mut self) {
+        self.problem = None;
+        self.done_sources.clear();
+        self.export = None;
+        self.deep = Deep::Idle;
+        self.private_shown = false;
+    }
+
     fn save_settings(&self) -> Effect {
         Effect::SaveSettings(self.settings.clone())
     }
@@ -368,11 +378,7 @@ impl State {
                     return vec![];
                 }
                 self.scan = Scan::Running;
-                self.problem = None;
-                self.done_sources.clear();
-                self.export = None;
-                self.deep = Deep::Idle;
-                self.private_shown = false;
+                self.clear_for_a_new_check();
                 vec![Effect::RunScan]
             }
             Event::SourceDone(name) => {
@@ -481,7 +487,7 @@ impl State {
             }
             // Shown like any check, in this window.
             Event::DeepFinished(Ok(report), seconds) => {
-                self.deep = Deep::Idle;
+                self.clear_for_a_new_check();
                 self.update(Event::Finished(Ok(report), seconds))
             }
             Event::DeepFinished(Err(error), _) => self.update(Event::DeepRefused(error)),
@@ -879,6 +885,22 @@ mod tests {
         assert_eq!(s.update_note(), None);
         assert_eq!(s.update(Event::UpdateChecked(None, 2_000)), vec![], "a failed check isn't recorded: it's tried again next time");
         assert_eq!(s.update.checked_at, 1_000);
+    }
+
+    #[test]
+    fn a_finished_deep_check_clears_what_the_last_one_left_on_screen() {
+        // As a new check does: an old problem, an export message and the private card go.
+        let mut s = checked_state();
+        s.update(Event::Start);
+        s.update(Event::Finished(Err(ScanProblem::Failed), 1.0));
+        s.update(Event::Exported(Some("export.saved")));
+        s.private_shown = true;
+        s.update(Event::DeepAsked);
+        let mut deep = report("2026-10-09T11:00:00Z");
+        deep.elevated = true;
+        s.update(Event::DeepFinished(Ok(deep), 1.2));
+        assert_eq!((s.problem, s.export, s.private_shown), (None, None, false));
+        assert!(s.done_sources.is_empty());
     }
 
     #[test]

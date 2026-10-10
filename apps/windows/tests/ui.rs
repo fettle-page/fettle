@@ -1062,3 +1062,16 @@ fn every_next_step_sits_above_the_first_section() {
     let storage = at("STORAGE");
     assert!(step3.1 < storage.0, "step 3 ({step3:?}) runs into the Storage heading ({storage:?})");
 }
+
+#[test]
+fn a_fresh_check_is_headed_this_check_not_last_check() {
+    let h = harness(Locale::En);
+    press(&h.app, "Check this PC");
+    h.background.run_all(&h.app);
+    assert!(has(&h.app, "THIS CHECK"));
+    assert!(!has(&h.app, "LAST CHECK"), "that's the faded, remembered one");
+    let it = harness(Locale::It);
+    press(&it.app, "Controlla questo PC");
+    it.background.run_all(&it.app);
+    assert!(has(&it.app, "QUESTO CONTROLLO"));
+}

@@ -16,7 +16,8 @@ type Pages = {
     needsH: string; needs: string[]; formatsH: string; formats: string[]; warningH: string; warning: string[]; signingLink: string;
   };
   codeSigning: { title: string; description: string; kicker: string; h1: string; intro: string; unsigned: Section; signed: Section; sections: Section[]; privacyLink: string };
-  notFound: { title: string; description: string; h1: string; p: string; home: string };
+  /** One page serves every missing address, in both languages (src/scripts/not-found.ts picks one). */
+  notFound: { title: string; description: string; h1: string; p: string; line: string; next: string; links: { href: string; label: string }[] };
 };
 
 const en: Pages = {
@@ -153,7 +154,14 @@ const en: Pages = {
     description: "This page isn't here.",
     h1: "This page isn't here.",
     p: "The link may be old, or mistyped.",
-    home: "Back to the start",
+    line: "Nothing at this address.",
+    next: "Next step",
+    links: [
+      { href: "/", label: "Check your own PC" },
+      { href: "/download", label: "Download Fettle" },
+      { href: "/faq", label: "Questions, answered" },
+      { href: "/changelog", label: "What's new" },
+    ],
   },
 };
 
@@ -291,7 +299,14 @@ const it: Pages = {
     description: "Questa pagina non c'è.",
     h1: "Questa pagina non c'è.",
     p: "Il link potrebbe essere vecchio, o scritto male.",
-    home: "Torna all'inizio",
+    line: "Nessuna pagina a questo indirizzo.",
+    next: "Cosa fare",
+    links: [
+      { href: "/it", label: "Controlla il tuo PC" },
+      { href: "/it/download", label: "Scarica Fettle" },
+      { href: "/it/faq", label: "Domande e risposte" },
+      { href: "/it/changelog", label: "Novità" },
+    ],
   },
 };
 

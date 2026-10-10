@@ -1,0 +1,45 @@
+---
+// The 404 in one language: the heading on the mat, and a misprinted receipt with the ways on.
+import { text } from "@fettle/brain";
+import { Wordmark } from "@fettle/receipt-ui";
+import { pages } from "../i18n/pages.ts";
+import type { Locale } from "../i18n/paths.ts";
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const c = pages(locale).notFound;
+---
+
+<section class="nf wrap" data-nf={locale} data-title={c.title} lang={locale} hidden={locale !== "en"}>
+  <header class="doc-head">
+    <p class="kicker">404</p>
+    <h1>{c.h1}</h1>
+    <p class="body">{c.p}</p>
+  </header>
+  <div class="live nf-slip">
+    <div class="live-head">
+      <Wordmark className="live-wordmark" />
+      <span>404</span>
+    </div>
+    <hr />
+    <p class="nf-line">
+      <span class="tag tag-couldnt_check" aria-hidden="true">{text("tag.couldnt_check", locale)}</span>
+      <span>{c.line}</span>
+    </p>
+    <hr />
+    <p class="live-title">{c.next}</p>
+    <ul class="nf-links" role="list">
+      {
+        c.links.map((link) => (
+          <li>
+            <a href={link.href}>{link.label}</a> <span aria-hidden="true">→</span>
+          </li>
+        ))
+      }
+    </ul>
+    <div class="live-barcode" aria-hidden="true"></div>
+  </div>
+</section>

@@ -519,6 +519,25 @@ section.hero {
 .doc-sheet .faq-item { box-shadow: none; border-bottom: 1px dashed color-mix(in srgb, var(--color-paper) 72%, var(--color-ink)); border-radius: 0; }
 .doc-sheet .faq-item summary { padding-inline: 0; }
 .doc-sheet .faq-answer { padding-inline: 0; }
+
+/* ---------- 404: the heading, and a misprinted receipt with the ways on ---------- */
+.nf {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 360px); gap: 40px 72px; align-items: center;
+  padding-block: clamp(48px, 8vw, 96px) 0; max-width: 1100px;
+}
+.nf[hidden] { display: none; } /* the grid above would otherwise show the other language */
+.nf-slip { width: 100%; max-width: 360px; justify-self: center; }
+.nf-line { display: flex; gap: 10px; align-items: baseline; margin: 0; font-weight: 600; }
+.nf-links { margin: 6px 0 0; padding: 0; list-style: none; }
+.nf-links li { display: flex; justify-content: space-between; gap: 12px; }
+.nf-links li + li { margin-top: 6px; }
+.nf-links a { font-weight: 600; color: var(--color-ink); text-decoration: none; border-bottom: 1px dashed var(--color-ink-soft); }
+.nf-links a:hover { border-bottom-style: solid; }
+.nf-links a:focus-visible { outline-color: var(--color-mat); }
+@media (width < 900px) {
+  .nf { grid-template-columns: minmax(0, 1fr); }
+  .nf-slip { justify-self: start; }
+}
 .prose { max-width: 68ch; font: 400 17px/1.65 var(--font-display); color: var(--color-ink); }
 .prose section + section { margin-top: 34px; }
 .prose h2 { font-family: var(--font-display); margin: 0 0 10px; font-size: clamp(22px, 2.4vw, 28px); line-height: 1.15; letter-spacing: -0.02em; color: var(--color-ink); }
@@ -571,7 +590,7 @@ section.hero {
 /* ---------- Under the hand: paper lifts, links get the highlighter ---------- */
 .live, .slip, .sheet-front { transition: translate 200ms var(--ease-out), filter 200ms var(--ease-out), box-shadow 200ms var(--ease-out); }
 /* The highlighter sweeps in under a link from the left, a pill on the lower half of the text. */
-.text-link, .more-all, .foot-links a { --band-inset: 55% -4px -1px; position: relative; isolation: isolate; }
+.text-link, .more-all, .foot-links a, .nf-links a { --band-inset: 55% -4px -1px; position: relative; isolation: isolate; }
 .text-link { --band-color: color-mix(in srgb, var(--t-accent) 35%, transparent); } /* on the mat: shows on green too */
 /* "More questions" links can wrap (Italian, mid widths): an inline highlighter, cloned so each line gets its own pill. */
 .more-slip li a {
@@ -579,7 +598,7 @@ section.hero {
   background-image: linear-gradient(var(--color-soft), var(--color-soft)); background-repeat: no-repeat; background-size: 0% 100%;
   box-decoration-break: clone; -webkit-box-decoration-break: clone; transition: background-size 220ms var(--ease-out);
 }
-.text-link::before, .more-all::before, .foot-links a::before {
+.text-link::before, .more-all::before, .foot-links a::before, .nf-links a::before {
   content: ""; position: absolute; inset: var(--band-inset); z-index: -1; pointer-events: none;
   border-radius: 999px; background: var(--band-color, var(--color-soft));
   transform: scaleX(0); transform-origin: left; transition: transform 220ms var(--ease-out);
@@ -589,7 +608,7 @@ section.hero {
   .slip:hover { translate: 0 -3px; filter: drop-shadow(0 26px 24px rgb(0 0 0 / 0.3)); }
   /* The front sheet is inert, so the browser never sees the pointer over it: its stack carries the hover. */
   .tech-stack:hover .sheet-front { translate: 0 -3px; box-shadow: 0 30px 46px -18px rgb(0 0 0 / 0.5), 0 1px 2px rgb(0 0 0 / 0.2); }
-  .text-link:hover::before, .more-all:hover::before, .foot-links a:hover::before { transform: scaleX(1); }
+  .text-link:hover::before, .more-all:hover::before, .foot-links a:hover::before, .nf-links a:hover::before { transform: scaleX(1); }
   .more-slip li a:hover { background-size: 100% 100%; }
   .more-slip li a:hover, .more-all:hover { text-decoration: none; } /* the band marks it now */
 }
@@ -811,7 +830,7 @@ html[data-vt="theme-spot"]::view-transition-new(root) { animation-name: fettle-s
   .live, .slip, .sheet-front { transition: none; }
   .live:hover, .slip:hover, .tech-stack:hover .sheet-front { translate: none; }
   .cuts { display: none; }
-  .text-link::before, .more-all::before, .foot-links a::before, .more-slip li a { transition: none; }
+  .text-link::before, .more-all::before, .foot-links a::before, .nf-links a::before, .more-slip li a { transition: none; }
   .margin-note, .callout, .margin-note::after, .callout::before, .end-slip { animation: none; }
   .annotated-receipt :is(.kv > div, .steps li, .r-section h3, .line), .redact, .sheet-back, .sheet-mid, .seal, .questions-slip { animation: none; }
 }

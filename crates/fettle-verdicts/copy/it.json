@@ -64,6 +64,8 @@
   "windows.unsupported_esu.action": "Iscriviti agli Extended Security Updates da Windows Update, oppure passa a Windows 11.",
   "windows.esu_enrolled_until": "{product} riceve aggiornamenti di sicurezza grazie agli Extended Security Updates. Fine del supporto: {until}.",
   "windows.esu_enrolled": "{product} riceve aggiornamenti di sicurezza grazie agli Extended Security Updates.",
+  "windows.esu_ending": "{product} sta per perdere gli Extended Security Updates. Fine del supporto: {until}.",
+  "windows.esu_ending.action": "Prima di allora passa a Windows 11 per continuare a ricevere le correzioni di sicurezza.",
   "windows.esu_unknown": "{product} riceve aggiornamenti di sicurezza solo se è iscritto agli Extended Security Updates.",
   "windows.esu_unknown.action": "Apri Windows Update per verificare se questo PC è iscritto.",
   "windows.unknown_version": "Fettle non conosce ancora le date di supporto di questa versione di {product}.",

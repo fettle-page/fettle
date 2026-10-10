@@ -62,10 +62,16 @@ fn support_line(w: &Windows, build: u32, now: i64) -> Line {
     }
 
     match esu_state(w, &last_day(info.end)) {
-        Some(EsuState::Enrolled) => match info.esu_end.filter(|_| info.show_esu_end) {
-            Some(end) => line("windows-support", Level::Fine, "windows.esu_enrolled_until", &[product(), ("until", last_day(end).into())], Action::Default),
-            None => line("windows-support", Level::Fine, "windows.esu_enrolled", &[product()], Action::Default),
-        },
+        Some(EsuState::Enrolled) => {
+            // ESU's own end gets the same warning window. Commercial ESU's paid-for years aren't
+            // known, but its last possible day is, so near it the date is exact.
+            let ending = info.esu_end.filter(|end| end - now <= SUPPORT_END_KEEP_AN_EYE_DAYS * 86_400_000);
+            match (ending, info.esu_end.filter(|_| info.show_esu_end)) {
+                (Some(end), _) => line("windows-support", Level::KeepAnEye, "windows.esu_ending", &[product(), ("until", last_day(end).into())], Action::Default),
+                (None, Some(end)) => line("windows-support", Level::Fine, "windows.esu_enrolled_until", &[product(), ("until", last_day(end).into())], Action::Default),
+                (None, None) => line("windows-support", Level::Fine, "windows.esu_enrolled", &[product()], Action::Default),
+            }
+        }
         Some(EsuState::NotEnrolled) => line("windows-support", Level::ActSoon, "windows.unsupported_esu", &[product()], Action::Default),
         _ => line("windows-support", Level::KeepAnEye, "windows.esu_unknown", &[product()], Action::Default),
     }

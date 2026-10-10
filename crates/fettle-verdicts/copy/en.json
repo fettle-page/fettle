@@ -64,6 +64,8 @@
   "windows.unsupported_esu.action": "Enrol in Extended Security Updates from Windows Update, or upgrade to Windows 11.",
   "windows.esu_enrolled_until": "{product} gets security updates until {until} through Extended Security Updates.",
   "windows.esu_enrolled": "{product} gets security updates through Extended Security Updates.",
+  "windows.esu_ending": "{product} only gets Extended Security Updates until {until}.",
+  "windows.esu_ending.action": "Upgrade to Windows 11 before then to keep getting security fixes.",
   "windows.esu_unknown": "{product} only gets security updates if it's enrolled in Extended Security Updates.",
   "windows.esu_unknown.action": "Open Windows Update to check whether this PC is enrolled.",
   "windows.unknown_version": "Fettle doesn't know the support dates for this version of {product} yet.",

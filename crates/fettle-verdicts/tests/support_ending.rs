@@ -56,3 +56,23 @@ fn other_windows_versions_are_told_to_upgrade_before_the_end() {
     let l = find(&soon, "windows-support");
     assert_eq!((l.level, l.headline.key.as_str()), (Level::KeepAnEye, "windows.ending"));
 }
+
+// The end of Extended Security Updates gets the same warning window as the end of support.
+#[test]
+fn enrolled_windows_10_warns_before_esu_itself_ends() {
+    let home = json!({ "windows": { "check": { "status": "ok" }, "data": { "product": "Windows 10 Home", "edition_id": "Core", "build": 19045, "display_version": "22H2", "esu": "enrolled" } } });
+    let early = judge(home.clone(), "2027-07-01T10:00:00Z", false);
+    let fine = find(&early, "windows-support");
+    assert_eq!((fine.level, fine.headline.key.as_str()), (Level::Fine, "windows.esu_enrolled_until"));
+
+    let soon = judge(home, "2027-09-01T10:00:00Z", false);
+    let l = find(&soon, "windows-support");
+    assert_eq!((l.level, l.headline.key.as_str()), (Level::KeepAnEye, "windows.esu_ending"));
+    assert_eq!(l.headline.params.as_ref().and_then(|p| p.get("until")), fine.headline.params.as_ref().and_then(|p| p.get("until")));
+    assert_eq!(l.action.as_ref().map(|a| a.key.as_str()), Some("windows.esu_ending.action"));
+
+    // Commercial ESU's last possible day is known even when the paid-for year isn't.
+    let edu = json!({ "windows": { "check": { "status": "ok" }, "data": { "product": "Windows 10 Education", "edition_id": "Education", "build": 19045, "display_version": "22H2", "esu": "enrolled" } } });
+    assert_eq!(find(&judge(edu.clone(), "2028-01-01T10:00:00Z", false), "windows-support").headline.key, "windows.esu_enrolled");
+    assert_eq!(find(&judge(edu, "2028-09-01T10:00:00Z", false), "windows-support").headline.key, "windows.esu_ending");
+}

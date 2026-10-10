@@ -1184,6 +1184,7 @@ name = "fettle-collect"
 version = "0.1.0"
 dependencies = [
  "fettle-facts",
+ "fettle-verdicts",
  "serde",
  "serde_json",
  "windows",

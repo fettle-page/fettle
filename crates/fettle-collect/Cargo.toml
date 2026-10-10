@@ -14,3 +14,7 @@ serde_json = "1.0.151"
 winreg = "0.56.0"
 windows = { version = "0.62.2", features = ["Win32_Foundation", "Win32_Graphics_Dxgi", "Win32_Security", "Win32_Storage_FileSystem", "Win32_System_IO", "Win32_System_Ioctl", "Win32_System_SystemInformation", "Win32_System_Threading"] }
 wmi = "0.18.4"
+
+[dev-dependencies]
+# End-to-end tests: a raw drive log all the way to its verdict.
+fettle-verdicts = { path = "../fettle-verdicts" }

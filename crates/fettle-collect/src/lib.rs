@@ -98,3 +98,46 @@ mod limits_tests {
         assert!(model.encode_utf16().count() <= fettle_facts::limits::NAME);
     }
 }
+
+#[cfg(all(test, windows))]
+mod end_to_end {
+    use super::*;
+    use fettle_verdicts::{Level, evaluate};
+
+    /// A drive's NVMe health log (page 0x02): warning bits, 40 °C, spare 100% of a 10% floor, 3% used.
+    fn log(warning: u8) -> [u8; 512] {
+        let mut log = [0u8; 512];
+        log[0] = warning;
+        log[1..3].copy_from_slice(&313u16.to_le_bytes());
+        (log[3], log[4], log[5]) = (100, 10, 3);
+        log
+    }
+
+    /// The verdict lines for one NVMe drive whose log has these warning bits, through the real parser,
+    /// the mapping and the verdict engine.
+    fn verdict_lines(warning: u8) -> Vec<(String, Level)> {
+        let health = serde_json::to_value(sources::nvme::parse_nvme_health_log(&log(warning))).unwrap();
+        let raw: Raw = serde_json::from_value(serde_json::json!({
+            "physical_disks": { "ok": true, "ms": 1, "error": null, "data": [{ "DeviceId": "0", "FriendlyName": "Test NVMe", "BusType": 17, "MediaType": 4, "Size": 1 }] },
+            "nvme_health": { "ok": true, "ms": 1, "error": null, "data": [{ "drive": 0, "attempts": [{ "access": "none", "ok": true, "health": health }] }] },
+        }))
+        .unwrap();
+        let report = build_report(&raw, UNIX_EPOCH, false, &Redactor::default(), "1.0.1");
+        let receipt = evaluate(&report.facts, 0, false);
+        receipt.sections.iter().flat_map(|s| &s.lines).map(|l| (l.headline.key.clone(), l.level)).collect()
+    }
+
+    // The drive's own "reliability degraded" flag must reach the receipt as act-soon.
+    #[test]
+    fn a_drive_reporting_a_problem_gets_act_soon() {
+        assert!(verdict_lines(0x04).contains(&("storage.nvme_critical".into(), Level::ActSoon)));
+        assert!(verdict_lines(0x08).contains(&("storage.nvme_critical".into(), Level::ActSoon)), "read-only media");
+    }
+
+    #[test]
+    fn a_healthy_drive_or_one_that_is_only_hot_is_not_called_failing() {
+        for warning in [0x00, 0x02] {
+            assert!(!verdict_lines(warning).iter().any(|(k, _)| k == "storage.nvme_critical"), "{warning:#04x}");
+        }
+    }
+}

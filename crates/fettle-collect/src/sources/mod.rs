@@ -6,7 +6,7 @@
 
 mod elevation;
 mod gpu;
-mod nvme;
+pub(crate) mod nvme;
 mod startup;
 mod storage;
 mod windows;

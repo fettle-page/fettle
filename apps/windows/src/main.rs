@@ -43,6 +43,8 @@ fn main() -> Result<(), slint::PlatformError> {
 fn run() -> Result<(), slint::PlatformError> {
     let dev = DevArgs::parse(std::env::args().skip(1));
     select_backend(dev.hidden(), dev.unfocused())?;
+    // Deep-check reports a helper left behind (the app stopped waiting, or was closed).
+    fettle_windows::elevate::remove_leftovers(&fettle_windows::store::FileStore::default_dir());
     let mut deps = Deps::default();
     if let Some(dir) = &dev.data {
         deps.store = std::rc::Rc::new(fettle_windows::store::FileStore::new(dir.into()));

@@ -18,13 +18,17 @@ use std::path::{Path, PathBuf};
 pub const SCAN_ARG: &str = "--deep-scan";
 
 /// The report file this copy was started to write as the Deep check's helper. Only a new
-/// `fettle-deep-*.json` at an absolute path counts: the helper runs as administrator, so it never
-/// writes anywhere else.
+/// `fettle-deep-*.json` at an absolute local path counts (never a network share or a `\\?\` or
+/// `\\.\` device path): the helper runs as administrator, so it never writes anywhere else.
 pub fn helper_target(args: impl IntoIterator<Item = String>) -> Option<PathBuf> {
     let mut args = args.into_iter().skip(1);
     while let Some(a) = args.next() {
         if a == SCAN_ARG {
-            let path = PathBuf::from(args.next()?);
+            let given = args.next()?;
+            if given.starts_with(r"\\") {
+                return None;
+            }
+            let path = PathBuf::from(given);
             let name = path.file_name()?.to_str()?;
             return (path.is_absolute() && name.starts_with("fettle-deep-") && name.ends_with(".json")).then_some(path);
         }
@@ -38,11 +42,57 @@ pub fn write_new(path: &Path, report: &Report) -> std::io::Result<()> {
     std::fs::OpenOptions::new().write(true).create_new(true).open(path)?.write_all(&json)
 }
 
+/// Writes the helper's report: only a new file, and only straight into a real folder (a junction or
+/// link could point anywhere the administrator can write).
+pub fn write_report(path: &Path, report: &Report) -> std::io::Result<()> {
+    let folder = path.parent().ok_or_else(|| std::io::Error::other("no folder"))?;
+    let meta = std::fs::symlink_metadata(folder)?;
+    if meta.file_type().is_symlink() || is_reparse_point(&meta) {
+        return Err(std::io::Error::other("the folder is a junction or a link"));
+    }
+    write_new(path, report)
+}
+
+fn is_reparse_point(meta: &std::fs::Metadata) -> bool {
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::MetadataExt;
+        const FILE_ATTRIBUTE_REPARSE_POINT: u32 = 0x400;
+        meta.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT != 0
+    }
+    #[cfg(not(windows))]
+    {
+        let _ = meta;
+        false
+    }
+}
+
+/// What the helper hands the app: its scan without startup apps, which would be the administrator's
+/// (the app uses the user's own).
+pub fn for_the_app(mut report: Report) -> Report {
+    report.facts.startup = None;
+    report
+}
+
 /// The helper's whole job, run before any window exists: scan, write the report, and say how it
 /// went in the exit code (0 written, 1 not).
 pub fn run_helper(path: &Path) -> i32 {
-    let report = crate::scan::scan_quietly();
-    if write_new(path, &report).is_ok() { 0 } else { 1 }
+    if write_report(path, &for_the_app(crate::scan::scan_quietly())).is_ok() { 0 } else { 1 }
+}
+
+/// Clears Deep-check report files a helper wrote after the app had stopped waiting (it gave up, or
+/// was closed). Only ones older than ten minutes: a newer one may be another window's check.
+pub fn remove_leftovers(dir: &Path) {
+    let Ok(entries) = std::fs::read_dir(dir) else { return };
+    let cutoff = std::time::SystemTime::now() - std::time::Duration::from_secs(600);
+    for entry in entries.flatten() {
+        let name = entry.file_name();
+        let Some(name) = name.to_str() else { continue };
+        let old = entry.metadata().and_then(|m| m.modified()).is_ok_and(|t| t < cutoff);
+        if name.starts_with("fettle-deep-") && name.ends_with(".json") && old {
+            let _ = std::fs::remove_file(entry.path());
+        }
+    }
 }
 
 /// The Deep check's report: the elevated scan's, except the user's own startup apps, which come
@@ -148,6 +198,66 @@ mod tests {
         assert!(write_new(&path, &report).is_ok());
         assert!(write_new(&path, &report).is_err(), "already there");
         let _ = std::fs::remove_file(&path);
+    }
+
+    fn scratch(name: &str) -> PathBuf {
+        let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/tmp/fettle-elevate").join(name);
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    fn a_report() -> Report {
+        Report { schema_version: 1, app_version: "1.0.0".into(), engine_version: None, collected_at: "2026-10-10T10:00:00Z".into(), elevated: true, facts: Default::default() }
+    }
+
+    #[test]
+    fn the_helper_never_writes_to_a_network_path() {
+        for bad in [r"\\host\share\fettle-deep-1.json", r"\\?\UNC\host\share\fettle-deep-1.json", r"\\?\C:\Users\x\fettle-deep-1.json", r"\\.\pipe\fettle-deep-1.json"] {
+            assert_eq!(helper_target(args(&["fettle.exe", "--deep-scan", bad])), None, "{bad}");
+        }
+    }
+
+    #[test]
+    fn the_helper_never_writes_through_a_junction() {
+        let dir = scratch("junction");
+        let real = dir.join("real");
+        std::fs::create_dir_all(&real).unwrap();
+        let link = dir.join("link");
+        let made = std::process::Command::new("cmd").args(["/C", "mklink", "/J"]).arg(&link).arg(&real).output().unwrap();
+        assert!(made.status.success(), "{made:?}");
+        assert!(write_report(&link.join("fettle-deep-1-1.json"), &a_report()).is_err(), "a junction may point anywhere");
+        assert!(!real.join("fettle-deep-1-1.json").exists());
+        assert!(write_report(&real.join("fettle-deep-1-1.json"), &a_report()).is_ok());
+    }
+
+    #[test]
+    fn the_helper_never_writes_startup_apps() {
+        // They'd be the administrator's (the app uses the user's own anyway).
+        let mut report = a_report();
+        report.facts.startup = startup(&["AdminTool"]);
+        let dir = scratch("startup");
+        let path = dir.join("fettle-deep-1-2.json");
+        write_report(&path, &for_the_app(report)).unwrap();
+        let written: Report = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
+        assert_eq!(written.facts.startup, None);
+    }
+
+    #[test]
+    fn old_deep_files_are_cleared_at_launch() {
+        let dir = scratch("leftovers");
+        let old = dir.join("fettle-deep-1-1.json");
+        let fresh = dir.join("fettle-deep-2-2.json");
+        let other = dir.join("settings.json");
+        for p in [&old, &fresh, &other] {
+            std::fs::write(p, "{}").unwrap();
+        }
+        let hour_ago = std::time::SystemTime::now() - std::time::Duration::from_secs(3600);
+        std::fs::File::options().write(true).open(&old).unwrap().set_modified(hour_ago).unwrap();
+        remove_leftovers(&dir);
+        assert!(!old.exists(), "a Deep check that never came back");
+        assert!(fresh.exists(), "may belong to a Deep check running in another window");
+        assert!(other.exists());
     }
 
     fn startup(names: &[&str]) -> Option<Section<Startup>> {

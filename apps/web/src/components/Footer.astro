@@ -11,9 +11,10 @@ interface Props {
 }
 
 const { locale, path } = Astro.props;
-const other: Locale = locale === "en" ? "it" : "en";
 const to = (p: string) => localePath(locale, p);
 const year = new Date().getFullYear();
+/** Each language in its own words, as language pickers do. */
+const LANGUAGE_NAMES: Record<Locale, string> = { en: "English", it: "Italiano" };
 const { source } = links(release);
 ---
 
@@ -30,14 +31,21 @@ const { source } = links(release);
       <a href={to("/download")}>{t(locale, "nav.download")}</a>
       <a href={to("/code-signing")}>{t(locale, "footer.signing")}</a>
       {source && <a href={source}>{t(locale, "footer.source")}</a>}
-      <a href={alternates(path)[other]} hreflang={other} lang={other}>{t(locale, "nav.other_language")}</a>
     </nav>
-    <fieldset class="foot-theme" data-theme-picker hidden>
-      <legend>{t(locale, "theme.label")}</legend>
-      {(["auto", "light", "dark", "oled"] as const).map((v) => (
-        <label><input class="sr-only" type="radio" name="theme" value={v} /><span class={`swatch swatch-${v}`} aria-hidden="true"></span>{t(locale, `theme.${v}`)}</label>
-      ))}
-    </fieldset>
+    <div class="foot-prefs">
+      <fieldset class="foot-theme" data-theme-picker hidden>
+        <legend>{t(locale, "theme.label")}</legend>
+        {(["auto", "light", "dark", "oled"] as const).map((v) => (
+          <label><input class="sr-only" type="radio" name="theme" value={v} /><span class={`swatch swatch-${v}`} aria-hidden="true"></span>{t(locale, `theme.${v}`)}</label>
+        ))}
+      </fieldset>
+      <nav class="foot-lang" aria-labelledby="foot-lang-label">
+        <span id="foot-lang-label" class="foot-lang-label">{t(locale, "footer.language")}</span>
+        {(["en", "it"] as const).map((l) => (
+          <a href={alternates(path)[l]} hreflang={l} lang={l} aria-current={l === locale ? "true" : undefined}>{LANGUAGE_NAMES[l]}</a>
+        ))}
+      </nav>
+    </div>
     <p class="foot-small">{t(locale, "footer.small")}</p>
     <p class="foot-small">© {year} Fettle · {t(locale, "footer.made")}</p>
   </div>

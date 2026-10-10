@@ -1040,3 +1040,25 @@ fn opening_the_json_fold_moves_nothing_above_it() {
     let after = [place(intro), place("7 days"), place("Lock it with a password"), place("Advanced: show the JSON that will be sent")];
     assert_eq!(before, after, "the view kept its spacing above the fold");
 }
+
+/// A tired laptop with three next steps (the website's sample report).
+fn tired_report() -> Report {
+    let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../worker/test/fixtures/tired.json");
+    serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap()
+}
+
+#[test]
+fn every_next_step_sits_above_the_first_section() {
+    let h = harness_with(Locale::En, temp_dir(), |deps| deps.scanner = Arc::new(FakeScanner(tired_report())));
+    // Tall enough that the whole top of the receipt is on screen (the testing API only finds that).
+    h.app.window().window().set_size(slint::LogicalSize::new(1240.0, 2400.0));
+    press(&h.app, "Check this PC");
+    h.background.run_all(&h.app);
+    let at = |label: &str| {
+        let e = ElementHandle::find_by_accessible_label(h.app.window(), label).next().unwrap_or_else(|| panic!("no {label:?}"));
+        (e.absolute_position().y, e.absolute_position().y + e.size().height)
+    };
+    let step3 = at("NEXT STEP 3");
+    let storage = at("STORAGE");
+    assert!(step3.1 < storage.0, "step 3 ({step3:?}) runs into the Storage heading ({storage:?})");
+}

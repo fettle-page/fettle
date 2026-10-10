@@ -427,8 +427,11 @@ export component Receipt inherits Rectangle {
             for r in data.machine: KV { item: r; }
         }
         Dashes { }
-        // Hairline, then the summary everyone reads.
-        VerticalLayout {
+        // Hairline, then the summary everyone reads. Built through a one-item list on purpose: Slint
+        // measures a fixed block's wrapped text as one line per paragraph, so three next steps came
+        // out about five lines short and the first section was drawn over the third. Blocks a list
+        // creates (like the sections below) are measured at their real width.
+        for _ in 1: VerticalLayout {
             padding-top: 14px;
             Text {
                 text: data.summary;

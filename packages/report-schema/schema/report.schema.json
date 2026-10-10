@@ -313,17 +313,32 @@
                         ]
                       },
                       "kind": {
-                        "type": [
-                          "string",
-                          "null"
+                        "anyOf": [
+                          {
+                            "oneOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "ddr3",
+                                  "ddr4",
+                                  "ddr5",
+                                  "lpddr4",
+                                  "lpddr5",
+                                  "other"
+                                ]
+                              },
+                              {
+                                "description": "Soldered laptop memory.",
+                                "type": "string",
+                                "const": "lpddr3"
+                              }
+                            ]
+                          },
+                          {
+                            "type": "null"
+                          }
                         ],
-                        "default": null,
-                        "enum": [
-                          "ddr4",
-                          "ddr5",
-                          "other",
-                          null
-                        ]
+                        "default": null
                       },
                       "manufacturer": {
                         "type": [

@@ -199,8 +199,13 @@ pub struct MemoryModule {
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, Copy, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum MemoryKind {
+    Ddr3,
     Ddr4,
     Ddr5,
+    /// Soldered laptop memory.
+    Lpddr3,
+    Lpddr4,
+    Lpddr5,
     Other,
 }
 

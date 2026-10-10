@@ -3,7 +3,7 @@
 
 const BUS = { 17: "nvme", 11: "sata", 7: "usb" };
 const MEDIA = { 3: "hdd", 4: "ssd" };
-const MEMORY_KIND = { 26: "ddr4", 34: "ddr5" };
+const MEMORY_KIND = { 24: "ddr3", 26: "ddr4", 34: "ddr5", 29: "lpddr3", 30: "lpddr4", 35: "lpddr5" };
 const FORM_FACTOR = { 8: "dimm", 12: "sodimm" };
 
 const ok = (data) => ({ check: { status: "ok" }, data });

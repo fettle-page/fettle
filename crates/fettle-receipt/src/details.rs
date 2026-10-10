@@ -140,9 +140,13 @@ fn memory(d: &Memory, locale: Locale) -> Vec<DetailGroup> {
         .enumerate()
         .map(|(i, m)| {
             let kind = match m.kind {
+                Some(MemoryKind::Ddr3) => Some("DDR3".to_string()),
                 Some(MemoryKind::Ddr4) => Some("DDR4".to_string()),
                 Some(MemoryKind::Ddr5) => Some("DDR5".to_string()),
-                _ => None,
+                Some(MemoryKind::Lpddr3) => Some("LPDDR3".to_string()),
+                Some(MemoryKind::Lpddr4) => Some("LPDDR4".to_string()),
+                Some(MemoryKind::Lpddr5) => Some("LPDDR5".to_string()),
+                Some(MemoryKind::Other) | None => None,
             };
             let form = match m.form_factor {
                 Some(FormFactor::Dimm) => Some("DIMM".to_string()),
@@ -320,5 +324,15 @@ mod tests {
         assert_eq!(names, ["Apple", "apple", "Banana", "IntelX", "Intel® Graphics", "Zoom", "éclair", "Łódź"]);
         // UTF-16, not code points: an emoji's high surrogate sorts before U+FF21 (fullwidth A).
         assert_eq!(name_order("\u{1F680}", "\u{FF21}"), Ordering::Less);
+    }
+
+    #[test]
+    fn every_known_memory_type_is_named() {
+        use fettle_facts::MemoryModule;
+        for (kind, name) in [(MemoryKind::Ddr3, "DDR3"), (MemoryKind::Lpddr3, "LPDDR3"), (MemoryKind::Lpddr4, "LPDDR4"), (MemoryKind::Lpddr5, "LPDDR5"), (MemoryKind::Ddr4, "DDR4"), (MemoryKind::Ddr5, "DDR5")] {
+            let d = Memory { modules: vec![MemoryModule { kind: Some(kind), ..Default::default() }], ..Default::default() };
+            let rows: Vec<_> = memory(&d, Locale::En).into_iter().flat_map(|g| g.rows).collect();
+            assert!(rows.iter().any(|r| r.value == name), "{name}: {rows:?}");
+        }
     }
 }

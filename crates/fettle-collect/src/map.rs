@@ -346,8 +346,13 @@ fn memory(s: &Sources) -> Section<Memory> {
             configured_speed_mts: u32_of(m, "ConfiguredClockSpeed"),
             part_number: text_of(m, "PartNumber"),
             kind: Some(match u64_of(m, "SMBIOSMemoryType") {
+                // SMBIOS type codes (LPDDR4X and LPDDR5X report as LPDDR4 and LPDDR5).
+                Some(24) => MemoryKind::Ddr3,
                 Some(26) => MemoryKind::Ddr4,
                 Some(34) => MemoryKind::Ddr5,
+                Some(29) => MemoryKind::Lpddr3,
+                Some(30) => MemoryKind::Lpddr4,
+                Some(35) => MemoryKind::Lpddr5,
                 _ => MemoryKind::Other,
             }),
             // Some firmware writes the word "Unknown" instead of leaving it empty.
@@ -695,6 +700,16 @@ mod tests {
         assert_eq!(wear(4), Some(150), "SSD");
         assert_eq!(wear(3), None, "HDD");
         assert_eq!(wear(0), None, "unknown media");
+    }
+
+    // SMBIOS memory types: older PCs have DDR3, thin laptops soldered LPDDR.
+    #[test]
+    fn memory_types_older_pcs_and_thin_laptops_use_are_named() {
+        let module = |t: u64| json!({ "Capacity": 8_589_934_592u64, "SMBIOSMemoryType": t });
+        let r = raw(&[("memory_modules", rows(json!([24, 29, 30, 35, 26, 34, 0].map(module))))]);
+        let kinds: Vec<_> = memory(&Sources(&r)).data.unwrap().modules.iter().map(|m| m.kind).collect();
+        use MemoryKind::*;
+        assert_eq!(kinds, [Ddr3, Lpddr3, Lpddr4, Lpddr5, Ddr4, Ddr5, Other].map(Some));
     }
 
     #[test]

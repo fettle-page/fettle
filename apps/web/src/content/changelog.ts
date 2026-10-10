@@ -9,8 +9,8 @@ export const releases: Release[] = [
     version: "1.0.1",
     date: null,
     notes: {
-      en: ["Before it installs anything, the installer shows what Fettle sends (only the update check) and offers a box to turn the update check off."],
-      it: ["Prima di installare, l'installer mostra cosa invia Fettle (solo il controllo degli aggiornamenti) e offre una casella per disattivarlo."],
+      en: ["Before it installs anything, the installer shows what Fettle sends (only the update check) and offers a box to turn the update check off.", "Opening the JSON in Share no longer spreads the view apart."],
+      it: ["Prima di installare, l'installer mostra cosa invia Fettle (solo il controllo degli aggiornamenti) e offre una casella per disattivarlo.", "Aprire il JSON in Condividi non allarga più la vista."],
     },
   },
   {

@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { generate } from "../scripts/generate.mjs";
 import { parseReport, SCHEMA_VERSION } from "../src/index.ts";
@@ -72,6 +72,52 @@ describe("edge cases", () => {
     expect(parseReport(disks(2)).ok).toBe(true);
     expect(parseReport(disks(10_000)).ok).toBe(false);
     expect(parseReport(disks(1, "x".repeat(10_000))).ok).toBe(false);
+  });
+
+  it("holds each string to its own limit: names 128, versions and dates 64, details 256", () => {
+    const ok = (data: object) => ({ check: { status: "ok" }, data });
+    const fields: [string, number, (s: string) => object][] = [
+      ["app_version", 64, (s) => ({ ...base, app_version: s, facts: {} })],
+      ["engine_version", 64, (s) => ({ ...base, engine_version: s, facts: {} })],
+      ["check.detail", 256, (s) => withFacts({ battery: { check: { status: "failed", detail: s } } })],
+      ["disk.model", 128, (s) => withFacts({ storage: ok({ disks: [{ model: s }] }) })],
+      ["volume.letter", 64, (s) => withFacts({ storage: ok({ volumes: [{ letter: s }] }) })],
+      ["module.part_number", 128, (s) => withFacts({ memory: ok({ modules: [{ part_number: s }] }) })],
+      ["module.manufacturer", 128, (s) => withFacts({ memory: ok({ modules: [{ manufacturer: s }] }) })],
+      ["module.bank_label", 128, (s) => withFacts({ memory: ok({ modules: [{ bank_label: s }] }) })],
+      ["module.device_locator", 128, (s) => withFacts({ memory: ok({ modules: [{ device_locator: s }] }) })],
+      ["windows.product", 128, (s) => withFacts({ windows: ok({ product: s }) })],
+      ["windows.edition_id", 64, (s) => withFacts({ windows: ok({ edition_id: s }) })],
+      ["windows.display_version", 64, (s) => withFacts({ windows: ok({ display_version: s }) })],
+      ["windows.installation_type", 64, (s) => withFacts({ windows: ok({ installation_type: s }) })],
+      ["tpm.spec_version", 64, (s) => withFacts({ windows: ok({ tpm: { spec_version: s } }) })],
+      ["startup.name", 128, (s) => withFacts({ startup: ok({ items: [{ name: s }] }) })],
+      ["gpu.name", 128, (s) => withFacts({ graphics: ok({ adapters: [{ name: s }] }) })],
+      ["gpu.driver_version", 64, (s) => withFacts({ graphics: ok({ adapters: [{ driver_version: s }] }) })],
+      ["system.cpu_name", 128, (s) => withFacts({ system: ok({ cpu_name: s }) })],
+      ["system.board", 128, (s) => withFacts({ system: ok({ board: s }) })],
+      ["system.bios_version", 64, (s) => withFacts({ system: ok({ bios_version: s }) })],
+      ["display.name", 128, (s) => withFacts({ system: ok({ displays: [{ name: s }] }) })],
+    ];
+    for (const [field, max, report] of fields) {
+      expect(parseReport(report("x".repeat(max))).ok, `${field} at ${max}`).toBe(true);
+      expect(parseReport(report("x".repeat(max + 1))).ok, `${field} over ${max}`).toBe(false);
+    }
+  });
+
+  it("still accepts every real report and test case", () => {
+    const cases = new URL("../../../crates/fettle-receipt/tests/parity/cases/", import.meta.url);
+    const names = readdirSync(cases);
+    expect(names.length).toBeGreaterThan(100);
+    for (const name of names) {
+      const r = parseReport(JSON.parse(readFileSync(new URL(name, cases), "utf8")).report);
+      expect(r.ok, `${name}: ${r.ok ? "" : r.error}`).toBe(true);
+    }
+    const fixtures = new URL("../../../crates/fettle-collect/tests/fixtures/", import.meta.url);
+    for (const name of readdirSync(fixtures).filter((n) => n.endsWith(".facts.json"))) {
+      const r = parseReport(withFacts(JSON.parse(readFileSync(new URL(name, fixtures), "utf8"))));
+      expect(r.ok, `${name}: ${r.ok ? "" : r.error}`).toBe(true);
+    }
   });
 
   it("schema/report.schema.json is current too", () => {

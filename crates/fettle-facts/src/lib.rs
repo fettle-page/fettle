@@ -11,18 +11,32 @@ pub mod startup_names;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+/// The longest each kind of string in a report may be, in UTF-16 code units (how the upload check
+/// counts). Shared reports are checked against these, so the collector clamps to them too.
+pub mod limits {
+    /// Names and models: products, disks, memory, startup apps, graphics cards, processors, boards, displays.
+    pub const NAME: usize = 128;
+    /// Versions, dates, editions and drive letters.
+    pub const SHORT: usize = 64;
+    /// Why a section couldn't be read.
+    pub const DETAIL: usize = 256;
+}
+
 /// Bumped whenever the shape changes in a way old readers can't handle.
 pub const SCHEMA_VERSION: u32 = 1;
 
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, PartialEq)]
 pub struct Report {
     pub schema_version: u32,
+    #[schemars(length(max = limits::SHORT))]
     pub app_version: String,
     /// Version of the verdict engine the app used, so a shared report can show the same verdicts.
     #[serde(default)]
+    #[schemars(length(max = limits::SHORT))]
     pub engine_version: Option<String>,
     /// RFC 3339 timestamp.
     #[schemars(regex(pattern = r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})$"))]
+    #[schemars(length(max = limits::SHORT))]
     pub collected_at: String,
     pub elevated: bool,
     pub facts: Facts,
@@ -53,6 +67,7 @@ pub struct Section<T> {
 pub struct Check {
     pub status: CheckStatus,
     #[serde(default)]
+    #[schemars(length(max = limits::DETAIL))]
     pub detail: Option<String>,
 }
 
@@ -78,6 +93,7 @@ pub struct Storage {
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, PartialEq, Default)]
 #[serde(default)]
 pub struct Disk {
+    #[schemars(length(max = limits::NAME))]
     pub model: Option<String>,
     pub bus: Option<Bus>,
     pub media: Option<Media>,
@@ -133,6 +149,7 @@ pub struct SmartSummary {
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, PartialEq, Default)]
 #[serde(default)]
 pub struct Volume {
+    #[schemars(length(max = limits::SHORT))]
     pub letter: Option<String>,
     pub size_bytes: Option<u64>,
     pub free_bytes: Option<u64>,
@@ -164,11 +181,15 @@ pub struct MemoryModule {
     pub capacity_bytes: Option<u64>,
     pub speed_mts: Option<u32>,
     pub configured_speed_mts: Option<u32>,
+    #[schemars(length(max = limits::NAME))]
     pub part_number: Option<String>,
     pub kind: Option<MemoryKind>,
+    #[schemars(length(max = limits::NAME))]
     pub manufacturer: Option<String>,
     /// Firmware slot labels, e.g. "P0 CHANNEL A" + "DIMM 1" (AMD) or "BANK 0" + "ChannelA-DIMM0" (Intel).
+    #[schemars(length(max = limits::NAME))]
     pub bank_label: Option<String>,
+    #[schemars(length(max = limits::NAME))]
     pub device_locator: Option<String>,
     pub configured_voltage_mv: Option<u32>,
     pub form_factor: Option<FormFactor>,
@@ -196,15 +217,20 @@ pub enum FormFactor {
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, PartialEq, Default)]
 #[serde(default)]
 pub struct Windows {
+    #[schemars(length(max = limits::NAME))]
     pub product: Option<String>,
+    #[schemars(length(max = limits::SHORT))]
     pub edition_id: Option<String>,
     pub build: Option<u32>,
     pub ubr: Option<u32>,
+    #[schemars(length(max = limits::SHORT))]
     pub display_version: Option<String>,
+    #[schemars(length(max = limits::SHORT))]
     pub installation_type: Option<String>,
     pub uptime_seconds: Option<u64>,
     /// Date (YYYY-MM-DD) of the most recent installed update.
     #[schemars(regex(pattern = r"^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$"))]
+    #[schemars(length(max = limits::SHORT))]
     pub last_update_installed: Option<String>,
     pub secure_boot: Option<bool>,
     pub tpm: Option<Tpm>,
@@ -216,6 +242,7 @@ pub struct Windows {
 #[serde(default)]
 pub struct Tpm {
     pub present: Option<bool>,
+    #[schemars(length(max = limits::SHORT))]
     pub spec_version: Option<String>,
 }
 
@@ -238,6 +265,7 @@ pub struct Startup {
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, PartialEq, Default)]
 #[serde(default)]
 pub struct StartupItem {
+    #[schemars(length(max = limits::NAME))]
     pub name: Option<String>,
     pub location: Option<StartupLocation>,
     /// Task Manager's enabled flag; `None` when Windows has no record of it.
@@ -263,11 +291,14 @@ pub struct Graphics {
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, PartialEq, Default)]
 #[serde(default)]
 pub struct Gpu {
+    #[schemars(length(max = limits::NAME))]
     pub name: Option<String>,
     pub vram_bytes: Option<u64>,
+    #[schemars(length(max = limits::SHORT))]
     pub driver_version: Option<String>,
     /// YYYY-MM-DD.
     #[schemars(regex(pattern = r"^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$"))]
+    #[schemars(length(max = limits::SHORT))]
     pub driver_date: Option<String>,
     pub temperature_c: Option<i32>,
     pub software: Option<bool>,
@@ -278,12 +309,16 @@ pub struct Gpu {
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, PartialEq, Default)]
 #[serde(default)]
 pub struct System {
+    #[schemars(length(max = limits::NAME))]
     pub cpu_name: Option<String>,
     pub cores: Option<u32>,
     pub threads: Option<u32>,
+    #[schemars(length(max = limits::NAME))]
     pub board: Option<String>,
+    #[schemars(length(max = limits::SHORT))]
     pub bios_version: Option<String>,
     #[schemars(regex(pattern = r"^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$"))]
+    #[schemars(length(max = limits::SHORT))]
     pub bios_date: Option<String>,
     pub chassis: Option<Chassis>,
     pub displays: Vec<Display>,
@@ -300,6 +335,7 @@ pub enum Chassis {
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, PartialEq, Default)]
 #[serde(default)]
 pub struct Display {
+    #[schemars(length(max = limits::NAME))]
     pub name: Option<String>,
     pub width_cm: Option<u32>,
     pub height_cm: Option<u32>,

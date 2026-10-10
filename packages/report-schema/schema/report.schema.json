@@ -4,11 +4,13 @@
   "type": "object",
   "properties": {
     "app_version": {
-      "type": "string"
+      "type": "string",
+      "maxLength": 64
     },
     "collected_at": {
       "description": "RFC 3339 timestamp.",
       "type": "string",
+      "maxLength": 64,
       "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?(Z|[+-]\\d{2}:\\d{2})$"
     },
     "elevated": {
@@ -20,7 +22,8 @@
         "string",
         "null"
       ],
-      "default": null
+      "default": null,
+      "maxLength": 64
     },
     "facts": {
       "type": "object",
@@ -40,7 +43,8 @@
                     "string",
                     "null"
                   ],
-                  "default": null
+                  "default": null,
+                  "maxLength": 256
                 },
                 "status": {
                   "description": "\"Not present\" (a desktop has no battery) and \"needs admin\" must stay different.",
@@ -113,7 +117,8 @@
                     "string",
                     "null"
                   ],
-                  "default": null
+                  "default": null,
+                  "maxLength": 256
                 },
                 "status": {
                   "description": "\"Not present\" (a desktop has no battery) and \"needs admin\" must stay different.",
@@ -149,6 +154,7 @@
                           "null"
                         ],
                         "default": null,
+                        "maxLength": 64,
                         "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$"
                       },
                       "driver_version": {
@@ -156,14 +162,16 @@
                           "string",
                           "null"
                         ],
-                        "default": null
+                        "default": null,
+                        "maxLength": 64
                       },
                       "name": {
                         "type": [
                           "string",
                           "null"
                         ],
-                        "default": null
+                        "default": null,
+                        "maxLength": 128
                       },
                       "software": {
                         "type": [
@@ -215,7 +223,8 @@
                     "string",
                     "null"
                   ],
-                  "default": null
+                  "default": null,
+                  "maxLength": 256
                 },
                 "status": {
                   "description": "\"Not present\" (a desktop has no battery) and \"needs admin\" must stay different.",
@@ -251,7 +260,8 @@
                           "string",
                           "null"
                         ],
-                        "default": null
+                        "default": null,
+                        "maxLength": 128
                       },
                       "capacity_bytes": {
                         "type": [
@@ -285,7 +295,8 @@
                           "string",
                           "null"
                         ],
-                        "default": null
+                        "default": null,
+                        "maxLength": 128
                       },
                       "form_factor": {
                         "description": "Desktop (DIMM) or laptop (SODIMM) stick.",
@@ -319,14 +330,16 @@
                           "string",
                           "null"
                         ],
-                        "default": null
+                        "default": null,
+                        "maxLength": 128
                       },
                       "part_number": {
                         "type": [
                           "string",
                           "null"
                         ],
-                        "default": null
+                        "default": null,
+                        "maxLength": 128
                       },
                       "speed_mts": {
                         "type": [
@@ -372,7 +385,8 @@
                     "string",
                     "null"
                   ],
-                  "default": null
+                  "default": null,
+                  "maxLength": 256
                 },
                 "status": {
                   "description": "\"Not present\" (a desktop has no battery) and \"needs admin\" must stay different.",
@@ -427,7 +441,8 @@
                           "string",
                           "null"
                         ],
-                        "default": null
+                        "default": null,
+                        "maxLength": 128
                       }
                     }
                   }
@@ -455,7 +470,8 @@
                     "string",
                     "null"
                   ],
-                  "default": null
+                  "default": null,
+                  "maxLength": 256
                 },
                 "status": {
                   "description": "\"Not present\" (a desktop has no battery) and \"needs admin\" must stay different.",
@@ -516,7 +532,8 @@
                           "string",
                           "null"
                         ],
-                        "default": null
+                        "default": null,
+                        "maxLength": 128
                       },
                       "nvme": {
                         "description": "From the NVMe SMART / Health Information log (page 0x02).",
@@ -692,7 +709,8 @@
                           "string",
                           "null"
                         ],
-                        "default": null
+                        "default": null,
+                        "maxLength": 64
                       },
                       "size_bytes": {
                         "type": [
@@ -729,7 +747,8 @@
                     "string",
                     "null"
                   ],
-                  "default": null
+                  "default": null,
+                  "maxLength": 256
                 },
                 "status": {
                   "description": "\"Not present\" (a desktop has no battery) and \"needs admin\" must stay different.",
@@ -758,6 +777,7 @@
                     "null"
                   ],
                   "default": null,
+                  "maxLength": 64,
                   "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$"
                 },
                 "bios_version": {
@@ -765,14 +785,16 @@
                     "string",
                     "null"
                   ],
-                  "default": null
+                  "default": null,
+                  "maxLength": 64
                 },
                 "board": {
                   "type": [
                     "string",
                     "null"
                   ],
-                  "default": null
+                  "default": null,
+                  "maxLength": 128
                 },
                 "chassis": {
                   "type": [
@@ -801,7 +823,8 @@
                     "string",
                     "null"
                   ],
-                  "default": null
+                  "default": null,
+                  "maxLength": 128
                 },
                 "displays": {
                   "type": "array",
@@ -823,7 +846,8 @@
                           "string",
                           "null"
                         ],
-                        "default": null
+                        "default": null,
+                        "maxLength": 128
                       },
                       "width_cm": {
                         "type": [
@@ -869,7 +893,8 @@
                     "string",
                     "null"
                   ],
-                  "default": null
+                  "default": null,
+                  "maxLength": 256
                 },
                 "status": {
                   "description": "\"Not present\" (a desktop has no battery) and \"needs admin\" must stay different.",
@@ -906,14 +931,16 @@
                     "string",
                     "null"
                   ],
-                  "default": null
+                  "default": null,
+                  "maxLength": 64
                 },
                 "edition_id": {
                   "type": [
                     "string",
                     "null"
                   ],
-                  "default": null
+                  "default": null,
+                  "maxLength": 64
                 },
                 "esu": {
                   "description": "Provisional: confirm the signal on the Windows 10 work laptop.",
@@ -934,7 +961,8 @@
                     "string",
                     "null"
                   ],
-                  "default": null
+                  "default": null,
+                  "maxLength": 64
                 },
                 "last_update_installed": {
                   "description": "Date (YYYY-MM-DD) of the most recent installed update.",
@@ -943,6 +971,7 @@
                     "null"
                   ],
                   "default": null,
+                  "maxLength": 64,
                   "pattern": "^\\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\\d|3[01])$"
                 },
                 "product": {
@@ -950,7 +979,8 @@
                     "string",
                     "null"
                   ],
-                  "default": null
+                  "default": null,
+                  "maxLength": 128
                 },
                 "secure_boot": {
                   "type": [
@@ -977,7 +1007,8 @@
                         "string",
                         "null"
                       ],
-                      "default": null
+                      "default": null,
+                      "maxLength": 64
                     }
                   },
                   "default": null

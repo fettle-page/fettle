@@ -1128,3 +1128,14 @@ fn my_shared_links_can_check_which_still_work() {
     assert!(has(&h.app, "https://fettle.page/r/alive1234567890abcd"));
     assert_eq!(FileStore::new(dir).load_links(0).len(), 1, "remembered");
 }
+
+#[test]
+fn italian_link_dates_read_naturally() {
+    let dir = temp_dir();
+    let saved = |id: &str, expires: &str| fettle_windows::store::SavedLink { id: id.into(), url: format!("https://fettle.page/r/{id}"), delete_token: "t".into(), expires_at: expires.into() };
+    FileStore::new(dir.clone()).save_links(&[saved("eight1234567890abcd", "2026-11-08T10:00:00Z"), saved("first1234567890abcd", "2026-11-01T10:00:00Z")]);
+    let h = harness_in(Locale::It, dir);
+    h.app.dispatch(fettle_windows::state::Event::Open(fettle_windows::state::Panel::Links));
+    assert!(has(&h.app, "Fino all'8 novembre 2026"));
+    assert!(has(&h.app, "Fino al 1° novembre 2026"));
+}

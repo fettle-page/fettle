@@ -167,6 +167,33 @@ fn hint(keys: &str, label: String) -> Hint {
     Hint { keys: keys.into(), label: label.into() }
 }
 
+/// An Italian long date ("8 ottobre 2026") after the article its day needs: "l'8", "l'11", "il 1°"
+/// and "il 17". Templates can't choose it, so the app fills the whole phrase.
+fn it_dated(date: &str, plain: &str, elided: &str) -> String {
+    let day: String = date.chars().take_while(char::is_ascii_digit).collect();
+    match day.as_str() {
+        "8" | "11" => format!("{elided}{date}"),
+        "1" => format!("{plain} 1°{}", &date[1..]),
+        _ => format!("{plain} {date}"),
+    }
+}
+
+/// "il 17 ottobre", "l'8 ottobre", "il 1° ottobre".
+fn it_il(date: &str) -> String {
+    it_dated(date, "il", "l'")
+}
+
+/// "al 17 ottobre", "all'8 ottobre", "al 1° ottobre".
+fn it_al(date: &str) -> String {
+    it_dated(date, "al", "all'")
+}
+
+/// A date for a template: plain as `{date}`, and with its Italian article as `{il_date}` and
+/// `{al_date}` (English templates just use `{date}`).
+fn date_params(date: String) -> Vec<(&'static str, Param)> {
+    vec![("il_date", it_il(&date).into()), ("al_date", it_al(&date).into()), ("date", date.into())]
+}
+
 /// Seconds with one decimal in the language ("0.7", "0,7").
 fn seconds(s: f64, lang: Locale) -> String {
     let text = format!("{s:.1}");
@@ -308,7 +335,7 @@ pub fn apply(w: &AppWindow, s: &State, ctx: &Ctx, cache: &mut Cache) {
         }
         w.set_share_locked_note(if shared.locked { t("share.locked_note", lang, &[]) } else { String::new() }.into());
         w.set_share_delete_link(shared.delete_url.clone().into());
-        w.set_share_expires(t("share.expires", lang, &[("date", long_local_date(&shared.expires_at).into())]).into());
+        w.set_share_expires(t("share.expires", lang, &date_params(long_local_date(&shared.expires_at))).into());
     }
     if let Some(c) = &s.current {
         // Exactly what would leave this PC: the redacted report and the engine version.
@@ -316,7 +343,7 @@ pub fn apply(w: &AppWindow, s: &State, ctx: &Ctx, cache: &mut Cache) {
         w.set_share_json(serde_json::to_string_pretty(&outgoing).unwrap_or_default().into());
     }
     w.set_share_note(s.share_note.map(|k| t(k, lang, &[])).unwrap_or_default().into());
-    let links: Vec<LinkRow> = s.links.iter().map(|l| LinkRow { id: l.id.clone().into(), url: l.url.clone().into(), until: t("links.until", lang, &[("date", long_local_date(&l.expires_at).into())]).into() }).collect();
+    let links: Vec<LinkRow> = s.links.iter().map(|l| LinkRow { id: l.id.clone().into(), url: l.url.clone().into(), until: t("links.until", lang, &date_params(long_local_date(&l.expires_at))).into() }).collect();
     changed(&mut cache.links, links.iter().map(|l| format!("{}={}", l.id, l.until)).collect::<Vec<_>>().join("|"), || w.set_links(model(links.clone())));
     w.set_links_label(t("title.links", lang, &[("count", Param::Int(s.links.len() as i64))]).into());
     w.set_links_status(s.links_status.map(|(k, _)| t(k, lang, &[("count", Param::Int(s.links_gone as i64))])).unwrap_or_default().into());
@@ -386,4 +413,25 @@ pub fn feed(w: &AppWindow) {
             w.set_printed(true);
         }
     });
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn italian_dates_take_the_article_their_day_needs() {
+        // "il"/"al" before most days, "l'"/"all'" before 8 and 11 (otto, undici), and the 1st as "1°".
+        assert_eq!(it_il("17 ottobre 2026"), "il 17 ottobre 2026");
+        assert_eq!(it_al("17 ottobre 2026"), "al 17 ottobre 2026");
+        assert_eq!(it_il("8 ottobre 2026"), "l'8 ottobre 2026");
+        assert_eq!(it_al("8 ottobre 2026"), "all'8 ottobre 2026");
+        assert_eq!(it_il("11 novembre 2026"), "l'11 novembre 2026");
+        assert_eq!(it_al("11 novembre 2026"), "all'11 novembre 2026");
+        assert_eq!(it_il("1 ottobre 2026"), "il 1° ottobre 2026");
+        assert_eq!(it_al("1 ottobre 2026"), "al 1° ottobre 2026");
+        // 18 and 81 aren't days with an article change ("il 18"); a date without a day stays as it is.
+        assert_eq!(it_al("18 ottobre 2026"), "al 18 ottobre 2026");
+        assert_eq!(it_il("ottobre 2026"), "il ottobre 2026");
+    }
 }

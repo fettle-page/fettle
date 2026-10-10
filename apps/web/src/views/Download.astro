@@ -24,11 +24,10 @@ const intro = files ? c.introReady.replace("{version}", files.version) : c.intro
       {
         files ? (
           <>
-            <p class="download-cta"><a class="btn btn-primary" href={files.installer}>{c.installer}</a></p>
+            <p class="download-cta"><DownloadCount locale={locale}><a class="btn btn-primary" href={files.installer}>{c.installer}</a></DownloadCount></p>
             <p class="download-more">
               <a href={files.portable}>{c.portable}</a> · <a href={files.checksums}>{c.checksums}</a> · <a href={files.all}>{c.allReleases}</a>
             </p>
-            <DownloadCount locale={locale} />
           </>
         ) : (
           <p class="download-cta"><span class="btn btn-primary is-waiting">{c.button}</span></p>

@@ -3,7 +3,7 @@ import raw from "../wrangler.jsonc?raw";
 import { downloadCount, resetDownloadCount } from "../src/downloads.ts";
 import { call } from "./helpers.ts";
 
-// The download count on the download page: GitHub's own total for the installer and the
+// The download count, on a tape stuck to the download button of the home and download pages: GitHub's own total for the installer and the
 // zip of every published release, asked for at most once an hour, filled in by the Worker. Visitors'
 // browsers never contact GitHub, and nothing about who downloaded is stored.
 const release = (draft: boolean, assets: [string, number][]) => ({ draft, assets: assets.map(([name, download_count]) => ({ name, download_count })) });
@@ -14,7 +14,7 @@ const RELEASES = [
 const github = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
 let fetchSpy: ReturnType<typeof vi.spyOn>;
 const answer = (r: () => Response | Promise<Response>) => fetchSpy.mockImplementation(async () => r());
-const line = (html: string) => /<p class="dl-count"[^>]*>([^<]*)<\/p>/.exec(html);
+const line = (html: string) => /<span class="dl-tape"[^>]*>([^<]*)<\/span>/.exec(html);
 
 beforeEach(() => {
   resetDownloadCount();
@@ -40,33 +40,27 @@ describe("the download count", () => {
     expect(new Headers((fetchSpy.mock.calls[1]! as [string, RequestInit])[1].headers).get("authorization")).toBeNull();
   });
 
-  it("shows on the download page, in each language", async () => {
-    const en = line(await (await call("/download")).text());
+  it("shows on the home page's download button, in each language", async () => {
+    const en = line(await (await call("/")).text());
     expect(en![0]).not.toMatch(/\shidden[\s>]/);
-    expect(en![1]).toBe("Downloaded 8 times");
-    expect(line(await (await call("/it/download")).text())![1]).toBe("Scaricato 8 volte");
-  });
-
-  it("leaves the home page alone: a plain file, without the Worker or GitHub", async () => {
-    const res = await call("/");
-    expect(line(await res.text())).toBeNull();
-    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(en![1]).toBe("8 downloads");
+    expect(line(await (await call("/it")).text())![1]).toBe("8 download");
   });
 
   it("shows on the download pages, with each language's thousands separator", async () => {
     answer(() => github([release(false, [["Fettle-Setup-1.0.0.exe", 1000], ["Fettle-1.0.0-portable.zip", 234]])]));
-    expect(line(await (await call("/download")).text())![1]).toBe("Downloaded 1,234 times");
-    expect(line(await (await call("/it/download")).text())![1]).toBe("Scaricato 1.234 volte");
+    expect(line(await (await call("/download")).text())![1]).toBe("1,234 downloads");
+    expect(line(await (await call("/it/download")).text())![1]).toBe("1.234 download");
   });
 
-  it("says once, not 1 times", async () => {
+  it("says 1 download, not 1 downloads", async () => {
     answer(() => github([release(false, [["Fettle-Setup-1.0.0.exe", 1]])]));
-    expect(line(await (await call("/download")).text())![1]).toBe("Downloaded once");
-    expect(line(await (await call("/it/download")).text())![1]).toBe("Scaricato una volta");
+    expect(line(await (await call("/")).text())![1]).toBe("1 download");
+    expect(line(await (await call("/it/download")).text())![1]).toBe("1 download");
   });
 
   it("asks GitHub once, not on every visit", async () => {
-    await call("/download");
+    await call("/");
     await call("/it/download");
     await call("/download");
     expect(fetchSpy).toHaveBeenCalledTimes(1);
@@ -76,7 +70,7 @@ describe("the download count", () => {
     for (const fail of [() => github({ message: "rate limited" }, 403), () => github({}, 500), () => { throw new TypeError("network"); }, () => github({ not: "a list" })]) {
       resetDownloadCount();
       answer(fail);
-      const res = await call("/download");
+      const res = await call("/");
       expect(res.status).toBe(200);
       const l = line(await res.text());
       expect(l![0]).toMatch(/\shidden[\s>]/);
@@ -90,8 +84,8 @@ describe("the download count", () => {
     expect(res.headers.get("content-type")).toContain("text/html");
   });
 
-  it("runs the Worker first only on the two pages that show it", () => {
+  it("runs the Worker first only on the four pages that show it", () => {
     const config = JSON.parse(raw.replace(/^\s*\/\/.*$/gm, ""));
-    expect(config.assets.run_worker_first).toEqual(["/api/*", "/r/*", "/download", "/it/download"]);
+    expect(config.assets.run_worker_first).toEqual(["/api/*", "/r/*", "/", "/it", "/download", "/it/download"]);
   });
 });

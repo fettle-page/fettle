@@ -1,6 +1,6 @@
 import { vi } from "vitest";
 
-// Tests never reach the internet: GitHub (asked for the download count on the download page)
+// Tests never reach the internet: GitHub (asked for the download count on the home and download pages)
 // answers "unavailable" unless a test says otherwise (test/downloads.test.ts).
 const real = globalThis.fetch;
 vi.spyOn(globalThis, "fetch").mockImplementation((input: RequestInfo | URL, init?: RequestInit) => {

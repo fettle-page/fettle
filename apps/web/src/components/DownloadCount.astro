@@ -1,7 +1,7 @@
 ---
-// How many times Fettle was downloaded: an empty, hidden line the share Worker fills in with GitHub's
-// own total (worker/src/downloads.ts). Served without the Worker, or when GitHub doesn't answer, it
-// shows nothing.
+// The main download button with a strip of label tape stuck on its corner: how many times Fettle was
+// downloaded. The share Worker fills the tape in with GitHub's own total (worker/src/downloads.ts);
+// served without the Worker, or when GitHub doesn't answer, it stays hidden.
 import type { Locale } from "../i18n/paths.ts";
 import { t } from "../i18n/strings.ts";
 
@@ -12,4 +12,4 @@ interface Props {
 const { locale } = Astro.props;
 ---
 
-<p class="dl-count" data-download-count data-locale={locale} data-one={t(locale, "downloads.one")} data-many={t(locale, "downloads.many")} hidden></p>
+<span class="dl-cta"><slot /><span class="dl-tape" data-download-count data-locale={locale} data-one={t(locale, "downloads.one")} data-many={t(locale, "downloads.many")} hidden></span></span>

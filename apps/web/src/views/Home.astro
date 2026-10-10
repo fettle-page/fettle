@@ -1,4 +1,5 @@
 ---
+import DownloadCount from "../components/DownloadCount.astro";
 import AnnotatedSample from "../components/AnnotatedSample.astro";
 import DownloadSlip from "../components/DownloadSlip.astro";
 import Legend from "../components/Legend.astro";
@@ -30,7 +31,7 @@ const to = (p: string) => localePath(locale, p);
       <h1 id="hero-title">{h.h1a} <em>{h.h1b}</em></h1>
       <p class="lede">{h.lede}</p>
       <div class="ctas">
-        <a class="btn btn-primary" href={to("/download")}>{h.ctaDownload}</a>
+        <DownloadCount locale={locale}><a class="btn btn-primary" href={to("/download")}>{h.ctaDownload}</a></DownloadCount>
         <a class="btn btn-ghost" href="#sample">{h.ctaSample}</a>
       </div>
       <p class="fine">{h.fine}</p>

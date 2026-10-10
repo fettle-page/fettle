@@ -1,10 +1,10 @@
-// The download count on the download page: GitHub's own total for the installer and the zip
+// The download count, on a tape stuck to the main download button of the home and download pages: GitHub's own total for the installer and the zip
 // of every published release. Asked for at most once an hour (per isolate) and written into the page's
 // empty line, so visitors' browsers never contact GitHub and nothing about who downloaded is kept.
 import { release } from "@fettle/web/release";
 
-/** The pages with a download count line (apps/web DownloadCount.astro); wrangler.jsonc runs the Worker first on them. */
-export const DOWNLOAD_PAGES = new Set(["/download", "/it/download"]);
+/** The pages with a download count tape (apps/web DownloadCount.astro); wrangler.jsonc runs the Worker first on them. */
+export const DOWNLOAD_PAGES = new Set(["/", "/it", "/download", "/it/download"]);
 
 const HOUR = 3_600_000;
 /** After a failed ask, try again in five minutes rather than an hour. */
@@ -59,7 +59,7 @@ export async function downloadCount(env: Env): Promise<number | null> {
   return known.count;
 }
 
-/** A download page with its count line filled in (or left hidden when there's no count). */
+/** A home or download page with its count tape filled in (or left hidden when there's no count). */
 export async function withDownloadCount(request: Request, env: Env): Promise<Response> {
   if (request.method !== "GET" && request.method !== "HEAD") return env.ASSETS.fetch(request);
   // A bare request: the visitor's conditional headers would otherwise get a 304 that keeps an old count.

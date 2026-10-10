@@ -77,6 +77,15 @@ describe("the code signing policy page", () => {
     expect(sitemap).toMatch(/\/it\/code-signing</);
   });
 
+  // SignPath's application form: the download page must say the project uses the SignPath Foundation.
+  it("the download page names the SignPath Foundation, and nothing still says Fettle will apply", () => {
+    expect(text(page("download.html"))).toContain("SignPath Foundation");
+    expect(text(page("it/download.html"))).toContain("SignPath Foundation");
+    for (const locale of ["en", "it"] as const) {
+      expect(JSON.stringify([copy(locale), faqs(locale)])).not.toMatch(/will apply|chiederà la firma/);
+    }
+  });
+
   // SignPath's terms: install instructions come with uninstall instructions.
   it("the download page says how to remove each download", () => {
     const en = text(page("download.html"));

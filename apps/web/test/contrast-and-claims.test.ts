@@ -42,7 +42,8 @@ describe("contrast, link previews and claims", () => {
   it("only claims what is true today", () => {
     for (const locale of ["en", "it"] as const) {
       const all = JSON.stringify([faqs(locale), home(locale), pages(locale)]);
-      expect(all).not.toMatch(/is applying|ha chiesto la firma|Android/);
+      // "Has applied" to SignPath is true from 2026-10-10 (the application went in that day).
+      expect(all).not.toMatch(/is applying|Android/);
       expect(all).not.toMatch(/A real receipt|Uno scontrino vero/);
     }
   });

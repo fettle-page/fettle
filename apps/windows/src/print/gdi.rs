@@ -319,7 +319,7 @@ pub fn print(owner: HWND, model: &ReceiptModel) -> Result<bool, String> {
         // The paper's real size, so A4, Letter and anything else lay out right.
         let size = PageSize::Custom(caps(PHYSICALWIDTH) / caps(LOGPIXELSX) * 72.0, caps(PHYSICALHEIGHT) / caps(LOGPIXELSY) * 72.0);
         let device = Device { hdc, dots_per_point: dpp, offset: (caps(PHYSICALOFFSETX), caps(PHYSICALOFFSETY)) };
-        let name = wide("Fettle receipt");
+        let name = wide(&crate::exports::job_name(model));
         let doc = DOCINFOW { cbSize: std::mem::size_of::<DOCINFOW>() as i32, lpszDocName: PCWSTR(name.as_ptr()), ..Default::default() };
         let started = StartDocW(hdc, &doc);
         if let Some(outcome) = start_doc_outcome(started, windows::Win32::Foundation::GetLastError().0) {

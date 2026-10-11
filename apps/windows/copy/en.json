@@ -115,6 +115,7 @@
   "deep.title": "Deep check",
   "export.print_title": "Print or save as PDF",
   "export.json_title": "Save as PDF, or the report as JSON",
+  "export.job_name": "Fettle receipt",
   "export.copy_title": "Copy for Discord or Reddit",
   "settings.look": "Look",
   "settings.language": "Language",

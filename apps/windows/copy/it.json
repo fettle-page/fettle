@@ -115,6 +115,7 @@
   "deep.title": "Controllo approfondito",
   "export.print_title": "Stampa o salva in PDF",
   "export.json_title": "Salva in PDF, o il report in JSON",
+  "export.job_name": "Scontrino Fettle",
   "export.copy_title": "Copia per Discord o Reddit",
   "settings.look": "Aspetto",
   "settings.language": "Lingua",

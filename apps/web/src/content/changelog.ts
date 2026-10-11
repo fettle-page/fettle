@@ -41,6 +41,7 @@ export const releases: Release[] = [
         "With two Fettle windows open, a link shared in one is no longer forgotten when the other saves its links, and My shared links shows the links from both.",
         "When the update check can't get an answer, Fettle waits an hour before trying again, then two, then four, and never more often than you chose, instead of trying every ten minutes in each open window.",
         "Saving with a name that doesn't end in .pdf (receipt.txt, say) now adds .pdf to it, and never replaces a file Windows didn't ask you about.",
+        "In Italian, Windows' print queue now shows the receipt as “Scontrino Fettle”.",
       ],
       it: [
         "Su Windows 10, Fettle non dice più che un PC è iscritto agli Extended Security Updates solo perché ha installato un aggiornamento in ritardo. Ora lo ricava dalla build di Windows e, quando non può saperlo, ti chiede di controllare in Windows Update.",
@@ -74,6 +75,7 @@ export const releases: Release[] = [
         "Con due finestre di Fettle aperte, un link condiviso in una non viene più dimenticato quando l'altra salva i suoi link, e I miei link condivisi mostra quelli di entrambe.",
         "Quando il controllo degli aggiornamenti non riceve risposta, Fettle aspetta un'ora prima di riprovare, poi due, poi quattro, e mai più spesso di quanto hai scelto, invece di riprovare ogni dieci minuti in ogni finestra aperta.",
         "Salvando con un nome che non finisce in .pdf (per esempio scontrino.txt), ora Fettle aggiunge .pdf, e non sostituisce mai un file per cui Windows non ti ha chiesto conferma.",
+        "In italiano, la coda di stampa di Windows ora mostra lo scontrino come «Scontrino Fettle».",
       ],
     },
   },

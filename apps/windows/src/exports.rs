@@ -117,6 +117,11 @@ impl Clipboard for RealClipboard {
     }
 }
 
+/// The print job's name, as the printer queue shows it, in the receipt's language.
+pub fn job_name(model: &ReceiptModel) -> String {
+    t("export.job_name", model.locale, &[])
+}
+
 /// "fettle-2026-10-07", the scan's date where the user is (from the receipt's own stamp).
 pub fn suggested_name(model: &ReceiptModel) -> String {
     let when = &model.meta.when;
@@ -248,6 +253,12 @@ mod tests {
         ] {
             assert!(!openable(url), "{url}");
         }
+    }
+
+    #[test]
+    fn the_print_job_is_named_in_the_receipts_language() {
+        assert_eq!(job_name(&crate::print::layout::tests::dump_model(Locale::En)), "Fettle receipt");
+        assert_eq!(job_name(&crate::print::layout::tests::dump_model(Locale::It)), "Scontrino Fettle");
     }
 
     #[test]

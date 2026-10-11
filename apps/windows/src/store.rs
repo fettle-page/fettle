@@ -100,10 +100,11 @@ impl FileStore {
     fn write(&self, name: &str, value: &impl Serialize) {
         let Ok(text) = serde_json::to_string(value) else { return };
         let _ = std::fs::create_dir_all(&self.dir);
-        // Written aside, then moved over the old file, so a crash never leaves half a file.
-        let tmp = self.dir.join(format!("{name}.tmp"));
-        if std::fs::write(&tmp, text).is_ok() {
-            let _ = std::fs::rename(&tmp, self.dir.join(name));
+        // Written aside, then moved over the old file, so a crash never leaves half a file. The
+        // temporary file is this process's own: another Fettle window may be saving at the same moment.
+        let tmp = self.dir.join(format!("{name}.{}.tmp", std::process::id()));
+        if std::fs::write(&tmp, text).is_err() || std::fs::rename(&tmp, self.dir.join(name)).is_err() {
+            let _ = std::fs::remove_file(&tmp);
         }
     }
 
@@ -371,6 +372,19 @@ pub(crate) mod tests {
         assert_eq!(ids(&a), ["b"]);
         a.forget_links(&["gone".to_string()], 0);
         assert_eq!(ids(&b), ["b"]);
+    }
+
+    #[test]
+    fn another_windows_half_written_file_never_gets_in_the_way() {
+        // Another Fettle window is writing links.json at the same moment: its temporary file is its own.
+        let dir = temp_dir();
+        std::fs::create_dir_all(dir.join("links.json.tmp")).unwrap();
+        let store = FileStore::new(dir.clone());
+        let link = SavedLink { id: "a".into(), url: "https://fettle.page/r/a".into(), delete_token: "token-a".into(), expires_at: "2026-11-01T00:00:00Z".into() };
+        store.add_link(&link, 0);
+        assert_eq!(store.load_links(0), vec![link]);
+        let left: Vec<String> = std::fs::read_dir(&dir).unwrap().flatten().map(|e| e.file_name().to_string_lossy().into_owned()).filter(|n| n.ends_with(".tmp") && n != "links.json.tmp").collect();
+        assert!(left.is_empty(), "{left:?}");
     }
 
     #[test]

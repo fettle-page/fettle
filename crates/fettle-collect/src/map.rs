@@ -196,11 +196,13 @@ fn monitor_name(units: Option<&Value>) -> Option<String> {
 
 // ---------- storage ----------
 
-/// The SMART attribute table: 12-byte entries from offset 2 (id, flags×2, value, worst, raw×6).
+/// The SMART attribute table: 30 12-byte entries from offset 2 (id, flags×2, value, worst, raw×6).
+/// What follows it in the 512-byte block isn't attributes.
 fn smart_attributes(bytes: &[u8]) -> Vec<(u8, u8, u64)> {
+    const TABLE_END: usize = 2 + 30 * 12;
     let mut attrs = Vec::new();
     let mut i = 2;
-    while i + 12 <= bytes.len() {
+    while i + 12 <= bytes.len().min(TABLE_END) {
         let id = bytes[i];
         if id != 0 {
             let raw = bytes[i + 5..i + 11].iter().rev().fold(0u64, |acc, b| acc * 256 + u64::from(*b));
@@ -833,6 +835,22 @@ mod tests {
         let hours = |raw: u64| smart_summary(&smart_attributes(&table(&[(9, 100, raw)])), None).power_on_hours;
         assert_eq!(hours(0x48A4_0000_9E53), Some(40_531), "the Kingston SV300's value");
         assert_eq!(hours(32_617), Some(32_617));
+    }
+
+    // The table has 30 entries (bytes 2 to 361); drivers hand over 512 bytes, and what follows the
+    // table (thresholds, vendor data) can look like attributes. The real MX500 dump yields 128, 2, 77, 82.
+    #[test]
+    fn nothing_past_the_30_entry_table_is_read_as_an_attribute() {
+        let mut bytes = table(&[(194, 100, 36)]);
+        bytes.resize(512, 0);
+        for (k, (id, raw)) in [(197u8, 5u64), (194, 99)].into_iter().enumerate() {
+            let at = 362 + k * 12;
+            bytes[at] = id;
+            bytes[at + 3] = 100;
+            bytes[at + 5..at + 11].copy_from_slice(&raw.to_le_bytes()[..6]);
+        }
+        let m = smart_summary(&smart_attributes(&bytes), None);
+        assert_eq!((m.pending_sectors, m.temperature_c), (None, Some(36)));
     }
 
     // Samsung SATA SSDs (an 860 EVO here) report their temperature only as attribute 190.

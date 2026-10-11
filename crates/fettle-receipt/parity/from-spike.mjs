@@ -48,7 +48,8 @@ function hotfixDay(s) {
 /** The SMART attribute table: 12-byte entries from offset 2 (id, flags×2, value, worst, raw×6). */
 function smartAttributes(bytes) {
   const attrs = new Map();
-  for (let i = 2; i + 12 <= bytes.length; i += 12) {
+  // 30 entries (bytes 2 to 361): what follows them in the 512-byte block isn't attributes.
+  for (let i = 2; i + 12 <= Math.min(bytes.length, 2 + 30 * 12); i += 12) {
     const id = bytes[i];
     if (!id) continue;
     const raw = bytes.slice(i + 5, i + 11).reduceRight((acc, b) => acc * 256 + b, 0);

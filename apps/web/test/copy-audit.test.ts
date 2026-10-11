@@ -94,3 +94,12 @@ describe("what stays out of every receipt, file and link", () => {
     for (const text of [faq("it", "share"), faq("it", "forum"), home("it").privP1]) expect(text).toMatch(/email/);
   });
 });
+
+describe("the privacy page's counting", () => {
+  it("names everything counted per address each minute, and is dated for this change", () => {
+    expect(privacy("en")).toContain("share page views, report reads and deletions");
+    expect(privacy("it")).toContain("le visite alle pagine condivise, le letture e le eliminazioni dei report");
+    expect(pages("en").privacy.updated).toBe("Last updated: 11 October 2026");
+    expect(pages("it").privacy.updated).toMatch(/11 ottobre 2026/);
+  });
+});

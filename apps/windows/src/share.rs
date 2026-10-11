@@ -8,7 +8,7 @@ use std::collections::HashMap;
 
 pub const PASSWORD_MIN: usize = 8;
 pub const PASSWORD_MAX: usize = 128;
-pub const MAX_UPLOAD_BYTES: usize = 262_144;
+pub const MAX_UPLOAD_BYTES: usize = 65_536;
 
 /// fettle.page. A development build can point at a local Worker with FETTLE_SHARE_ORIGIN; a
 /// release build ignores it, so no setting outside the app can send shared reports elsewhere.
@@ -375,15 +375,32 @@ mod tests {
         assert!(f.calls().is_empty());
     }
 
-    #[test]
-    fn refuses_a_report_over_256_kb_before_sending_it() {
-        let f = Fake::new(|| json(201, created()));
-        // Long text is shortened to the limits first, so it takes many entries to pass 256 KB.
+    /// A report with `n` startup apps of 100 characters each, and the size of its upload.
+    fn with_startup_apps(n: usize) -> (Report, usize) {
         let item = fettle_facts::StartupItem { name: Some("x".repeat(100)), location: None, enabled: Some(true) };
-        let startup = fettle_facts::Section { check: fettle_facts::Check { status: fettle_facts::CheckStatus::Ok, detail: None }, data: Some(fettle_facts::Startup { items: vec![item; 3000] }) };
-        let big = Report { facts: Facts { startup: Some(startup), ..Facts::default() }, ..report() };
+        let startup = fettle_facts::Section { check: fettle_facts::Check { status: fettle_facts::CheckStatus::Ok, detail: None }, data: Some(fettle_facts::Startup { items: vec![item; n] }) };
+        let r = Report { facts: Facts { startup: Some(startup), ..Facts::default() }, ..report() };
+        let size = serde_json::json!({ "report": r }).to_string().len();
+        (r, size)
+    }
+
+    #[test]
+    fn refuses_a_report_over_64_kib_before_sending_it() {
+        let f = Fake::new(|| json(201, created()));
+        // Long text is shortened to the limits first, so it takes many entries to pass 64 KiB.
+        let (big, size) = with_startup_apps(700);
+        assert!(size > 65_536 && size < 262_144, "over the limit, under the old one: {size}");
         assert_eq!(share_report(&f, ORIGIN, &big, None, None).unwrap_err().error, "too_large");
         assert!(f.calls().is_empty());
+    }
+
+    #[test]
+    fn sends_a_report_just_under_64_kib() {
+        let f = Fake::new(|| json(201, created()));
+        let (report, size) = with_startup_apps(450);
+        assert!(size > 50_000 && size < 65_536, "{size}");
+        assert!(share_report(&f, ORIGIN, &report, None, None).is_ok());
+        assert_eq!(f.calls().len(), 1);
     }
 
     #[test]

@@ -46,7 +46,7 @@ const en: Pages = {
       {
         h: "Share links",
         p: [
-          "Only when you choose to share, Fettle uploads the report behind the receipt you see, with the private details taken out, and nothing else. It's stored with Cloudflare, in its EU data centres only, for the time you pick (7 days, 30 days or 1 year) and then deleted. A private delete link lets you remove it sooner.",
+          "Only when you choose to share, Fettle uploads the report behind the receipt you see, with the private details taken out, and nothing else. Our server checks it again before storing it, and removes any email address, IP address, account ID, server name or profile folder name it finds, even from an older app. It's stored with Cloudflare, in its EU data centres only, for the time you pick (7 days, 30 days or 1 year) and then deleted. A private delete link lets you remove it sooner.",
           "If you add a password, our server keeps only a scrambled hash of it, never the password itself. After a right password it also keeps a scrambled hash of a pass, so the same browser can reopen the receipt; the pass expires 24 hours after it was last used. Anyone with the link, and the password if you set one, can open the receipt.",
         ],
       },
@@ -192,7 +192,7 @@ const it: Pages = {
       {
         h: "Link condivisi",
         p: [
-          "Solo quando scegli di condividere, Fettle carica il report da cui nasce lo scontrino che vedi, con i dati personali tolti, e nient'altro. Viene conservato su Cloudflare, solo nei suoi data center nell'UE, per il tempo che scegli (7 giorni, 30 giorni o 1 anno) e poi eliminato. Un link privato di eliminazione ti permette di toglierlo prima.",
+          "Solo quando scegli di condividere, Fettle carica il report da cui nasce lo scontrino che vedi, con i dati personali tolti, e nient'altro. Il nostro server lo ricontrolla prima di conservarlo e toglie ogni indirizzo email, indirizzo IP, ID di account, nome di server o nome di cartella del profilo che trova, anche se arriva da un'app più vecchia. Viene conservato su Cloudflare, solo nei suoi data center nell'UE, per il tempo che scegli (7 giorni, 30 giorni o 1 anno) e poi eliminato. Un link privato di eliminazione ti permette di toglierlo prima.",
           "Se aggiungi una password, il nostro server conserva solo un'impronta (hash), mai la password. Dopo una password corretta conserva anche l'impronta di un permesso, così lo stesso browser può riaprire lo scontrino; il permesso scade 24 ore dall'ultimo utilizzo. Chiunque abbia il link, e la password se l'hai impostata, può aprire lo scontrino.",
         ],
       },

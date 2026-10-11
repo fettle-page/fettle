@@ -129,3 +129,10 @@ describe("the Italian wording after review", () => {
     expect(changelogIt).toContain("condivisa senza il GUID");
   });
 });
+
+describe("the server's own privacy pass", () => {
+  it("is on the privacy page: the server checks each upload again before storing it", () => {
+    expect(privacy("en")).toContain("Our server checks it again before storing it");
+    expect(privacy("it")).toContain("Il nostro server lo ricontrolla prima di conservarlo");
+  });
+});

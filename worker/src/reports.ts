@@ -51,6 +51,25 @@ export async function logRef(id: string): Promise<string> {
 
 const address = (request: Request) => request.headers.get("cf-connecting-ip") ?? "unknown";
 /** The per-minute key: an IPv4 address, or an IPv6 /64. */
+/** `report` after the brain's privacy pass, or null if the pass fails or its result isn't a valid report. */
+function scrubbed(report: Report): Report | null {
+  try {
+    // Rust writes every absent field as null (the app's own uploads carry them too); in a report the
+    // two mean the same to the schema and the brain, so reports are stored without the nulls.
+    const again = parseReport(withoutNulls(brain.redactReport(report)));
+    return again.ok ? again.report : null;
+  } catch {
+    return null;
+  }
+}
+
+/** A copy of `value` with every null-valued object key left out. */
+function withoutNulls(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(withoutNulls);
+  if (value === null || typeof value !== "object") return value;
+  return Object.fromEntries(Object.entries(value).filter(([, v]) => v !== null).map(([k, v]) => [k, withoutNulls(v)]));
+}
+
 export const clientKey = (request: Request) => rateKey(address(request));
 /** The daily key: an IPv4 address, or an IPv6 /48. */
 const dailyKey = (request: Request) => dayKey(address(request));
@@ -96,6 +115,11 @@ export async function createReport(request: Request, env: Env): Promise<Response
   if (!parsed.ok) return apiError(400, "invalid_report", { detail: parsed.error.slice(0, 1000) });
   // The schema only checks the timestamp's shape; the verdicts need a real date (no month 13).
   if (Number.isNaN(Date.parse(parsed.report.collected_at))) return apiError(400, "invalid_report", { detail: "collected_at is not a real date" });
+  // The app removes private details before uploading; run the same name-independent pass again here
+  // (emails, IPs, account SIDs, server names, profile folders), so an old or modified app can't store
+  // them. Checked again afterwards, so only a valid report is ever stored.
+  const clean = scrubbed(parsed.report);
+  if (!clean) return apiError(400, "invalid_report", { detail: "the report could not be checked for private details" });
   // Only uploads that would be stored count against the address's day.
   const wait = await env.UPLOAD_BUDGET.getByName(await budgetName(dailyKey(request), env.ADDRESS_PEPPER!)).take();
   if (wait > 0) return rateLimited(wait);
@@ -104,8 +128,8 @@ export async function createReport(request: Request, env: Env): Promise<Response
   const id = newId(ttl);
   const deleteToken = newDeleteToken();
   const expiresAt = new Date(Date.now() + TTL_DAYS[ttl] * DAY_MS).toISOString();
-  // The parsed report, not the raw body: unknown fields never reach storage.
-  const stored = JSON.stringify(parsed.report);
+  // The parsed and scrubbed report, not the raw body: unknown fields and private details never reach storage.
+  const stored = JSON.stringify(clean);
   const meta: Meta = { expiresAt, deleteHash: await hashToken(deleteToken) };
   const locked = envelope.password !== undefined;
   if (locked) {

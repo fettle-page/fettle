@@ -154,7 +154,7 @@
           {
             "enabled": true,
             "location": "run_key",
-            "name": "MicrosoftEdgeAutoLaunch_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+            "name": "Microsoft Edge"
           },
           {
             "enabled": false,

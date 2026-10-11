@@ -11,9 +11,11 @@ export const releases: Release[] = [
     notes: {
       en: [
         "The “new version” note's download link now only ever opens a page on fettle.page.",
+        "The share server now checks every uploaded report again before storing it, and removes any email address, IP address, account ID, server name or profile folder name, even from an older app.",
       ],
       it: [
         "Il link per scaricare la nuova versione ora apre sempre e solo una pagina di fettle.page.",
+        "Il server di condivisione ora ricontrolla ogni report caricato prima di conservarlo, e toglie ogni indirizzo email, indirizzo IP, ID di account, nome di server o nome di cartella del profilo, anche se arriva da un'app più vecchia.",
       ],
     },
   },

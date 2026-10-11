@@ -115,9 +115,36 @@ pub const HELPER_DEADLINE: std::time::Duration = std::time::Duration::from_secs(
 /// The helper's whole job, run before any window exists: scan, write the report, and say how it
 /// went in the exit code (0 written, 1 not).
 pub fn run_helper(path: &Path) -> i32 {
-    let started = std::time::Instant::now();
+    // A scan that hangs still ends at the deadline: no hidden administrator process left running.
+    std::thread::spawn(|| {
+        std::thread::sleep(HELPER_DEADLINE.saturating_sub(since_process_start()));
+        std::process::exit(1);
+    });
     let report = for_the_app(crate::scan::scan_quietly());
-    finish_helper(path, &report, started.elapsed())
+    finish_helper(path, &report, since_process_start())
+}
+
+/// How long ago Windows created this process (the app's wait starts about then), so time spent
+/// loading before `main`, an antivirus scan say, counts too.
+pub fn since_process_start() -> std::time::Duration {
+    #[cfg(windows)]
+    {
+        use windows::Win32::Foundation::FILETIME;
+        use windows::Win32::System::Threading::{GetCurrentProcess, GetProcessTimes};
+        let (mut created, mut exited, mut kernel, mut user) = (FILETIME::default(), FILETIME::default(), FILETIME::default(), FILETIME::default());
+        // SAFETY: the current process's pseudo-handle, and four FILETIMEs to fill in.
+        if unsafe { GetProcessTimes(GetCurrentProcess(), &mut created, &mut exited, &mut kernel, &mut user) }.is_ok() {
+            return since_filetime((u64::from(created.dwHighDateTime) << 32) | u64::from(created.dwLowDateTime), std::time::SystemTime::now());
+        }
+    }
+    std::time::Duration::ZERO
+}
+
+/// The time from `filetime` (100 ns steps since 1601) to `now`; zero if `now` is earlier.
+fn since_filetime(filetime: u64, now: std::time::SystemTime) -> std::time::Duration {
+    const FROM_1601_TO_1970: u64 = 11_644_473_600;
+    let now_ticks = now.duration_since(std::time::UNIX_EPOCH).map(|d| (d.as_secs() + FROM_1601_TO_1970) * 10_000_000 + u64::from(d.subsec_nanos()) / 100).unwrap_or(0);
+    std::time::Duration::from_nanos(now_ticks.saturating_sub(filetime) * 100)
 }
 
 /// Writes the helper's report if it's in time (`took` is how long the scan ran), and says how it went.
@@ -344,6 +371,17 @@ mod tests {
         let late = dir.join("fettle-deep-1-2.json");
         assert_eq!(finish_helper(&late, &a_report(), HELPER_DEADLINE), 1);
         assert!(!late.exists(), "the app has given up on it");
+    }
+
+    #[test]
+    fn the_helper_counts_from_when_windows_created_it() {
+        // 2026-10-10T10:00:00Z as a FILETIME (100 ns steps since 1601), and 90 s later.
+        let created: u64 = (1_791_626_400 + 11_644_473_600) * 10_000_000;
+        let now = std::time::UNIX_EPOCH + std::time::Duration::from_secs(1_791_626_490);
+        assert_eq!(since_filetime(created, now), std::time::Duration::from_secs(90));
+        assert_eq!(since_filetime(created + 1_000 * 10_000_000, now), std::time::Duration::ZERO, "a clock change never makes it negative");
+        // This test's own process started moments ago, not in 1601.
+        assert!(since_process_start() < std::time::Duration::from_secs(3600));
     }
 
     #[test]

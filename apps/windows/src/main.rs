@@ -22,6 +22,15 @@ fn next_renderer(current: &str) -> Option<&'static str> {
 }
 
 fn main() -> Result<(), slint::PlatformError> {
+    // DLLs loaded later by name come from System32 only, like the ones the exe imports
+    // (/DEPENDENTLOADFLAG in build.rs), never from the folder fettle.exe sits in. The Visual C++
+    // runtime beside a packaged fettle.exe still loads: its manifest names it.
+    #[cfg(windows)]
+    // SAFETY: a plain flag for this process, set before any other thread exists.
+    unsafe {
+        use windows::Win32::System::LibraryLoader::{LOAD_LIBRARY_SEARCH_SYSTEM32, SetDefaultDllDirectories};
+        let _ = SetDefaultDllDirectories(LOAD_LIBRARY_SEARCH_SYSTEM32);
+    }
     // The Deep check's helper (elevated, no window): scan, write the report, done. Asked to write
     // somewhere it won't, it stops too: never the whole app as administrator.
     match fettle_windows::elevate::helper_target(std::env::args()) {

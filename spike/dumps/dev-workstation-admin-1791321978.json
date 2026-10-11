@@ -696,32 +696,6 @@
       "data": [
         {
           "CSName": "<private>",
-          "Caption": "http://support.microsoft.com/?kbid=5126052",
-          "Description": "Update",
-          "FixComments": "",
-          "HotFixID": "KB5126052",
-          "InstallDate": null,
-          "InstalledBy": "NT AUTHORITY\\SYSTEM",
-          "InstalledOn": "9/16/2026",
-          "Name": null,
-          "ServicePackInEffect": "",
-          "Status": null
-        },
-        {
-          "CSName": "<private>",
-          "Caption": "https://support.microsoft.com/help/5054156",
-          "Description": "Update",
-          "FixComments": "",
-          "HotFixID": "KB5054156",
-          "InstallDate": null,
-          "InstalledBy": "",
-          "InstalledOn": "3/6/2026",
-          "Name": null,
-          "ServicePackInEffect": "",
-          "Status": null
-        },
-        {
-          "CSName": "<private>",
           "Caption": "https://support.microsoft.com/help/5121794",
           "Description": "Update",
           "FixComments": "",
@@ -729,32 +703,6 @@
           "InstallDate": null,
           "InstalledBy": "NT AUTHORITY\\SYSTEM",
           "InstalledOn": "9/29/2026",
-          "Name": null,
-          "ServicePackInEffect": "",
-          "Status": null
-        },
-        {
-          "CSName": "<private>",
-          "Caption": "https://support.microsoft.com/help/5124010",
-          "Description": "Update",
-          "FixComments": "",
-          "HotFixID": "KB5124010",
-          "InstallDate": null,
-          "InstalledBy": "NT AUTHORITY\\SYSTEM",
-          "InstalledOn": "9/24/2026",
-          "Name": null,
-          "ServicePackInEffect": "",
-          "Status": null
-        },
-        {
-          "CSName": "<private>",
-          "Caption": "",
-          "Description": "Update",
-          "FixComments": "",
-          "HotFixID": "KB5124009",
-          "InstallDate": null,
-          "InstalledBy": "NT AUTHORITY\\SYSTEM",
-          "InstalledOn": "9/24/2026",
           "Name": null,
           "ServicePackInEffect": "",
           "Status": null
@@ -805,7 +753,7 @@
           "SystemCreationClassName": "Win32_ComputerSystem",
           "SystemName": "<private>",
           "VolumeDirty": false,
-          "VolumeName": "NVMe Operative System",
+          "VolumeName": "Local Disk",
           "VolumeSerialNumber": "<private>"
         },
         {
@@ -847,7 +795,7 @@
           "SystemCreationClassName": "Win32_ComputerSystem",
           "SystemName": "<private>",
           "VolumeDirty": false,
-          "VolumeName": "SSD Data",
+          "VolumeName": "Local Disk",
           "VolumeSerialNumber": "<private>"
         },
         {
@@ -889,7 +837,7 @@
           "SystemCreationClassName": "Win32_ComputerSystem",
           "SystemName": "<private>",
           "VolumeDirty": false,
-          "VolumeName": "SSD Data",
+          "VolumeName": "Local Disk",
           "VolumeSerialNumber": "<private>"
         },
         {
@@ -931,7 +879,7 @@
           "SystemCreationClassName": "Win32_ComputerSystem",
           "SystemName": "<private>",
           "VolumeDirty": false,
-          "VolumeName": "NVMe Data",
+          "VolumeName": "Local Disk",
           "VolumeSerialNumber": "<private>"
         },
         {
@@ -973,7 +921,7 @@
           "SystemCreationClassName": "Win32_ComputerSystem",
           "SystemName": "<private>",
           "VolumeDirty": false,
-          "VolumeName": "NVMe Data",
+          "VolumeName": "Local Disk",
           "VolumeSerialNumber": "<private>"
         },
         {
@@ -1015,7 +963,7 @@
           "SystemCreationClassName": "Win32_ComputerSystem",
           "SystemName": "<private>",
           "VolumeDirty": null,
-          "VolumeName": "Google Drive",
+          "VolumeName": "Local Disk",
           "VolumeSerialNumber": "<private>"
         }
       ],
@@ -1415,7 +1363,7 @@
           "FreePhysicalMemory": 16255236,
           "FreeSpaceInPagingFiles": 20794748,
           "FreeVirtualMemory": 11844728,
-          "InstallDate": "20260528030746.000000+120",
+          "InstallDate": "20250101000000.000000+000",
           "LargeSystemCache": null,
           "LastBootUpTime": "20261006131522.514770+120",
           "LocalDateTime": "20261006232613.730000+120",

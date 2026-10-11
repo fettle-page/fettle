@@ -1,7 +1,7 @@
 use super::common::{Action, couldnt_check, line, section_problem};
-use crate::lifecycle::{Esu, last_day, support_end};
+use crate::lifecycle::{Esu, LAST_WIN10_UBR_WITHOUT_ESU, last_day, support_end};
 use crate::thresholds::{SUPPORT_END_KEEP_AN_EYE_DAYS, UPTIME_NUDGE_DAYS};
-use crate::{Level, Line, MessageRef, Param, SectionId, SectionVerdict, fmt};
+use crate::{Level, Line, MessageRef, Param, SectionId, SectionVerdict};
 use fettle_facts::{EsuState, Section, Windows};
 
 /// `cpu_name` is the processor as Windows names it (from the system facts), for Windows 11 readiness.
@@ -62,7 +62,7 @@ fn support_line(w: &Windows, build: u32, now: i64) -> Line {
         return line("windows-support", Level::ActSoon, key, &[product()], Action::Default);
     }
 
-    match esu_state(w, &last_day(info.end)) {
+    match esu_state(w, build) {
         Some(EsuState::Enrolled) => {
             // ESU's own end gets the same warning window. Commercial ESU's paid-for years aren't
             // known, but its last possible day is, so near it the date is exact.
@@ -78,16 +78,16 @@ fn support_line(w: &Windows, build: u32, now: i64) -> Line {
     }
 }
 
-/// Whether ESU is delivering updates. An explicit answer wins; otherwise an update installed after
-/// the last day of support shows enrollment, because only ESU updates arrive after it. (A Windows 10
-/// laptop reported no ESU licence while installing monthly security updates.) An older update
-/// proves nothing either way.
-fn esu_state(w: &Windows, last_supported_day: &str) -> Option<EsuState> {
+/// Whether ESU is delivering updates. An explicit answer wins; otherwise the build shows it, because
+/// every Windows 10 22H2 update after the last one without ESU comes only through ESU. (A Windows 10
+/// laptop reported no ESU licence while installing monthly security updates.) When an update was
+/// installed proves nothing: PCs install old updates late.
+fn esu_state(w: &Windows, build: u32) -> Option<EsuState> {
     if matches!(w.esu, Some(EsuState::Enrolled | EsuState::NotEnrolled)) {
         return w.esu;
     }
-    match w.last_update_installed.as_deref() {
-        Some(day) if fmt::iso_day(day).is_some() && day > last_supported_day => Some(EsuState::Enrolled),
+    match w.ubr {
+        Some(ubr) if build == 19045 && ubr > LAST_WIN10_UBR_WITHOUT_ESU => Some(EsuState::Enrolled),
         _ => w.esu,
     }
 }

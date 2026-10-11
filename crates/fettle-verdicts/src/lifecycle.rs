@@ -143,6 +143,12 @@ fn win10_ltsc(build: u32, edition: EditionClass) -> Option<i64> {
     }
 }
 
+/// The newest Windows 10 22H2 build revision a PC gets without ESU: 19045.6466, KB5071959 (11 November
+/// 2025, offered only to PCs not enrolled). Every later update, from 19045.6575 (KB5068781, the same
+/// day) on, comes only through ESU.
+/// https://support.microsoft.com/en-us/topic/windows-10-update-history-8127c2c6-6edf-4fdf-8b9f-0f7be1ef3562
+pub const LAST_WIN10_UBR_WITHOUT_ESU: u32 = 6466;
+
 // Consumer ESU for Windows 10 22H2 runs until 12 Oct 2027 (extended by Microsoft in June 2026).
 fn consumer_esu_end() -> i64 {
     d("2027-10-13")

@@ -76,3 +76,47 @@ fn enrolled_windows_10_warns_before_esu_itself_ends() {
     assert_eq!(find(&judge(edu.clone(), "2028-01-01T10:00:00Z", false), "windows-support").headline.key, "windows.esu_enrolled");
     assert_eq!(find(&judge(edu, "2028-09-01T10:00:00Z", false), "windows-support").headline.key, "windows.esu_ending");
 }
+
+// Enrolment in ESU shows in the build: 19045.6466 (KB5071959, November 2025) was the last update
+// Windows 10 22H2 got without ESU; every later one comes only through ESU. When an update was
+// installed proves nothing, because PCs install old updates late.
+fn win10_home(ubr: Option<u32>, last_update: Option<&str>) -> Value {
+    ok(json!({ "product": "Windows 10 Home", "edition_id": "Core", "build": 19045, "display_version": "22H2", "ubr": ubr, "last_update_installed": last_update }))
+}
+
+#[test]
+fn a_late_installed_october_2025_update_does_not_mean_esu() {
+    // The October 2025 update (19045.6456) installed three days after it came out, never enrolled.
+    let r = judge(json!({ "windows": win10_home(Some(6456), Some("2025-10-17")) }), "2026-03-01T10:00:00Z", false);
+    let l = find(&r, "windows-support");
+    assert_eq!((l.level, l.headline.key.as_str()), (Level::KeepAnEye, "windows.esu_unknown"));
+}
+
+#[test]
+fn the_update_for_pcs_without_esu_does_not_mean_esu() {
+    // KB5071959 was offered only to PCs not enrolled, to fix the enrolment wizard.
+    let r = judge(json!({ "windows": win10_home(Some(6466), Some("2026-09-25")) }), "2026-10-01T10:00:00Z", false);
+    assert_eq!(find(&r, "windows-support").headline.key, "windows.esu_unknown");
+}
+
+#[test]
+fn a_build_only_esu_delivers_means_enrolled() {
+    // 19045.6575 is the November 2025 ESU update.
+    let r = judge(json!({ "windows": win10_home(Some(6575), Some("2025-11-12")) }), "2026-03-01T10:00:00Z", false);
+    let l = find(&r, "windows-support");
+    assert_eq!((l.level, l.headline.key.as_str()), (Level::Fine, "windows.esu_enrolled_until"));
+}
+
+#[test]
+fn without_the_build_revision_an_update_date_proves_nothing() {
+    let r = judge(json!({ "windows": win10_home(None, Some("2026-02-11")) }), "2026-03-01T10:00:00Z", false);
+    assert_eq!(find(&r, "windows-support").headline.key, "windows.esu_unknown");
+}
+
+#[test]
+fn windows_own_answer_about_esu_wins_over_the_build() {
+    let mut w = win10_home(Some(6575), None);
+    w["data"]["esu"] = json!("not_enrolled");
+    let r = judge(json!({ "windows": w }), "2026-03-01T10:00:00Z", false);
+    assert_eq!(find(&r, "windows-support").headline.key, "windows.unsupported_esu");
+}

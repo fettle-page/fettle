@@ -9,8 +9,12 @@ export const releases: Release[] = [
     version: "1.0.3",
     date: null,
     notes: {
-      en: [],
-      it: [],
+      en: [
+        "On Windows 10, Fettle no longer says a PC is enrolled in Extended Security Updates just because it installed an update late. It now reads enrolment from the Windows build, and when it can't tell, it asks you to check Windows Update.",
+      ],
+      it: [
+        "Su Windows 10, Fettle non dice più che un PC è iscritto agli Extended Security Updates solo perché ha installato un aggiornamento in ritardo. Ora lo ricava dalla build di Windows e, quando non può saperlo, ti chiede di controllare in Windows Update.",
+      ],
     },
   },
   {

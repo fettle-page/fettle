@@ -164,7 +164,7 @@ export function generateReports(seed: number, count: number): Report[] {
           product: opt(pick(["Windows 11 Pro", "Windows 10 Home", "Windows 11 Pro for Workstations", "Windows 10 Enterprise LTSC 2021"])),
           edition_id: opt(pick(EDITIONS), 0.95),
           build: opt(pick([17763, 19041, 19044, 19045, 22000, 22621, 22631, 26100, 26200, 26300]), 0.95),
-          ubr: opt(pick([1, 6456, 9550])),
+          ubr: opt(pick([1, 6456, 6466, 6575, 9550])),
           display_version: opt(pick(VERSIONS), 0.95),
           installation_type: opt("Client"),
           uptime_seconds: opt(pick([0, 3599, 3600, 7200, 86399, 86400, 172800, 13 * 86400 + 5, 14 * 86400, 40 * 86400])),

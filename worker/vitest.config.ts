@@ -8,5 +8,6 @@ export default defineConfig({
   // The share page is rendered with React inside the Worker. Pre-bundle React so the test runner
   // loads one copy (its CommonJS files would otherwise load twice and break hooks).
   resolve: { dedupe: ["react", "react-dom"] },
-  test: { setupFiles: ["./test/setup.ts"], deps: { optimizer: { ssr: { enabled: true, include: REACT } } } },
+  // Each file's first test also loads the Worker, the brain and React: over 5 s on a busy CI machine.
+  test: { testTimeout: 30_000, setupFiles: ["./test/setup.ts"], deps: { optimizer: { ssr: { enabled: true, include: REACT } } } },
 });

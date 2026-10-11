@@ -61,6 +61,8 @@ function pageHeaders(hashes: InlineHashes): Headers {
     "x-robots-tag": "noindex",
     "referrer-policy": "no-referrer",
     "x-content-type-options": "nosniff",
+    // As on the static site (apps/web/public/_headers).
+    "permissions-policy": "camera=(), microphone=(), geolocation=()",
     "cache-control": "no-store",
   });
 }

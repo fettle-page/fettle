@@ -1,4 +1,5 @@
 import { env } from "cloudflare:workers";
+import staticHeaders from "../../apps/web/public/_headers?raw";
 import { parseReport } from "@fettle/report-schema";
 import { describe, expect, it } from "vitest";
 import { newId } from "../src/ids.ts";
@@ -35,6 +36,8 @@ async function expectShareHeaders(res: Response) {
   expect(res.headers.get("x-robots-tag")).toBe("noindex");
   expect(res.headers.get("referrer-policy")).toBe("no-referrer");
   expect(res.headers.get("x-content-type-options")).toBe("nosniff");
+  // The same as the static site's (apps/web/public/_headers).
+  expect(res.headers.get("permissions-policy")).toBe(/Permissions-Policy: (.+)/.exec(staticHeaders)?.[1]?.trim());
   expect(res.headers.get("cache-control")).toBe("no-store");
   expect(res.headers.get("etag")).toBeNull();
 }

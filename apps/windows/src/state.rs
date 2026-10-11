@@ -257,7 +257,7 @@ pub enum Event {
     /// Every so often while the app is open: a day may have passed.
     UpdateTick,
     /// The website's answer (None: no answer, or a bad one) and when.
-    UpdateChecked(Option<crate::update::Latest>, i64),
+    UpdateChecked(UpdateRecord),
     /// Download the newer version (its page, in the app's language).
     OpenUpdate,
 }
@@ -654,9 +654,8 @@ impl State {
             }
             Event::UpdateTick => self.check_updates(),
             // No answer is no news, and isn't recorded: the website is asked again next time.
-            Event::UpdateChecked(None, _) => vec![],
-            Event::UpdateChecked(Some(latest), at) => {
-                self.update = UpdateRecord { checked_at: at, latest: Some(latest) };
+            Event::UpdateChecked(record) => {
+                self.update = record;
                 vec![Effect::SaveUpdate(self.update.clone())]
             }
             Event::OpenUpdate => {
@@ -883,8 +882,9 @@ mod tests {
     #[test]
     fn a_newer_version_shows_a_note_until_updates_are_turned_off() {
         let mut s = State::default();
-        let found = s.update(Event::UpdateChecked(Some(latest("999.0.0")), 1_000));
-        assert_eq!(found, vec![Effect::SaveUpdate(UpdateRecord { checked_at: 1_000, latest: Some(latest("999.0.0")) })]);
+        let record = UpdateRecord { checked_at: 1_000, tried_at: 1_000, failures: 0, latest: Some(latest("999.0.0")) };
+        let found = s.update(Event::UpdateChecked(record.clone()));
+        assert_eq!(found, vec![Effect::SaveUpdate(record)]);
         assert_eq!(s.update_note().map(|l| l.version.as_str()), Some("999.0.0"));
         assert_eq!(s.update(Event::OpenUpdate), vec![Effect::OpenUpdatePage]);
         s.update(Event::SetUpdates(false));
@@ -895,10 +895,11 @@ mod tests {
     #[test]
     fn the_same_version_or_a_failed_check_says_nothing() {
         let mut s = State::default();
-        s.update(Event::UpdateChecked(Some(latest(crate::update::CURRENT)), 1_000));
+        s.update(Event::UpdateChecked(UpdateRecord { checked_at: 1_000, tried_at: 1_000, failures: 0, latest: Some(latest(crate::update::CURRENT)) }));
         assert_eq!(s.update_note(), None);
-        assert_eq!(s.update(Event::UpdateChecked(None, 2_000)), vec![], "a failed check isn't recorded: it's tried again next time");
-        assert_eq!(s.update.checked_at, 1_000);
+        let failed = UpdateRecord { checked_at: 1_000, tried_at: 2_000, failures: 1, latest: Some(latest(crate::update::CURRENT)) };
+        assert_eq!(s.update(Event::UpdateChecked(failed.clone())), vec![Effect::SaveUpdate(failed)], "a failed check is recorded, so it waits before asking again");
+        assert_eq!(s.update_note(), None);
     }
 
     #[test]

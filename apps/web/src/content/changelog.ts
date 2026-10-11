@@ -39,6 +39,7 @@ export const releases: Release[] = [
         "Reports now also hide the account's full name, email addresses, company domain and one- or two-letter account names, and network server names in error messages, wherever they turn up.",
         "The privacy page, FAQ and home page now list everything Fettle keeps out of receipts, files and links, including your name, email address, the PC's work or school domain and server names.",
         "With two Fettle windows open, a link shared in one is no longer forgotten when the other saves its links, and My shared links shows the links from both.",
+        "When the update check can't get an answer, Fettle waits an hour before trying again, then two, then four, and never more often than you chose, instead of trying every ten minutes in each open window.",
       ],
       it: [
         "Su Windows 10, Fettle non dice più che un PC è iscritto agli Extended Security Updates solo perché ha installato un aggiornamento in ritardo. Ora lo ricava dalla build di Windows e, quando non può saperlo, ti chiede di controllare in Windows Update.",
@@ -70,6 +71,7 @@ export const releases: Release[] = [
         "I report ora nascondono anche il nome completo dell'account, gli indirizzi email, il dominio aziendale, i nomi utente di una o due lettere e, nei messaggi di errore, i nomi dei server di rete, ovunque compaiano.",
         "La pagina sulla privacy, le FAQ e la home ora elencano tutto ciò che Fettle tiene fuori da scontrini, file e link, compresi il tuo nome, l'indirizzo email, il dominio aziendale o scolastico del PC e i nomi dei server.",
         "Con due finestre di Fettle aperte, un link condiviso in una non viene più dimenticato quando l'altra salva i suoi link, e I miei link condivisi mostra quelli di entrambe.",
+        "Quando il controllo degli aggiornamenti non riceve risposta, Fettle aspetta un'ora prima di riprovare, poi due, poi quattro, e mai più spesso di quanto hai scelto, invece di riprovare ogni dieci minuti in ogni finestra aperta.",
       ],
     },
   },

@@ -979,6 +979,41 @@ fn with_updates_off_nothing_is_sent() {
     assert!(!has(&u.h.app, "Fettle 999.0.0 is out."));
 }
 
+#[test]
+fn a_failed_check_is_tried_again_an_hour_later_by_any_window_not_every_ten_minutes() {
+    let dir = temp_dir();
+    let site = Arc::new(UpdateSite("not the update file", Default::default()));
+    let clock = Arc::new(std::sync::atomic::AtomicI64::new(fettle_verdicts::fmt::parse_rfc3339("2026-10-09T12:00:00Z").unwrap()));
+    let window = || {
+        let (s, c) = (site.clone(), clock.clone());
+        harness_with(Locale::En, dir.clone(), move |deps| {
+            deps.http = s;
+            deps.now_ms = Arc::new(move || c.load(Ordering::SeqCst));
+        })
+    };
+    let asks = || site.1.lock().unwrap().len();
+    let minutes = |m: i64| {
+        clock.fetch_add(m * 60_000, Ordering::SeqCst);
+    };
+    let first = window();
+    first.background.run_all(&first.app);
+    assert_eq!(asks(), 1);
+    minutes(10);
+    first.app.dispatch(fettle_windows::state::Event::UpdateTick);
+    first.background.run_all(&first.app);
+    assert_eq!(asks(), 1, "not again ten minutes later");
+    let second = window();
+    second.background.run_all(&second.app);
+    assert_eq!(asks(), 1, "a second window counts the first one's try");
+    minutes(50);
+    second.app.dispatch(fettle_windows::state::Event::UpdateTick);
+    second.background.run_all(&second.app);
+    assert_eq!(asks(), 2, "an hour after the failure");
+    first.app.dispatch(fettle_windows::state::Event::UpdateTick);
+    first.background.run_all(&first.app);
+    assert_eq!(asks(), 2, "and the other window sees that try too");
+}
+
 fn seeded_update(hours_ago: i64, settings: &str) -> PathBuf {
     let now = fettle_verdicts::fmt::parse_rfc3339("2026-10-09T12:00:00Z").unwrap();
     let dir = temp_dir();

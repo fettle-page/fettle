@@ -393,17 +393,16 @@ impl Fettle {
             }
             Effect::CheckUpdates => {
                 let now = (self.0.deps.now_ms)();
-                let due = {
-                    let state = self.0.state.borrow();
-                    now - state.update.checked_at >= state.settings.update_every.ms()
-                };
-                if !due || self.0.checking.replace(true) {
+                // The record on disk, not this window's copy: another window may have asked meanwhile.
+                let record = store.load_update();
+                let every = self.0.state.borrow().settings.update_every.ms();
+                if !crate::update::due(&record, every, now) || self.0.checking.replace(true) {
                     return;
                 }
                 let (http, origin, post) = (self.0.deps.http.clone(), self.0.deps.share_origin.clone(), self.poster());
                 self.0.deps.background.spawn(Box::new(move || {
                     let latest = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| crate::update::fetch(&*http, &origin))).ok().flatten();
-                    post(Event::UpdateChecked(latest, now));
+                    post(Event::UpdateChecked(crate::update::answered(&record, latest, now)));
                 }));
             }
             Effect::SaveUpdate(record) => store.save_update(&record),

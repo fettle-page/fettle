@@ -7,7 +7,7 @@ export type Release = { version: string; date: string | null; notes: Record<Loca
 export const releases: Release[] = [
   {
     version: "1.0.3",
-    date: null,
+    date: "2026-10-11",
     notes: {
       en: [
         "On Windows 10, Fettle no longer says a PC is enrolled in Extended Security Updates just because it installed an update late. It now reads enrolment from the Windows build, and when it can't tell, it asks you to check Windows Update.",

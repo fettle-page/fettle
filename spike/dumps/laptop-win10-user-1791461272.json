@@ -1802,7 +1802,7 @@
           "command": "\"C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe\" --win-session-start",
           "hive": "HKCU",
           "key": "Software\\Microsoft\\Windows\\CurrentVersion\\Run",
-          "name": "MicrosoftEdgeAutoLaunch_5EFC0ECB77A7585FE9DCDD0B2E946A2B"
+          "name": "MicrosoftEdgeAutoLaunch_0123456789ABCDEF0123456789ABCDEF"
         },
         {
           "command": "C:\\Riot Games\\Riot Client\\RiotClientServices.exe --launch-background-mode",
@@ -1906,11 +1906,11 @@
           "UserSID": "<private>"
         },
         {
-          "Caption": "MicrosoftEdgeAutoLaunch_5EFC0ECB77A7585FE9DCDD0B2E946A2B",
+          "Caption": "MicrosoftEdgeAutoLaunch_0123456789ABCDEF0123456789ABCDEF",
           "Command": "\"C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe\" --win-session-start",
-          "Description": "MicrosoftEdgeAutoLaunch_5EFC0ECB77A7585FE9DCDD0B2E946A2B",
+          "Description": "MicrosoftEdgeAutoLaunch_0123456789ABCDEF0123456789ABCDEF",
           "Location": "HKU\\<sid>\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run",
-          "Name": "MicrosoftEdgeAutoLaunch_5EFC0ECB77A7585FE9DCDD0B2E946A2B",
+          "Name": "MicrosoftEdgeAutoLaunch_0123456789ABCDEF0123456789ABCDEF",
           "SettingID": null,
           "User": "<pc-name>\\<user>",
           "UserSID": "<private>"

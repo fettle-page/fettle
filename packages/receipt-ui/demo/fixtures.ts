@@ -15,7 +15,7 @@ const GB = 1e9;
 const startupApps = [
   "OneDrive", "Microsoft Teams", "Spotify", "Steam", "Discord", "Adobe Creative Cloud", "Epic Games Launcher",
   "Dropbox", "Zoom", "Skype", "HP Support Assistant", "McAfee WebAdvisor", "Realtek Audio Console", "Google Drive",
-  "Opera GX", "WhatsApp", "EA app", "Logitech Options", "MicrosoftEdgeAutoLaunch_D381F9995CD4E4E9D3547570FCA4BB36",
+  "Opera GX", "WhatsApp", "EA app", "Logitech Options", "MicrosoftEdgeAutoLaunch_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
 ];
 
 const tiredLaptop: Report = valid({

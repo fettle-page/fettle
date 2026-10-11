@@ -1,7 +1,7 @@
 //! Startup item names, cleaned before a report is built.
 //!
 //! Some apps register their startup entry with a long hex code that can derive from the user's
-//! profile (Edge: `MicrosoftEdgeAutoLaunch_D381F9995CD4E4E9D3547570FCA4BB36`). A shared report must
+//! profile (Edge: `MicrosoftEdgeAutoLaunch_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA`). A shared report must
 //! not carry that fingerprint, so the code is dropped and well-known names are made readable.
 
 /// Long enough that ordinary names ("Build_2026", "App_DEADBEEF") are never mistaken for a code.
@@ -44,7 +44,7 @@ mod tests {
 
     #[test]
     fn edge_and_chrome_get_their_product_names() {
-        assert_eq!(name("MicrosoftEdgeAutoLaunch_D381F9995CD4E4E9D3547570FCA4BB36"), "Microsoft Edge");
+        assert_eq!(name("MicrosoftEdgeAutoLaunch_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"), "Microsoft Edge");
         assert_eq!(name("GoogleChromeAutoLaunch_8C0D9D7E4B1F4F2AA1B2C3D4E5F60718"), "Google Chrome");
     }
 

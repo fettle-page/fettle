@@ -363,7 +363,7 @@ mod tests {
 
     #[test]
     fn entra_and_lowercase_sids_are_replaced() {
-        assert_eq!(r().text(r"HKU\S-1-12-1-1234567890-1234567890-1234567890-1234567890\Run"), r"HKU\<sid>\Run");
+        assert_eq!(r().text(r"HKU\S-1-12-1-1111111111-2222222222-3333333333-4444444444\Run"), r"HKU\<sid>\Run");
         assert_eq!(r().text("s-1-5-21-1-2-3-1001"), "<sid>");
     }
 
@@ -490,7 +490,7 @@ mod tests {
                     check: Check { status: CheckStatus::Ok, detail: None },
                     data: Some(Startup {
                         items: vec![
-                            StartupItem { name: Some("MicrosoftEdgeAutoLaunch_D381F9995CD4E4E9D3547570FCA4BB36".into()), ..Default::default() },
+                            StartupItem { name: Some("MicrosoftEdgeAutoLaunch_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA".into()), ..Default::default() },
                             StartupItem { name: Some("jdoe's sync".into()), ..Default::default() },
                         ],
                     }),

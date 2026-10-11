@@ -1930,7 +1930,7 @@
           "enabled": true,
           "hive": "HKCU",
           "key": "Run",
-          "name": "MicrosoftEdgeAutoLaunch_D381F9995CD4E4E9D3547570FCA4BB36",
+          "name": "MicrosoftEdgeAutoLaunch_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
           "raw_hex": "020000000000000000000000"
         },
         {
@@ -2043,7 +2043,7 @@
           "command": "\"C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe\" --no-startup-window --win-session-start",
           "hive": "HKCU",
           "key": "Software\\Microsoft\\Windows\\CurrentVersion\\Run",
-          "name": "MicrosoftEdgeAutoLaunch_D381F9995CD4E4E9D3547570FCA4BB36"
+          "name": "MicrosoftEdgeAutoLaunch_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
         },
         {
           "command": "%windir%\\system32\\SecurityHealthSystray.exe",
@@ -2155,11 +2155,11 @@
           "UserSID": "<private>"
         },
         {
-          "Caption": "MicrosoftEdgeAutoLaunch_D381F9995CD4E4E9D3547570FCA4BB36",
+          "Caption": "MicrosoftEdgeAutoLaunch_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
           "Command": "\"C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe\" --no-startup-window --win-session-start",
-          "Description": "MicrosoftEdgeAutoLaunch_D381F9995CD4E4E9D3547570FCA4BB36",
+          "Description": "MicrosoftEdgeAutoLaunch_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
           "Location": "HKU\\<sid>\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run",
-          "Name": "MicrosoftEdgeAutoLaunch_D381F9995CD4E4E9D3547570FCA4BB36",
+          "Name": "MicrosoftEdgeAutoLaunch_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
           "SettingID": null,
           "User": "<pc-name>\\<user>",
           "UserSID": "<private>"

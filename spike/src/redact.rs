@@ -60,7 +60,7 @@ const PRIVATE: &[&str] = &[
     "CSName", "DNSHostName", "Domain", "Workgroup", "ComputerName", "SystemName", "MachineName",
     "UserName", "PrimaryOwnerName", "RegisteredUser", "RegisteredOwner", "RegisteredOrganization",
     "Organization", "MACAddress", "IPAddress", "PSComputerName", "__SERVER", "__PATH", "__RELPATH",
-    "FruId", "UserSID",
+    "FruId", "UserSID", "ProcessorId", "AssetTag",
 ];
 
 /// Profile folders that belong to no one in particular.
@@ -97,6 +97,23 @@ pub fn redact(value: &mut Value, ctx: &RedactContext, include_private: bool) {
     }
 }
 
+/// Like `redact`, plus fields that are private only in one source: Win32_OperatingSystem's
+/// Description is the description the owner typed for the PC.
+pub fn redact_source(source: &str, value: &mut Value, ctx: &RedactContext, include_private: bool) {
+    if source == "os" && !include_private {
+        let rows: Vec<&mut Value> = match &mut *value {
+            Value::Array(rows) => rows.iter_mut().collect(),
+            row => vec![row],
+        };
+        for row in rows {
+            if let Some(d) = row.get_mut("Description") {
+                *d = Value::String("<private>".into());
+            }
+        }
+    }
+    redact(value, ctx, include_private);
+}
+
 pub fn redact_str(s: &str, ctx: &RedactContext, include_private: bool) -> String {
     if include_private {
         return s.to_string();
@@ -113,15 +130,15 @@ pub fn redact_str(s: &str, ctx: &RedactContext, include_private: bool) -> String
     s
 }
 
-/// Local and domain account SIDs (S-1-5-21-…) identify this PC and its users.
-/// Well-known SIDs like S-1-5-18 are left alone.
+/// Local and domain account SIDs (S-1-5-21-…) and Entra ID account SIDs (S-1-12-1-…) identify
+/// this PC and its users. Well-known SIDs like S-1-5-18 are left alone.
 fn replace_account_sids(s: &str) -> String {
-    const PREFIX: &str = "S-1-5-21-";
+    const PREFIXES: [&str; 2] = ["S-1-5-21-", "S-1-12-1-"];
     let mut out = String::with_capacity(s.len());
     let mut rest = s;
-    while let Some(pos) = rest.find(PREFIX) {
+    while let Some((pos, prefix)) = PREFIXES.iter().filter_map(|p| rest.find(p).map(|i| (i, *p))).min() {
         out.push_str(&rest[..pos]);
-        let tail = &rest[pos + PREFIX.len()..];
+        let tail = &rest[pos + prefix.len()..];
         let len = tail.find(|c: char| !(c.is_ascii_digit() || c == '-')).unwrap_or(tail.len());
         out.push_str("<sid>");
         rest = &tail[len..];
@@ -231,6 +248,36 @@ mod tests {
             r"HKU\<sid>\Software\Run"
         );
         assert_eq!(redact_str("S-1-5-18", &c, false), "S-1-5-18");
+    }
+
+    #[test]
+    fn processor_ids_and_asset_tags_hidden() {
+        let mut v = json!([{"Name": "AMD Ryzen 7 5800X", "ProcessorId": "0000000000000000", "AssetTag": "ACME-0001"}]);
+        redact(&mut v, &ctx(), false);
+        assert_eq!(v, json!([{"Name": "AMD Ryzen 7 5800X", "ProcessorId": "<private>", "AssetTag": "<private>"}]));
+    }
+
+    #[test]
+    fn the_computer_description_is_hidden_but_other_descriptions_stay() {
+        // Win32_OperatingSystem.Description is the description the owner typed for the PC.
+        let mut os = json!([{"Caption": "Microsoft Windows 11 Pro", "Description": "Office PC 3"}]);
+        redact_source("os", &mut os, &ctx(), false);
+        assert_eq!(os, json!([{"Caption": "Microsoft Windows 11 Pro", "Description": "<private>"}]));
+        let mut gpu = json!([{"Description": "AMD Radeon Graphics"}]);
+        redact_source("video_controllers", &mut gpu, &ctx(), false);
+        assert_eq!(gpu, json!([{"Description": "AMD Radeon Graphics"}]));
+        let mut kept = json!([{"Description": "Office PC 3"}]);
+        redact_source("os", &mut kept, &ctx(), true);
+        assert_eq!(kept, json!([{"Description": "Office PC 3"}]));
+    }
+
+    #[test]
+    fn entra_id_account_sids_replaced() {
+        assert_eq!(
+            redact_str(r"HKU\S-1-12-1-1111111111-2222222222-3333333333-4444444444\Software\Run", &ctx(), false),
+            r"HKU\<sid>\Software\Run"
+        );
+        assert_eq!(redact_str("S-1-5-32-544", &ctx(), false), "S-1-5-32-544");
     }
 
     #[test]

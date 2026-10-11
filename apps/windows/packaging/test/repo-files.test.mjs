@@ -5,7 +5,7 @@ import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import { describe, it } from "node:test";
 import { readFileSync } from "node:fs";
-import { realLookingSids, unexpectedPaths } from "../repo-files.mjs";
+import { realLookingEdgeCodes, realLookingProcessorIds, realLookingSids, unexpectedPaths } from "../repo-files.mjs";
 
 // Test data must use obviously fake identifiers: a real account SID once slipped into a test.
 describe("account SIDs in tracked files", () => {
@@ -21,6 +21,48 @@ describe("account SIDs in tracked files", () => {
     const tracked = execFileSync("git", ["ls-files"], { cwd: root, encoding: "utf8" }).trim().split("\n");
     const bad = tracked.filter((p) => !/\.(png|ico|woff2?|ttf|wasm)$/i.test(p) && realLookingSids(readFileSync(join(root, p), "latin1")).length);
     assert.deepEqual(bad, []);
+  });
+});
+
+/** Every tracked text file, as [path, text]. */
+function trackedTexts() {
+  const root = join(import.meta.dirname, "../../../..");
+  const tracked = execFileSync("git", ["ls-files"], { cwd: root, encoding: "utf8" }).trim().split("\n");
+  return tracked.filter((p) => !/\.(png|ico|woff2?|ttf|wasm)$/i.test(p)).map((p) => [p, readFileSync(join(root, p), "latin1")]);
+}
+
+describe("Entra ID account SIDs in tracked files", () => {
+  it("allows only obviously fake ones", () => {
+    assert.deepEqual(realLookingSids("HKU\\S-1-12-1-1111111111-2222222222-3333333333-4444444444\\Run"), []);
+    const random = ["S-1-12-1", "3623811015", "1336104434", "3030082011", "2013431744"].join("-");
+    assert.equal(realLookingSids(`HKU\\${random}\\Run`).length, 1);
+  });
+});
+
+// A dump from the test kit once carried a real CPU ProcessorId.
+describe("CPU ProcessorIds in tracked files", () => {
+  it("allows only placeholders and one repeated character", () => {
+    assert.deepEqual(realLookingProcessorIds('"ProcessorId": "<processor-id>", "ProcessorId":"<private>", "ProcessorId": "0000000000000000"'), []);
+    // Built at run time, so this file doesn't hold a real-looking ProcessorId itself.
+    const random = JSON.stringify({ ["Processor" + "Id"]: ["178BFBFF", "00A20F12"].join("") });
+    assert.equal(realLookingProcessorIds(random).length, 1);
+  });
+
+  it("holds for every file tracked in this repo", () => {
+    assert.deepEqual(trackedTexts().filter(([, text]) => realLookingProcessorIds(text).length).map(([p]) => p), []);
+  });
+});
+
+// Edge names its startup entry after a hash of the browser profile's path, which holds the account name.
+describe("Edge startup codes in tracked files", () => {
+  it("allows only obviously fake ones", () => {
+    assert.deepEqual(realLookingEdgeCodes("MicrosoftEdgeAutoLaunch_0123456789ABCDEF0123456789ABCDEF and MicrosoftEdgeAutoLaunch_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"), []);
+    const random = ["5D0C93F1", "2B7E44A0", "9C1F08E3", "D47A6B25"].join("");
+    assert.equal(realLookingEdgeCodes(`MicrosoftEdgeAutoLaunch_${random}`).length, 1);
+  });
+
+  it("holds for every file tracked in this repo", () => {
+    assert.deepEqual(trackedTexts().filter(([, text]) => realLookingEdgeCodes(text).length).map(([p]) => p), []);
   });
 });
 

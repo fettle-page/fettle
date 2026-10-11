@@ -28,6 +28,7 @@ export const releases: Release[] = [
         "The privacy page now says shared reports are kept only in EU data centres, and the site says plainly that a share link carries the report behind the receipt.",
         "Share pages in Italian now link back to the Italian home page.",
         "A missing page under /it/ now shows the Italian 404 with the Italian menu and footer, and the 404 no longer marks Home as the page you're on.",
+        "Addresses ending in / or .html now redirect permanently to the clean address, so search engines keep one copy of each page.",
       ],
       it: [
         "Su Windows 10, Fettle non dice più che un PC è iscritto agli Extended Security Updates solo perché ha installato un aggiornamento in ritardo. Ora lo ricava dalla build di Windows e, quando non può saperlo, ti chiede di controllare in Windows Update.",
@@ -48,6 +49,7 @@ export const releases: Release[] = [
         "La pagina sulla privacy ora dice che i report condivisi sono conservati solo in data center nell'UE, e il sito dice chiaramente che un link condiviso contiene il report dietro lo scontrino.",
         "Le pagine condivise in italiano ora rimandano alla home in italiano.",
         "Una pagina mancante sotto /it/ ora mostra il 404 in italiano con menu e piè di pagina in italiano, e il 404 non segna più la Home come pagina corrente.",
+        "Gli indirizzi che finiscono con / o .html ora reindirizzano in modo permanente all'indirizzo pulito, così i motori di ricerca tengono una sola copia di ogni pagina.",
       ],
     },
   },

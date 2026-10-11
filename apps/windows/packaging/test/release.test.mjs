@@ -9,6 +9,9 @@ const root = join(import.meta.dirname, "../../../..");
 const workflow = (name) => readFileSync(join(root, ".github", "workflows", name), "utf8");
 const scripts = Object.keys(JSON.parse(readFileSync(join(root, "package.json"), "utf8")).scripts);
 const INNO_SHA256 = "9c73c3bae7ed48d44112a0f48e66742c00090bdb5bef71d9d3c056c66e97b732";
+// skia-binaries 0.153.3, the archive the app builds with (matches GitHub's digest for that asset).
+const SKIA_SHA256 = "a19adbcb3c8e9d691ce4e9350fcc3e3ce066a0793263d5358185efbceae46f30";
+const lockfile = readFileSync(join(root, "Cargo.lock"), "utf8");
 
 describe("checkTag", () => {
   it("accepts the tag v<version>", () => {
@@ -62,7 +65,38 @@ describe("workflows", () => {
     it(`${name} only runs npm scripts that exist`, () => {
       for (const [, script] of workflow(name).matchAll(/npm run ([\w:-]+)/g)) assert.ok(scripts.includes(script), script);
     });
+
+    // skia-bindings' build script downloads Skia's prebuilt libraries and doesn't check them.
+    it(`${name} checks Skia's prebuilt libraries against a pinned hash before cargo runs`, () => {
+      const w = workflow(name);
+      const skia = /^name = "skia-bindings"\nversion = "([^"]+)"/m.exec(lockfile)[1];
+      assert.ok(w.includes(`/releases/download/${skia}/`), `downloads the archive for skia-bindings ${skia}, as Cargo.lock has it`);
+      const check = w.indexOf(SKIA_SHA256);
+      assert.ok(check >= 0, "checks the pinned hash");
+      assert.ok(w.indexOf("SKIA_BINARIES_URL=file://") > check, "points the build at the checked file");
+      assert.ok(w.indexOf("run: npm ci") > check && w.indexOf("run: cargo ") > check, "before anything builds");
+    });
+
+    it(`${name} builds with exactly the dependencies in Cargo.lock`, () => {
+      const runs = [...workflow(name).matchAll(/run: (cargo .*)$/gm)].map((m) => m[1]);
+      assert.ok(runs.length > 0);
+      for (const run of runs) assert.match(run, /--locked/, run);
+    });
   }
+
+  // rust-toolchain.toml can't name both a version and the MSVC host (rustup refuses it, and a PC whose
+  // default host is GNU can't build the app), so it says "stable" for local builds and the workflows
+  // pin the exact version.
+  it("ci.yml and release.yml build with the same exact Rust version, with the WebAssembly target", () => {
+    const pins = ["ci.yml", "release.yml"].map((name) => {
+      const w = workflow(name);
+      const pin = /^\s+RUSTUP_TOOLCHAIN: "(\d+\.\d+\.\d+)-x86_64-pc-windows-msvc"$/m.exec(w);
+      assert.ok(pin, `${name} sets RUSTUP_TOOLCHAIN to an exact version`);
+      assert.match(w, new RegExp(`rustup toolchain install ${pin[1].replaceAll(".", "\\.")}-x86_64-pc-windows-msvc --profile minimal --target wasm32-unknown-unknown`), name);
+      return pin[1];
+    });
+    assert.equal(pins[0], pins[1]);
+  });
 
   it("ci.yml runs every test on pushes and pull requests", () => {
     const ci = workflow("ci.yml");
@@ -70,7 +104,7 @@ describe("workflows", () => {
     assert.match(ci, /^\s+pull_request:/m);
     assert.match(ci, /npm test/);
     assert.match(ci, /cargo test --workspace/);
-    assert.match(ci, /rustup target add wasm32-unknown-unknown/);
+    assert.match(ci, /rustup toolchain install .* --target wasm32-unknown-unknown/);
   });
 
   it("release.yml runs only for version tags, checks the tag first, and drafts the release", () => {

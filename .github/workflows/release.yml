@@ -15,6 +15,10 @@ on:
 
 permissions: {}
 
+# The exact Rust version for every cargo command here (rust-toolchain.toml says "stable" for local builds).
+env:
+  RUSTUP_TOOLCHAIN: "1.99.0-x86_64-pc-windows-msvc"
+
 jobs:
   build:
     runs-on: windows-2025
@@ -30,11 +34,25 @@ jobs:
           node-version: 24
           cache: npm
       - run: npm run release:check
-      - run: rustup target add wasm32-unknown-unknown
+      - run: rustup toolchain install 1.99.0-x86_64-pc-windows-msvc --profile minimal --target wasm32-unknown-unknown
+      # skia-bindings' build script downloads Skia's prebuilt libraries without checking them: fetch the
+      # archive this build uses here, check it, and point the build at the checked copy. A new
+      # skia-bindings version (or other features) needs a different archive: update the name and hash.
+      - name: Fetch Skia's prebuilt libraries (checked)
+        shell: pwsh
+        run: |
+          $name = "skia-binaries-b7f043e0b1e2a850e702-x86_64-pc-windows-msvc-d3d-ganesh-gl-jpegd-jpege-pdf.tar.gz"
+          $dir = Join-Path $env:RUNNER_TEMP "skia"
+          New-Item -ItemType Directory -Force -Path $dir | Out-Null
+          $file = Join-Path $dir $name
+          Invoke-WebRequest -Uri "https://github.com/rust-skia/skia-binaries/releases/download/0.153.3/$name" -OutFile $file
+          $hash = (Get-FileHash $file -Algorithm SHA256).Hash.ToLower()
+          if ($hash -ne "a19adbcb3c8e9d691ce4e9350fcc3e3ce066a0793263d5358185efbceae46f30") { throw "The Skia download doesn't match its known hash ($hash)" }
+          "SKIA_BINARIES_URL=file://$($dir.Replace('\', '/'))/skia-binaries-{key}.tar.gz" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
       - run: npm ci
       - run: npm test
       # Every test program runs, so one run shows every failure.
-      - run: cargo test --workspace --no-fail-fast
+      - run: cargo test --workspace --locked --no-fail-fast
 
       - name: Install Inno Setup 6.7.3
         shell: pwsh

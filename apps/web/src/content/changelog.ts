@@ -12,7 +12,7 @@ export const releases: Release[] = [
       en: [
         "On Windows 10, Fettle no longer says a PC is enrolled in Extended Security Updates just because it installed an update late. It now reads enrolment from the Windows build, and when it can't tell, it asks you to check Windows Update.",
         "A drive that reports sectors it can't read or repair (SMART attribute 198) is now marked ACT, and the number shows in its details. Before, that value was read but never used.",
-        "The receipt says “In fine fettle” only when Fettle could read the health of every disk. Otherwise it says it couldn't, and offers a Deep check where one would help.",
+        "The receipt says “In fine fettle” only when Fettle could read the health of every drive inside the PC. Otherwise it says it couldn't, and offers a Deep check where one would help.",
         "A PC that reports an impossible date for its firmware, a driver or an update no longer makes a report that can't be shared: Fettle leaves that date out. A date written day first is no longer taken for the latest update.",
         "On a laptop with two batteries, battery health no longer mixes one battery's figures with the other's.",
         "Samsung SATA SSDs (such as the 860 EVO) now show their temperature, and get a warning when they run hot.",
@@ -41,7 +41,7 @@ export const releases: Release[] = [
       it: [
         "Su Windows 10, Fettle non dice più che un PC è iscritto agli Extended Security Updates solo perché ha installato un aggiornamento in ritardo. Ora lo ricava dalla build di Windows e, quando non può saperlo, ti chiede di controllare in Windows Update.",
         "Un disco che segnala settori che non riesce né a leggere né a riparare (attributo SMART 198) ora viene segnato AGISCI, e il numero compare nei suoi dettagli. Prima quel valore veniva letto ma non usato.",
-        "Lo scontrino dice «In gran forma» solo se Fettle è riuscito a leggere lo stato di tutti i dischi. Altrimenti dice che non ci è riuscito, e propone un Controllo approfondito quando può servire.",
+        "Lo scontrino dice «In gran forma» solo se Fettle è riuscito a leggere lo stato di tutti i dischi interni del PC. Altrimenti dice che non ci è riuscito, e propone un Controllo approfondito quando può servire.",
         "Un PC che riporta una data impossibile per il firmware, un driver o un aggiornamento non produce più un report impossibile da condividere: Fettle omette quella data. Una data scritta con il giorno davanti non viene più presa per l'ultimo aggiornamento.",
         "Su un portatile con due batterie, lo stato della batteria non mescola più i dati di una con quelli dell'altra.",
         "Gli SSD SATA Samsung (come l'860 EVO) ora mostrano la loro temperatura e ricevono un avviso quando scaldano troppo.",

@@ -97,6 +97,19 @@ describe("POST /api/reports", () => {
     expect((await upload(body, { ip: freshIp() })).status).toBe(201);
   });
 
+  // The report schema follows the Rust types: numbers in their range, lists of at most 256 entries.
+  it("refuses a report with a number out of range or an overlong list", async () => {
+    const negative = tiredReport();
+    negative.facts.battery.data.design_capacity_mwh = -5;
+    const long = tiredReport();
+    long.facts.startup.data.items = Array.from({ length: 257 }, (_, i) => ({ name: `App ${i}`, enabled: true }));
+    for (const report of [negative, long]) {
+      const res = await upload({ report }, { ip: freshIp() });
+      expect(res.status).toBe(400);
+      expect((await res.json<{ error: string }>()).error).toBe("invalid_report");
+    }
+  });
+
   it("refuses an endless chunked upload", async () => {
     const body = new ReadableStream({ pull(c) { c.enqueue(new TextEncoder().encode(" ".repeat(65536))); } });
     const res = await call("/api/reports", {

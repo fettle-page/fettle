@@ -2,7 +2,7 @@
 
 One Cloudflare Worker serves the share links:
 
-- `POST /api/reports` takes `{ expires?, password?, report }`. It validates the report against `@fettle/report-schema` (unknown fields are dropped), stores it in R2 and returns `{ id, url, deleteUrl, deleteToken, expiresAt, locked }`.
+- `POST /api/reports` takes `{ expires?, password?, report }`. It validates the report against `@fettle/report-schema` (unknown fields are dropped; every text field, number and list has its own limit from the Rust types, and anything outside them is refused with `invalid_report`), stores it in R2 and returns `{ id, url, deleteUrl, deleteToken, expiresAt, locked }`.
   - **Limits:** uploads are capped at 64 KiB (the largest real report is about 4 KB), 10 per minute per IP, and 100 a day (UTC) per IP, counted in a Durable Object (`UploadBudget`) named by a SHA-256 of the address and the day. Share pages (`/r/:id`) and `GET /api/reports/:id` are capped at 60 a minute per IP, and unlock requests at 20 a minute per IP, checked before anything is read from R2.
   - **Expiry:** `7d`, `30d` (default) or `1y`.
 - `GET /api/reports/:id` returns `{ report, expiresAt }`. A password-protected report answers `401 password_required` instead.

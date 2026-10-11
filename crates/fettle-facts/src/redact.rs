@@ -152,9 +152,15 @@ impl Redactor {
     /// Rewrites every text field in the report, and gives startup items their readable names.
     /// Dates, the volume letter and the app's own fields are left alone: they can't carry a name.
     pub fn report(&self, report: &mut Report) {
+        self.rewrite(report, &|s| self.hardware(s), &|s| self.text(s));
+    }
+
+    /// Every text field: firmware and driver text through `fixed`, text a user can name (disk and
+    /// startup names) through `free`, error details through `detail`.
+    fn rewrite(&self, report: &mut Report, fixed: &dyn Fn(&str) -> String, free: &dyn Fn(&str) -> String) {
         let text = |v: &mut Option<String>| {
             if let Some(s) = v {
-                *s = self.hardware(s);
+                *s = fixed(s);
             }
         };
         let detail = |check: &mut Check| {
@@ -178,7 +184,7 @@ impl Redactor {
                 // Disk names can be renamed by the user (Storage Spaces), so they count as free text.
                 for disk in &mut d.disks {
                     if let Some(model) = &mut disk.model {
-                        *model = self.text(model);
+                        *model = free(model);
                     }
                 }
             }
@@ -212,7 +218,7 @@ impl Redactor {
             if let Some(d) = &mut sec.data {
                 for item in &mut d.items {
                     if let Some(name) = &mut item.name {
-                        *name = self.text(&friendly_startup_name(name));
+                        *name = free(&friendly_startup_name(name));
                     }
                 }
             }
@@ -226,6 +232,20 @@ impl Redactor {
                 }
             }
         }
+    }
+}
+
+/// The share server's pass over an uploaded report: what needs no names. Email addresses, account
+/// SIDs, profile folders and USB serials in every text field; IP and MAC addresses and network
+/// servers in free text too (error details, disk and startup names), but not in versions, where
+/// "1.2.3.4" is a version. Startup names get their readable form, as the app gives them. Running
+/// it again changes nothing.
+pub fn scrub_report(report: &mut Report) {
+    let r = Redactor::default();
+    r.rewrite(report, &|s| r.text(s), &|s| r.detail(s));
+    report.app_version = r.text(&report.app_version);
+    if let Some(v) = &mut report.engine_version {
+        *v = r.text(v);
     }
 }
 
@@ -735,6 +755,52 @@ mod tests {
         assert_eq!(r.detail("LAN adapter disconnected"), "LAN adapter disconnected");
         assert_eq!(r.text("Microsoft Edge"), "Microsoft Edge");
         assert_eq!(r.text("Default Directory sync"), "Default Directory sync");
+    }
+
+    /// A report as an older or altered app might upload it, with private text in every kind of field.
+    fn uploaded() -> Report {
+        let section = |data: serde_json::Value| serde_json::json!({ "check": { "status": "ok" }, "data": data });
+        serde_json::from_value(serde_json::json!({
+            "schema_version": 1, "app_version": "1.0.0", "collected_at": "2026-10-11T10:00:00Z", "elevated": false,
+            "facts": {
+                "system": { "check": { "status": "failed", "detail": r"\\fileserver01\share\C:\Users\jsmith\x" }, "data": { "cpu_name": r"CPU of S-1-12-1-1111111111-2222222222-3333333333-4444444444" } },
+                "storage": section(serde_json::json!({ "disks": [{ "model": "Backup at 10.0.0.7 (fe80::1c2b:3d4e:5f60:7a8b)" }] })),
+                "startup": section(serde_json::json!({ "items": [{ "name": "OneDrive - Contoso (john.smith@contoso.com)" }, { "name": "MicrosoftEdgeAutoLaunch_0123456789ABCDEF0123456789ABCDEF" }] })),
+                "graphics": section(serde_json::json!({ "adapters": [{ "name": "GPU", "driver_version": "1.2.3.4" }] })),
+                "memory": { "check": { "status": "failed", "detail": "adapter 00:1A:2B:3C:4D:5E at C:/Users/jsmith/x" } }
+            }
+        }))
+        .unwrap()
+    }
+
+    #[test]
+    fn the_share_servers_pass_hides_what_needs_no_names() {
+        let mut report = uploaded();
+        scrub_report(&mut report);
+        let f = &report.facts;
+        assert_eq!(f.system.as_ref().unwrap().check.detail.as_deref(), Some(r"\\<server>\share\C:\Users\<user>\x"));
+        assert_eq!(f.system.as_ref().unwrap().data.as_ref().unwrap().cpu_name.as_deref(), Some("CPU of <sid>"));
+        assert_eq!(f.storage.as_ref().unwrap().data.as_ref().unwrap().disks[0].model.as_deref(), Some("Backup at <ip> (<ip>)"));
+        let names: Vec<_> = f.startup.as_ref().unwrap().data.as_ref().unwrap().items.iter().map(|i| i.name.clone().unwrap()).collect();
+        assert_eq!(names, ["OneDrive - Contoso (<email>)", "Microsoft Edge"]);
+        // A version number that looks like an address stays.
+        assert_eq!(f.graphics.as_ref().unwrap().data.as_ref().unwrap().adapters[0].driver_version.as_deref(), Some("1.2.3.4"));
+        assert_eq!(f.memory.as_ref().unwrap().check.detail.as_deref(), Some("adapter <mac> at C:/Users/<user>/x"));
+    }
+
+    #[test]
+    fn the_share_servers_pass_changes_nothing_the_second_time() {
+        let mut once = uploaded();
+        scrub_report(&mut once);
+        let mut twice = once.clone();
+        scrub_report(&mut twice);
+        assert_eq!(serde_json::to_string(&twice).unwrap(), serde_json::to_string(&once).unwrap());
+        // A report the app already cleaned comes back exactly as it was.
+        let path = concat!(env!("CARGO_MANIFEST_DIR"), "/../fettle-collect/tests/fixtures/hostile.report.json");
+        let clean: Report = serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
+        let mut scrubbed = clean.clone();
+        scrub_report(&mut scrubbed);
+        assert_eq!(serde_json::to_string(&scrubbed).unwrap(), serde_json::to_string(&clean).unwrap());
     }
 
     /// Every text field in the report is either cleaned by `Redactor::report` or can't hold a

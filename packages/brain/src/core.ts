@@ -1,4 +1,5 @@
 // Talks to the Rust receipt (crates/fettle-wasm): JSON in, JSON out, through the module's own memory.
+import type { Report } from "@fettle/report-schema";
 import type { Locale } from "./locale.ts";
 import type { Receipt, ReceiptModel } from "./types.ts";
 
@@ -8,6 +9,10 @@ export type Zone = "UTC" | { offsetMinutes: number };
 export interface Brain {
   receiptFor(report: unknown, locale: Locale, zone?: Zone): { receipt: Receipt; model: ReceiptModel };
   markdownFor(report: unknown, locale: Locale, zone?: Zone): string;
+  /** The share server's privacy pass over an uploaded report: email, IP and MAC addresses, account
+   * SIDs, profile folders and network servers hidden (no names needed). Running it again changes
+   * nothing. Throws BrainError when it isn't a report. */
+  redactReport(report: unknown): Report;
   /** The module's memory (a test checks it settles). */
   readonly memory: WebAssembly.Memory;
 }
@@ -22,6 +27,7 @@ type Exports = {
   alloc(len: number): number;
   dealloc(ptr: number, cap: number): void;
   receipt(ptr: number, len: number, locale: number, zoneKind: number, offsetMinutes: number, withMarkdown: number): number;
+  redact(ptr: number, len: number): number;
 };
 
 const instantiateOnce = (module: WebAssembly.Module) => new WebAssembly.Instance(module, {}).exports as unknown as Exports;
@@ -32,15 +38,15 @@ export function createBrain(module: WebAssembly.Module, instantiate: (module: We
   const encoder = new TextEncoder();
   const decoder = new TextDecoder();
 
-  function call(report: unknown, locale: Locale, zone: Zone, withMarkdown: boolean) {
+  /** Writes the report into the module, runs `fn` on it, and returns the JSON it answers with. */
+  function invoke(report: unknown, fn: (ptr: number, len: number) => number) {
     const input = encoder.encode(JSON.stringify(report));
-    const offset = zone === "UTC" ? 0 : zone.offsetMinutes;
     let ptr = 0;
     let pair: number;
     try {
       ptr = wasm.alloc(input.length);
       new Uint8Array(wasm.memory.buffer, ptr, input.length).set(input);
-      pair = wasm.receipt(ptr, input.length, locale === "it" ? 1 : 0, zone === "UTC" ? 0 : 1, offset, withMarkdown ? 1 : 0);
+      pair = fn(ptr, input.length);
     } catch (e) {
       // A trap (a Rust panic aborts) can leave the module half-way through: drop it and start a fresh
       // one, so later requests in this isolate aren't served by a broken module. Our own log line,
@@ -56,7 +62,13 @@ export function createBrain(module: WebAssembly.Module, instantiate: (module: We
     wasm.dealloc(outPtr, outLen);
     const out = JSON.parse(json);
     if (typeof out.error === "string") throw new BrainError(out.error);
-    return out as { receipt: Receipt; model: ReceiptModel; markdown?: string };
+    return out;
+  }
+
+  function call(report: unknown, locale: Locale, zone: Zone, withMarkdown: boolean) {
+    const offset = zone === "UTC" ? 0 : zone.offsetMinutes;
+    const run = (ptr: number, len: number) => wasm.receipt(ptr, len, locale === "it" ? 1 : 0, zone === "UTC" ? 0 : 1, offset, withMarkdown ? 1 : 0);
+    return invoke(report, run) as { receipt: Receipt; model: ReceiptModel; markdown?: string };
   }
 
   return {
@@ -65,6 +77,7 @@ export function createBrain(module: WebAssembly.Module, instantiate: (module: We
       return { receipt, model };
     },
     markdownFor: (report, locale, zone = "UTC") => call(report, locale, zone, true).markdown ?? "",
+    redactReport: (report) => invoke(report, (ptr, len) => wasm.redact(ptr, len)) as Report,
     get memory() {
       return wasm.memory;
     },

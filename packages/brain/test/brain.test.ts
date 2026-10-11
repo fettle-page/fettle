@@ -58,3 +58,17 @@ describe("the brain", () => {
     expect(brotliCompressSync(wasm).length).toBeLessThanOrEqual(150 * 1024);
   });
 });
+
+describe("the share server's privacy pass", () => {
+  it("hides what needs no names, and a second run changes nothing", () => {
+    const r = report(files[0]!);
+    r.facts.storage = { check: { status: "failed", detail: "no reply from john.smith@example.com at 10.0.0.7" } };
+    const once = brain.redactReport(r);
+    expect(once.facts.storage?.check.detail).toBe("no reply from <email> at <ip>");
+    expect(brain.redactReport(once)).toEqual(once);
+  });
+
+  it("a report it can't read throws BrainError and gives nothing back", () => {
+    expect(() => brain.redactReport({ not: "a report" })).toThrow(BrainError);
+  });
+});

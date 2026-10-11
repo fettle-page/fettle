@@ -1,8 +1,8 @@
 //! The receipt for the website and the share Worker, as WebAssembly (wasm32-unknown-unknown).
 //! A plain C interface with no imports: JSON text in, JSON text out. The caller (packages/brain)
-//! writes the report into memory from `alloc`, calls `receipt`, reads the `[ptr, len]` pair it
-//! points to, and frees both buffers with `dealloc`. The scan time comes from the report, so
-//! nothing here reads a clock.
+//! writes the report into memory from `alloc`, calls `receipt` (or `redact`, the share server's
+//! privacy pass), reads the `[ptr, len]` pair it points to, and frees both buffers with
+//! `dealloc`. The scan time comes from the report, so nothing here reads a clock.
 
 use fettle_facts::Report;
 use fettle_receipt::{ReceiptModel, Zone, markdown, receipt_for};
@@ -43,6 +43,17 @@ pub fn run(input: &[u8], locale: u32, zone_kind: u32, offset_minutes: i32, with_
     }
 }
 
+/// The report with what needs no names hidden (`fettle_facts::redact::scrub_report`), or
+/// `{"error": …}` when it isn't a report. The input never comes back as it was.
+pub fn redacted(input: &[u8]) -> String {
+    let mut report: Report = match serde_json::from_slice(input) {
+        Ok(r) => r,
+        Err(e) => return error(format!("report: {e}")),
+    };
+    fettle_facts::redact::scrub_report(&mut report);
+    serde_json::to_string(&report).unwrap_or_else(|e| error(format!("output: {e}")))
+}
+
 /// Room for `len` bytes, for the caller to write into.
 #[unsafe(no_mangle)]
 pub extern "C" fn alloc(len: usize) -> *mut u8 {
@@ -52,10 +63,10 @@ pub extern "C" fn alloc(len: usize) -> *mut u8 {
     ptr
 }
 
-/// Frees what `alloc` or `receipt` handed out.
+/// Frees what `alloc`, `receipt` or `redact` handed out.
 ///
 /// # Safety
-/// `ptr` and `cap` must come from `alloc(cap)` or from a `receipt` output pair, once.
+/// `ptr` and `cap` must come from `alloc(cap)` or from a `receipt` or `redact` output pair, once.
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn dealloc(ptr: *mut u8, cap: usize) {
     unsafe { drop(Vec::from_raw_parts(ptr, 0, cap)) };
@@ -71,9 +82,24 @@ static mut OUT: [u32; 2] = [0, 0];
 #[unsafe(no_mangle)]
 pub unsafe extern "C" fn receipt(ptr: *const u8, len: usize, locale: u32, zone_kind: u32, offset_minutes: i32, with_markdown: u32) -> *const u32 {
     let input = unsafe { std::slice::from_raw_parts(ptr, len) };
-    let output = run(input, locale, zone_kind, offset_minutes, with_markdown != 0).into_bytes();
+    hand_out(run(input, locale, zone_kind, offset_minutes, with_markdown != 0))
+}
+
+/// Runs `redacted` on the report at `ptr..ptr+len`; the output as for `receipt`.
+///
+/// # Safety
+/// `ptr..ptr+len` must be readable memory the caller wrote (from `alloc`).
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn redact(ptr: *const u8, len: usize) -> *const u32 {
+    let input = unsafe { std::slice::from_raw_parts(ptr, len) };
+    hand_out(redacted(input))
+}
+
+/// Leaves `output` in memory for the caller and points to `[out_ptr, out_len]`, valid until the
+/// next call; the caller frees it with `dealloc(out_ptr, out_len)`.
+fn hand_out(output: String) -> *const u32 {
     // Exactly `len` capacity, so `dealloc(out_ptr, out_len)` frees it whole.
-    let output = output.into_boxed_slice();
+    let output = output.into_bytes().into_boxed_slice();
     let n = output.len();
     let out_ptr = Box::into_raw(output) as *mut u8;
     unsafe {
@@ -114,6 +140,15 @@ mod tests {
         // The first case was checked at 21:26 UTC: 23:26 two hours east, with no "UTC".
         assert_eq!(v["model"]["meta"]["when"], "06/10/2026 23:26");
         assert!(v.get("markdown").is_none());
+    }
+
+    #[test]
+    fn redact_hides_what_needs_no_names_and_refuses_what_isnt_a_report() {
+        let mut v: Value = serde_json::from_str(&report()).unwrap();
+        v["facts"]["storage"]["check"] = serde_json::json!({ "status": "failed", "detail": "no reply from john.smith@example.com" });
+        let out = out(super::redacted(v.to_string().as_bytes()));
+        assert_eq!(out["facts"]["storage"]["check"]["detail"], "no reply from <email>");
+        assert!(super::redacted(b"{").starts_with(r#"{"error":"report: "#));
     }
 
     #[test]

@@ -69,6 +69,7 @@
   "d.not_found": "not found",
   "d.enabled": "on",
   "d.disabled": "off",
+  "d.unnamed_startup": "Unnamed startup item",
   "d.vram": "Video memory",
   "d.driver": "Driver",
   "d.driver_date": "Driver date",

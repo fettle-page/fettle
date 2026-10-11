@@ -6,7 +6,11 @@
 
 /// Long enough that ordinary names ("Build_2026", "App_DEADBEEF") are never mistaken for a code.
 const MIN_CODE_LEN: usize = 16;
-const UNNAMED: &str = "Unnamed startup item";
+/// An item with no readable name is stored with an empty name: the receipt prints it in the
+/// viewer's language.
+const UNNAMED: &str = "";
+/// What reports from 1.0.2 and earlier stored for it, in English whatever the language.
+pub const UNNAMED_BEFORE_1_0_3: &str = "Unnamed startup item";
 
 /// Product names for the "<Product>AutoLaunch_<code>" entries browsers register.
 const KNOWN: &[(&str, &str)] = &[("MicrosoftEdge", "Microsoft Edge"), ("GoogleChrome", "Google Chrome")];
@@ -77,7 +81,7 @@ mod tests {
         assert_eq!(name("App_{0F1E2D3C-4B5A-6978-8796-A5B4C3D2E1F0}"), "App");
         assert_eq!(name("Tool-0f1e2d3c-4b5a-6978-8796-a5b4c3d2e1f0"), "Tool");
         assert_eq!(name("Sync Helper {0F1E2D3C-4B5A-6978-8796-A5B4C3D2E1F0}"), "Sync Helper");
-        assert_eq!(name("{0F1E2D3C-4B5A-6978-8796-A5B4C3D2E1F0}"), "Unnamed startup item");
+        assert_eq!(name("{0F1E2D3C-4B5A-6978-8796-A5B4C3D2E1F0}"), "");
         assert_eq!(name("Backup {not a guid}"), "Backup {not a guid}");
     }
 
@@ -89,8 +93,8 @@ mod tests {
     }
 
     #[test]
-    fn a_name_that_is_only_a_code_keeps_something_readable() {
-        assert_eq!(name("0123456789ABCDEF0123456789ABCDEF"), "Unnamed startup item");
-        assert_eq!(name("   "), "Unnamed startup item");
+    fn a_name_that_is_only_a_code_is_stored_without_one() {
+        assert_eq!(name("0123456789ABCDEF0123456789ABCDEF"), "");
+        assert_eq!(name("   "), "");
     }
 }

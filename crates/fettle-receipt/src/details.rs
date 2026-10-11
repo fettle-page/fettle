@@ -256,9 +256,13 @@ pub fn name_order(a: &str, b: &str) -> Ordering {
 }
 
 fn startup(d: &Startup, locale: Locale) -> Vec<DetailGroup> {
-    let named: Vec<_> = d.items.iter().filter_map(|i| i.name.as_deref().filter(|n| !n.is_empty()).map(|n| (n, i.enabled != Some(false)))).collect();
-    let mut on: Vec<&str> = named.iter().filter(|(_, e)| *e).map(|(n, _)| *n).collect();
-    let mut off: Vec<&str> = named.iter().filter(|(_, e)| !*e).map(|(n, _)| *n).collect();
+    // An item without a readable name (stored empty, or in English before 1.0.3) shows in the
+    // receipt's language; one whose name wasn't read at all isn't listed.
+    let unnamed = ui("d.unnamed_startup", locale, &[]);
+    let label = |n: &str| if n.is_empty() || n == fettle_facts::startup_names::UNNAMED_BEFORE_1_0_3 { unnamed.clone() } else { n.to_string() };
+    let named: Vec<_> = d.items.iter().filter_map(|i| i.name.as_deref().map(|n| (label(n), i.enabled != Some(false)))).collect();
+    let mut on: Vec<&str> = named.iter().filter(|(_, e)| *e).map(|(n, _)| n.as_str()).collect();
+    let mut off: Vec<&str> = named.iter().filter(|(_, e)| !*e).map(|(n, _)| n.as_str()).collect();
     on.sort_by(|a, b| name_order(a, b));
     off.sort_by(|a, b| name_order(a, b));
     let row = |enabled: bool| move |name: &str| DetailRow { label: name.to_string(), value: ui(if enabled { "d.enabled" } else { "d.disabled" }, locale, &[]) };

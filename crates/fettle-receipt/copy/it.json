@@ -69,6 +69,7 @@
   "d.not_found": "non trovato",
   "d.enabled": "attiva",
   "d.disabled": "disattivata",
+  "d.unnamed_startup": "App all'avvio senza nome",
   "d.vram": "Memoria video",
   "d.driver": "Driver",
   "d.driver_date": "Data del driver",

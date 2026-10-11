@@ -3,7 +3,7 @@ import { existsSync, mkdirSync, readFileSync, rmSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { describe, it } from "node:test";
 import { loadFlags } from "../pe.mjs";
-import { crtDirIn, manifestFiles } from "../runtime.mjs";
+import { crtDirIn, manifestFiles, newestCrt, readExitCodes } from "../runtime.mjs";
 
 const root = resolve(import.meta.dirname, "../../../..");
 
@@ -20,11 +20,28 @@ describe("crtDirIn", () => {
     for (const v of ["14.40.33807", "14.44.35112", "14.9.1"]) mkdirSync(join(vs, "VC", "Redist", "MSVC", v, "x64", "Microsoft.VC143.CRT"), { recursive: true });
     mkdirSync(join(vs, "VC", "Redist", "MSVC", "v143"), { recursive: true });
     mkdirSync(join(vs, "VC", "Redist", "MSVC", "14.50.1", "x86", "Microsoft.VC145.CRT"), { recursive: true });
-    assert.equal(crtDirIn(vs), join(vs, "VC", "Redist", "MSVC", "14.44.35112", "x64", "Microsoft.VC143.CRT"));
+    assert.deepEqual(crtDirIn(vs), { dir: join(vs, "VC", "Redist", "MSVC", "14.44.35112", "x64", "Microsoft.VC143.CRT"), version: "14.44.35112" });
   });
 
   it("returns null when the installation has no runtime to ship", () => {
     assert.equal(crtDirIn(scratch("vs-empty")), null);
+  });
+});
+
+describe("newestCrt", () => {
+  it("picks the newest runtime by its version, whichever Visual Studio it comes with", () => {
+    const older = { dir: "C:\\VS\\2022\\BuildTools\\VC\\Redist\\MSVC\\14.38.33135\\x64\\Microsoft.VC143.CRT", version: "14.38.33135" };
+    const newer = { dir: "C:\\VS\\18\\Community\\VC\\Redist\\MSVC\\14.51.36231\\x64\\Microsoft.VC145.CRT", version: "14.51.36231" };
+    assert.equal(newestCrt([older, newer]), newer.dir);
+    assert.equal(newestCrt([newer, older]), newer.dir);
+    assert.equal(newestCrt([]), null);
+  });
+});
+
+describe("readExitCodes", () => {
+  it("matches each exit code to its run, even when one run couldn't start", () => {
+    assert.deepEqual(readExitCodes("0:1\r\n2:-1073741521\r\n", 3), ["1", "not started", "-1073741521"]);
+    assert.deepEqual(readExitCodes("1:timeout\n", 2), ["not started", "timeout"]);
   });
 });
 

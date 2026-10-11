@@ -653,7 +653,7 @@ impl State {
                 self.check_updates()
             }
             Event::UpdateTick => self.check_updates(),
-            // No answer is no news, and isn't recorded: the website is asked again next time.
+            // The try is recorded either way (update::answered), so a failure waits before the next.
             Event::UpdateChecked(record) => {
                 self.update = record;
                 vec![Effect::SaveUpdate(self.update.clone())]

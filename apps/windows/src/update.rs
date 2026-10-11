@@ -42,7 +42,15 @@ pub fn due(record: &UpdateRecord, every_ms: i64, now_ms: i64) -> bool {
     let last = record.tried_at.max(record.checked_at);
     let wait = if record.failures == 0 { every_ms } else { every_ms.min(HOUR_MS << (record.failures - 1).min(16)) };
     let never_asked = last == 0 && record.failures == 0;
-    never_asked || now_ms - last >= wait
+    // A last try "in the future" was stamped by a clock that was wrong and has been set right.
+    never_asked || now_ms < last || now_ms - last >= wait
+}
+
+/// The more recent of two records (by their last try): the one on disk may be another window's
+/// newer try, or older than this window's own if the file couldn't be written.
+pub fn newest(a: UpdateRecord, b: UpdateRecord) -> UpdateRecord {
+    let last = |r: &UpdateRecord| r.tried_at.max(r.checked_at);
+    if last(&b) > last(&a) { b } else { a }
 }
 
 /// The record after asking at `at`: what the website said, or one more failure (keeping what the
@@ -130,6 +138,22 @@ mod tests {
         let failed = answered(&good, None, 10);
         assert_eq!((failed.latest.clone(), failed.checked_at, failed.tried_at), (good.latest.clone(), 5, 10));
         assert_eq!(answered(&failed, found("999.0.1"), 20).failures, 0, "an answer starts over");
+    }
+
+    #[test]
+    fn the_newer_of_two_records_counts() {
+        let old = answered(&UpdateRecord::default(), found("1.0.0"), 1_000);
+        let new = answered(&old, None, 2_000);
+        assert_eq!(newest(old.clone(), new.clone()), new);
+        assert_eq!(newest(new.clone(), old.clone()), new);
+        assert_eq!(newest(UpdateRecord::default(), old.clone()), old, "a file that couldn't be written counts as never asked");
+    }
+
+    #[test]
+    fn a_clock_set_back_doesnt_stop_the_checks() {
+        // The last try was stamped while the clock was a year ahead; now it's right again.
+        let r = answered(&UpdateRecord::default(), found("1.0.0"), 365 * DAY_MS);
+        assert!(due(&r, DAY_MS, 10 * DAY_MS));
     }
 
     #[test]

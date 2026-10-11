@@ -1014,6 +1014,28 @@ fn a_failed_check_is_tried_again_an_hour_later_by_any_window_not_every_ten_minut
     assert_eq!(asks(), 2, "and the other window sees that try too");
 }
 
+#[test]
+fn a_data_folder_that_cant_be_written_still_asks_once_a_day() {
+    // A portable copy on a read-only folder: update.json never gets written.
+    let dir = temp_dir();
+    std::fs::create_dir_all(dir.parent().unwrap()).unwrap();
+    std::fs::write(&dir, "a file where the data folder should be").unwrap();
+    let site = Arc::new(UpdateSite(NEWER, Default::default()));
+    let clock = Arc::new(std::sync::atomic::AtomicI64::new(fettle_verdicts::fmt::parse_rfc3339("2026-10-09T12:00:00Z").unwrap()));
+    let (s, c) = (site.clone(), clock.clone());
+    let h = harness_with(Locale::En, dir.clone(), move |deps| {
+        deps.http = s;
+        deps.now_ms = Arc::new(move || c.load(Ordering::SeqCst));
+    });
+    h.background.run_all(&h.app);
+    assert_eq!(site.1.lock().unwrap().len(), 1);
+    clock.fetch_add(10 * 60_000, Ordering::SeqCst);
+    h.app.dispatch(fettle_windows::state::Event::UpdateTick);
+    h.background.run_all(&h.app);
+    assert_eq!(site.1.lock().unwrap().len(), 1, "not every ten minutes");
+    let _ = std::fs::remove_file(&dir);
+}
+
 fn seeded_update(hours_ago: i64, settings: &str) -> PathBuf {
     let now = fettle_verdicts::fmt::parse_rfc3339("2026-10-09T12:00:00Z").unwrap();
     let dir = temp_dir();

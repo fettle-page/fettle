@@ -393,8 +393,9 @@ impl Fettle {
             }
             Effect::CheckUpdates => {
                 let now = (self.0.deps.now_ms)();
-                // The record on disk, not this window's copy: another window may have asked meanwhile.
-                let record = store.load_update();
+                // The newer of the record on disk (another window may have asked meanwhile) and this
+                // window's own (the file may not be writable).
+                let record = crate::update::newest(store.load_update(), self.0.state.borrow().update.clone());
                 let every = self.0.state.borrow().settings.update_every.ms();
                 if !crate::update::due(&record, every, now) || self.0.checking.replace(true) {
                     return;

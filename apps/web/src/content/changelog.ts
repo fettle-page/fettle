@@ -29,6 +29,7 @@ export const releases: Release[] = [
         "Share pages in Italian now link back to the Italian home page.",
         "A missing page under /it/ now shows the Italian 404 with the Italian menu and footer, and the 404 no longer marks Home as the page you're on.",
         "Addresses ending in / or .html now redirect permanently to the clean address, so search engines keep one copy of each page.",
+        "FAQ questions are now headings, so screen readers can jump from one question to the next.",
       ],
       it: [
         "Su Windows 10, Fettle non dice più che un PC è iscritto agli Extended Security Updates solo perché ha installato un aggiornamento in ritardo. Ora lo ricava dalla build di Windows e, quando non può saperlo, ti chiede di controllare in Windows Update.",
@@ -50,6 +51,7 @@ export const releases: Release[] = [
         "Le pagine condivise in italiano ora rimandano alla home in italiano.",
         "Una pagina mancante sotto /it/ ora mostra il 404 in italiano con menu e piè di pagina in italiano, e il 404 non segna più la Home come pagina corrente.",
         "Gli indirizzi che finiscono con / o .html ora reindirizzano in modo permanente all'indirizzo pulito, così i motori di ricerca tengono una sola copia di ogni pagina.",
+        "Le domande delle FAQ ora sono titoli, così chi usa uno screen reader può passare da una domanda all'altra.",
       ],
     },
   },

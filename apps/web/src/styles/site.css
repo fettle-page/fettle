@@ -514,6 +514,7 @@ section.hero {
   font: 700 18px/1.3 var(--font-display); letter-spacing: -0.01em;
 }
 .faq-item summary::-webkit-details-marker { display: none; }
+.faq-item .faq-q { font: inherit; letter-spacing: inherit; color: inherit; margin: 0; } /* a heading for screen readers, styled as the summary */
 .faq-item summary::after { content: "+"; flex: none; font: 600 20px/1 var(--font-mono); color: var(--color-mat); transition: transform 0.2s var(--ease-out); }
 .faq-item[open] summary::after { transform: rotate(45deg); }
 .faq-item summary:focus-visible { outline: 2px solid var(--color-mat); outline-offset: -2px; }

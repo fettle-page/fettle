@@ -1,5 +1,6 @@
 ---
-// Questions as native <details>: no JavaScript, keyboard and screen reader friendly.
+// Questions as native <details>: no JavaScript, keyboard and screen reader friendly. Each question is
+// a heading inside its summary, so screen readers can jump from one to the next.
 import type { Faq } from "../content/faq.ts";
 import type { Locale } from "../i18n/paths.ts";
 import { t } from "../i18n/strings.ts";
@@ -18,7 +19,9 @@ const { contact, email } = links(release);
   {
     items.map((f) => (
       <details class="faq-item" id={f.id}>
-        <summary>{f.q}</summary>
+        <summary>
+          <h2 class="faq-q">{f.q}</h2>
+        </summary>
         <div class="faq-answer">
           {f.a.map((p) => (
             <p>{p}</p>

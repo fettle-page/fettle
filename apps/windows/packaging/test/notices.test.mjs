@@ -125,6 +125,7 @@ describe("renderNotices", () => {
     assert.match(out, /IBM Plex Mono/);
     assert.match(out, /based in part on the work of the Independent JPEG Group/);
     assert.match(out, /Microsoft Visual C\+\+ runtime/);
+    assert.match(out, /uses it under the Slint Royalty-free Desktop,\r?\nMobile, and Web Applications License 2\.0/);
     assert.match(out, /vcruntime140\.dll/);
     assert.ok(out.includes("\r\n"));
     assert.ok(!/[^\r]\n/.test(out), "every line ends in CRLF");

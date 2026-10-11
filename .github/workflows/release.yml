@@ -32,7 +32,6 @@ jobs:
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: 24
-          cache: npm
       - run: npm run release:check
       - run: rustup toolchain install 1.99.0-x86_64-pc-windows-msvc --profile minimal --target wasm32-unknown-unknown
       # skia-bindings' build script downloads Skia's prebuilt libraries without checking them: fetch the

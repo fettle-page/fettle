@@ -142,6 +142,8 @@ describe("workflows", () => {
     const publish = job("publish");
     assert.match(build, /permissions:\n\s+contents: read\n/);
     assert.doesNotMatch(build, /: write/);
+    // A cache can be filled by another workflow run; the downloads are built from a clean npm ci.
+    assert.doesNotMatch(build, /cache:/, "the release build restores no cache");
     for (const step of ["npm ci", "npm test", "cargo test", "npm run package:windows", "upload-artifact"]) assert.ok(build.includes(step), `build: ${step}`);
     assert.match(publish, /needs: build/);
     for (const right of ["contents: write", "id-token: write", "attestations: write"]) assert.ok(publish.includes(right), `publish: ${right}`);

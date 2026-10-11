@@ -1,6 +1,6 @@
 {
   "summary.fine": "In gran forma.",
-  "summary.fine_unchecked": "Tutto a posto finora, ma per i dischi serve un Controllo approfondito.",
+  "summary.fine_unchecked": "Tutto a posto finora, ma Fettle non è riuscito a leggere lo stato dei dischi.",
   "summary.action.deep_check": "Avvia un Controllo approfondito per leggere lo stato dei dischi.",
   "summary.some": "Serve una sistemata.",
   "summary.attention": "Ha bisogno di attenzioni.",

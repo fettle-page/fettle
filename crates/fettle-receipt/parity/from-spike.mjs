@@ -33,7 +33,10 @@ function wmiDate(s) {
   if (!realDay(+y, +mo, +d) || +h > 23 || +mi > 59 || +sec > 60) return null;
   return new Date(utc(+y, +mo, +d, +h, +mi, +sec).getTime() - Number(off) * 60000);
 }
-const isoDay = (date) => (date ? date.toISOString().slice(0, 10) : null);
+/** The calendar day a CIM_DATETIME names, offset ignored: release and driver dates are days (map.rs wmi_day). */
+const wmiDay = (s) => (wmiDate(s) ? `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}` : null);
+/** Text with its spaces trimmed, or undefined when nothing is left (map.rs text_of). */
+const text = (v) => (typeof v === "string" ? v.trim() || undefined : undefined);
 
 /** A CPU or graphics name without trademark marks: "Intel(R) Core(TM) i7" reads as "Intel Core i7". */
 const productName = (s) => s?.replace(/\((R|TM)\)|®|™/gi, " ").split(/\s+/).filter(Boolean).join(" ") || undefined;
@@ -172,7 +175,7 @@ function memory(s) {
       capacity_bytes: m.Capacity,
       speed_mts: m.Speed,
       configured_speed_mts: m.ConfiguredClockSpeed,
-      part_number: m.PartNumber?.trim(),
+      part_number: text(m.PartNumber),
       kind: MEMORY_KIND[m.SMBIOSMemoryType] ?? "other",
       // Some firmware writes the word "Unknown" instead of leaving it empty.
       manufacturer: /^unknown$/i.test(m.Manufacturer?.trim() ?? "") ? undefined : m.Manufacturer?.trim() || undefined,
@@ -194,17 +197,17 @@ function windows(s, collectedAt) {
   const updates = (rows(s.hotfixes) ?? []).map((h) => hotfixDay(h.InstalledOn)).filter(Boolean).sort();
   return ok({
     // The registry's ProductName says "Windows 10" on Windows 11; the OS caption doesn't.
-    product: os.Caption?.replace(/^Microsoft /, ""),
-    edition_id: reg.EditionID,
+    product: text(os.Caption)?.replace(/^Microsoft /, ""),
+    edition_id: text(reg.EditionID),
     build: Number(reg.CurrentBuild),
     ubr: reg.UBR,
-    display_version: reg.DisplayVersion ?? reg.ReleaseId,
-    installation_type: reg.InstallationType,
+    display_version: text(reg.DisplayVersion) ?? text(reg.ReleaseId),
+    installation_type: text(reg.InstallationType),
     uptime_seconds: boot ? Math.max(0, Math.round((collectedAt - boot) / 1000)) : undefined,
     last_update_installed: updates.at(-1),
     secure_boot: s.secure_boot?.ok ? s.secure_boot.data.uefi_secure_boot_enabled === 1 : undefined,
     // Elevated, Windows answers with no rows when the PC has no TPM; a failed query proves nothing.
-    tpm: rows(s.tpm) ? (tpm ? { present: true, spec_version: tpm.SpecVersion } : { present: false }) : undefined,
+    tpm: rows(s.tpm) ? (tpm ? { present: true, spec_version: text(tpm.SpecVersion) } : { present: false }) : undefined,
   });
 }
 
@@ -239,7 +242,7 @@ function graphics(s) {
         name: productName(a.description),
         vram_bytes: a.dedicated_video_memory,
         driver_version: wmi?.DriverVersion,
-        driver_date: isoDay(wmiDate(wmi?.DriverDate)),
+        driver_date: wmiDay(wmi?.DriverDate),
         software: a.software,
       };
     }),

@@ -1,0 +1,73 @@
+{
+  "battery": {
+    "check": {
+      "status": "not_present"
+    }
+  },
+  "graphics": {
+    "check": {
+      "status": "ok"
+    },
+    "data": {
+      "adapters": [
+        {
+          "driver_date": "2026-09-25",
+          "driver_version": "31.0.1.1",
+          "name": "Made-up GPU 1000",
+          "software": false,
+          "vram_bytes": 4294967296
+        }
+      ]
+    }
+  },
+  "memory": {
+    "check": {
+      "status": "ok"
+    },
+    "data": {
+      "modules": [
+        {
+          "capacity_bytes": 8589934592,
+          "configured_speed_mts": 3200,
+          "configured_voltage_mv": 1200,
+          "device_locator": "DIMM 1",
+          "form_factor": "dimm",
+          "kind": "ddr4",
+          "speed_mts": 3200
+        }
+      ],
+      "slots_total": 2
+    }
+  },
+  "startup": {
+    "check": {
+      "status": "ok"
+    },
+    "data": {
+      "items": []
+    }
+  },
+  "storage": {
+    "check": {
+      "status": "failed"
+    }
+  },
+  "windows": {
+    "check": {
+      "status": "ok"
+    },
+    "data": {
+      "build": 19045,
+      "display_version": "2009",
+      "edition_id": "Professional",
+      "installation_type": "Client",
+      "last_update_installed": "2026-09-25",
+      "product": "Windows 10 Pro",
+      "tpm": {
+        "present": true
+      },
+      "ubr": 6466,
+      "uptime_seconds": 46400
+    }
+  }
+}

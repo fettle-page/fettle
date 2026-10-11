@@ -18,7 +18,9 @@ struct Dump {
 fn rust_mapping_matches_the_js_converter_on_every_spike_dump() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let mut checked = 0;
-    for entry in fs::read_dir(root.join("../../spike/dumps")).unwrap() {
+    // The real dumps, and made-up scans with odd values they don't have.
+    let entries = fs::read_dir(root.join("../../spike/dumps")).unwrap().chain(fs::read_dir(root.join("tests/twin-cases")).unwrap());
+    for entry in entries {
         let path = entry.unwrap().path();
         if path.extension().is_none_or(|e| e != "json") {
             continue;
@@ -42,5 +44,5 @@ fn rust_mapping_matches_the_js_converter_on_every_spike_dump() {
         assert_eq!(got, want, "{name}");
         checked += 1;
     }
-    assert_eq!(checked, 5);
+    assert_eq!(checked, 6);
 }

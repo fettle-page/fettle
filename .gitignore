@@ -5,3 +5,5 @@ worker/.wrangler/
 worker/.dev.vars*
 apps/web/dist/
 apps/web/.astro/
+.claude/
+.playwright-cli/

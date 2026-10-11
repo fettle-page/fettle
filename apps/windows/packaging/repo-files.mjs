@@ -9,6 +9,12 @@ const ALLOWED_HIDDEN = [
 ];
 const ALLOWED_MARKDOWN = /^(.+\/)?README\.md$/;
 
+/** Account SIDs in `text` that could be real: test data may only use ones whose three numbers are
+ * each a single repeated digit (S-1-5-21-111111111-2222222222-333333333-1001, S-1-5-21-1-2-3-1001). */
+export function realLookingSids(text) {
+  return [...text.matchAll(/S-1-5-21-(\d+)-(\d+)-(\d+)/g)].filter((m) => m.slice(1, 4).some((n) => !/^(\d)\1*$/.test(n))).map((m) => m[0]);
+}
+
 /** The paths in `paths` that aren't allowed in the repo, in their original order. */
 export function unexpectedPaths(paths) {
   return paths.filter((p) => {

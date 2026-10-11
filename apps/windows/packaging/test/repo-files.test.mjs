@@ -4,7 +4,25 @@ import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import { describe, it } from "node:test";
-import { unexpectedPaths } from "../repo-files.mjs";
+import { readFileSync } from "node:fs";
+import { realLookingSids, unexpectedPaths } from "../repo-files.mjs";
+
+// Test data must use obviously fake identifiers: a real account SID once slipped into a test.
+describe("account SIDs in tracked files", () => {
+  it("allows only obviously fake ones (each number one repeated digit)", () => {
+    assert.deepEqual(realLookingSids("HKU\\S-1-5-21-111111111-2222222222-333333333-1001\\Run and S-1-5-21-1-2-3-1001"), []);
+    // Built at run time, so this file doesn't hold a real-looking SID itself.
+    const random = ["S-1-5-21", "3623811015", "3361044348", "30300820", "1013"].join("-");
+    assert.equal(realLookingSids(`HKU\\${random}\\Run`).length, 1);
+  });
+
+  it("holds for every file tracked in this repo", () => {
+    const root = join(import.meta.dirname, "../../../..");
+    const tracked = execFileSync("git", ["ls-files"], { cwd: root, encoding: "utf8" }).trim().split("\n");
+    const bad = tracked.filter((p) => !/\.(png|ico|woff2?|ttf|wasm)$/i.test(p) && realLookingSids(readFileSync(join(root, p), "latin1")).length);
+    assert.deepEqual(bad, []);
+  });
+});
 
 describe("tracked files", () => {
   it("refuses hidden paths and Markdown files that aren't on the list", () => {

@@ -12,11 +12,12 @@ const DAY_MS = 86_400_000;
 type Used = { day: number; count: number };
 
 /**
- * The budget's name for an address on a day (UTC): a SHA-256, so no address is ever a Durable
- * Object's name, and a new one every day, so yesterday's empties itself and is never used again.
+ * The budget's name for an address on a day (UTC): a SHA-256 mixed with `pepper` (the Worker secret
+ * ADDRESS_PEPPER), so no address is ever a Durable Object's name and the name can't be worked back to
+ * one by trying every IPv4 address. A new name every day, so yesterday's empties itself.
  */
-export async function budgetName(address: string, now = Date.now()): Promise<string> {
-  return hashToken(`upload-budget:${Math.floor(now / DAY_MS)}:${address}`);
+export async function budgetName(address: string, pepper: string, now = Date.now()): Promise<string> {
+  return hashToken(`upload-budget:${pepper}:${Math.floor(now / DAY_MS)}:${address}`);
 }
 
 /** One instance per address. It holds one count, cleared once its day is over. */

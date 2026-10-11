@@ -79,6 +79,11 @@ export async function createReport(request: Request, env: Env): Promise<Response
   // Before reading the body, so a flood stays cheap.
   const { success } = await env.UPLOAD_LIMITER.limit({ key: clientKey(request) });
   if (!success) return rateLimited();
+  // Without the secret the daily budget would be named by a plain hash of the address: refuse instead.
+  if (!env.ADDRESS_PEPPER) {
+    console.error(JSON.stringify({ event: "address_pepper_missing", message: "The ADDRESS_PEPPER secret isn't set, so uploads are refused." }));
+    return apiError(503, "unavailable");
+  }
 
   const read = await readJson(request, MAX_UPLOAD_BYTES);
   if (!read.ok) return read.response;
@@ -92,7 +97,7 @@ export async function createReport(request: Request, env: Env): Promise<Response
   // The schema only checks the timestamp's shape; the verdicts need a real date (no month 13).
   if (Number.isNaN(Date.parse(parsed.report.collected_at))) return apiError(400, "invalid_report", { detail: "collected_at is not a real date" });
   // Only uploads that would be stored count against the address's day.
-  const wait = await env.UPLOAD_BUDGET.getByName(await budgetName(dailyKey(request))).take();
+  const wait = await env.UPLOAD_BUDGET.getByName(await budgetName(dailyKey(request), env.ADDRESS_PEPPER!)).take();
   if (wait > 0) return rateLimited(wait);
 
   const ttl: Ttl = (envelope.expires as Ttl | undefined) ?? "30d";

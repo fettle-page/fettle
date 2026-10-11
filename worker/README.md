@@ -31,6 +31,8 @@ npm test -w @fettle/worker        # runs in workerd with local R2 and rate limit
 
 R2 and the rate limiters are simulated locally; nothing touches a Cloudflare account.
 
+Uploads need the `ADDRESS_PEPPER` secret (see Deploy); without it they answer 503 `unavailable`. For `wrangler dev`, put a line `ADDRESS_PEPPER=<any long random text>` in `worker/.dev.vars` (git-ignored). The tests set their own.
+
 ## Cloudflare setup (done 2026-10-10)
 
 - R2 bucket `fettle-reports`, in the **EU jurisdiction** (shared receipts stay in EU data centres). Lifecycle rules delete `7d/` after 7 days, `30d/` after 30 days and `1y/` after 365 days. The Worker also refuses expired links on every read; the rules only clean up.
@@ -42,4 +44,8 @@ R2 and the rate limiters are simulated locally; nothing touches a Cloudflare acc
 
 ## Deploy
 
-`npm run deploy -w @fettle/worker` (it rebuilds the site, then runs `wrangler deploy`). Deploy the site with each app release: `/app/latest.json` follows `published` in `apps/web/src/release.ts`.
+`npm run deploy -w @fettle/worker` (it rebuilds the site, then runs `wrangler deploy`).
+
+Secrets, set once with `wrangler secret put <name>` (each put redeploys):
+- `ADDRESS_PEPPER` (required): long random text, mixed into the name of each address's daily upload budget so the name can't be worked back to an IP. Without it, uploads are refused (503) and a loud `address_pepper_missing` line is logged. Changing it only resets that day's upload counts.
+- `GITHUB_TOKEN` (optional): a read-only token for the download count. Deploy the site with each app release: `/app/latest.json` follows `published` in `apps/web/src/release.ts`.

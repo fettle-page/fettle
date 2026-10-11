@@ -7,6 +7,7 @@ export type ErrorCode =
   | "invalid_json"
   | "invalid_request"
   | "invalid_report"
+  | "unavailable"
   | "too_large"
   | "rate_limited"
   | "unauthorized"

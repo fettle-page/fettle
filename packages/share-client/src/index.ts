@@ -14,6 +14,7 @@ export type Shared = { id: string; url: string; deleteUrl: string; deleteToken: 
 export type ShareError =
   | "invalid_request"
   | "invalid_report"
+  | "unavailable"
   | "too_large"
   | "rate_limited"
   | "unauthorized"
@@ -31,7 +32,7 @@ type FetchFn = typeof fetch;
 export type Options = { timeoutMs?: number };
 const DEFAULT_TIMEOUT_MS = 20_000;
 
-const SERVER_ERRORS = new Set<string>(["invalid_request", "invalid_report", "too_large", "rate_limited", "unauthorized", "forbidden", "unsupported_media_type", "invalid_json"]);
+const SERVER_ERRORS = new Set<string>(["invalid_request", "invalid_report", "unavailable", "too_large", "rate_limited", "unauthorized", "forbidden", "unsupported_media_type", "invalid_json"]);
 
 const endpoint = (origin: string, path: string) => origin.replace(/\/+$/, "") + path;
 

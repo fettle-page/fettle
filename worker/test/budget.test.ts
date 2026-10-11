@@ -1,11 +1,13 @@
 import { env } from "cloudflare:workers";
 import { runDurableObjectAlarm, runInDurableObject } from "cloudflare:test";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { budgetName, UPLOADS_PER_DAY, type UploadBudget } from "../src/budget.ts";
-import { dayKey } from "../src/reports.ts";
+import { createReport, dayKey } from "../src/reports.ts";
 import { call, DAY, freshIp, tiredReport, untilFreshWindow, upload } from "./helpers.ts";
 
 const MINUTE = 60_000;
+// A Worker secret, typed on the global Env (src/secrets.d.ts).
+const PEPPER = (env as Env).ADDRESS_PEPPER!;
 const today = () => Math.floor(Date.now() / DAY) * DAY + 3_600_000;
 let n = 0;
 const fresh = () => env.UPLOAD_BUDGET.getByName(`budget-test-${Date.now()}-${n++}`);
@@ -34,16 +36,18 @@ describe("the daily upload budget", () => {
   });
 
   it("is named by a hash, never by the address", async () => {
-    const name = await budgetName("198.51.100.200");
+    const name = await budgetName("198.51.100.200", PEPPER);
     expect(name).toMatch(/^[0-9a-f]{64}$/);
-    expect(await budgetName("198.51.100.200")).toBe(name);
-    expect(await budgetName("198.51.100.201")).not.toBe(name);
-    expect(await budgetName("198.51.100.200", Date.now() + DAY)).not.toBe(name);
+    expect(await budgetName("198.51.100.200", PEPPER)).toBe(name);
+    expect(await budgetName("198.51.100.201", PEPPER)).not.toBe(name);
+    expect(await budgetName("198.51.100.200", PEPPER, Date.now() + DAY)).not.toBe(name);
+    // Mixed with a secret, so the name can't be worked back to an address by trying them all.
+    expect(await budgetName("198.51.100.200", "another-secret")).not.toBe(name);
   });
 
   it("refuses an upload from an address that used up its day, and only that address", async () => {
     const ip = freshIp();
-    await runInDurableObject(env.UPLOAD_BUDGET.getByName(await budgetName(ip)), (_, state) =>
+    await runInDurableObject(env.UPLOAD_BUDGET.getByName(await budgetName(ip, PEPPER)), (_, state) =>
       state.storage.put("used", { day: Math.floor(Date.now() / DAY), count: UPLOADS_PER_DAY }),
     );
     const refused = await upload({ report: tiredReport() }, { ip });
@@ -54,9 +58,31 @@ describe("the daily upload budget", () => {
   });
 });
 
+describe("the upload budget's secret", () => {
+  it("is set for the tests", () => {
+    expect(PEPPER.length).toBeGreaterThanOrEqual(16);
+  });
+
+  it("refuses uploads, loudly, rather than count without it", async () => {
+    const errors: string[] = [];
+    const spy = vi.spyOn(console, "error").mockImplementation((...args: unknown[]) => void errors.push(args.map(String).join(" ")));
+    const withoutPepper = new Proxy(env, { get: (target, key) => (key === "ADDRESS_PEPPER" ? undefined : Reflect.get(target, key)) });
+    const request = new Request("http://example.com/api/reports", {
+      method: "POST",
+      headers: { "content-type": "application/json", "cf-connecting-ip": freshIp() },
+      body: JSON.stringify({ report: tiredReport() }),
+    });
+    const res = await createReport(request, withoutPepper);
+    spy.mockRestore();
+    expect(res.status).toBe(503);
+    expect(await res.json()).toEqual({ error: "unavailable" });
+    expect(errors.join("\n")).toContain("ADDRESS_PEPPER");
+  });
+});
+
 describe("the daily upload budget with IPv6", () => {
   it("is shared by a whole /48, not just a /64", async () => {
-    await runInDurableObject(env.UPLOAD_BUDGET.getByName(await budgetName(dayKey("2001:db8:5:1::1"))), (_, state) =>
+    await runInDurableObject(env.UPLOAD_BUDGET.getByName(await budgetName(dayKey("2001:db8:5:1::1"), PEPPER)), (_, state) =>
       state.storage.put("used", { day: Math.floor(Date.now() / DAY), count: UPLOADS_PER_DAY }),
     );
     expect((await upload({ report: tiredReport() }, { ip: "2001:db8:5:2::1" })).status).toBe(429);

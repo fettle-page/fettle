@@ -44,7 +44,8 @@ export function unexpectedPaths(paths) {
  * the project's own, and GitHub's no-reply one. */
 const FAKE_MAIL_DOMAINS = /^(.+\.)?(example(\.(com|org|net|co\.uk))?|contoso(-group)?\.com|fettle\.page|users\.noreply\.github\.com)$/i;
 
-/** Endings that make "name@thing.ext" a file, not an address ("GetFileAttributesW@kernel32.dll"). */
+/** Endings that make what follows the @ a file, not a mail domain (Inno Setup imports a function
+ * as GetFileAttributesW@kernel32.dll). */
 const FILE_ENDINGS = /\.(dll|exe|sys|ocx|drv|png|jpe?g|gif|svg|webp|ico|css|js|mjs|ts|json|wasm|txt)$/i;
 
 /** Email addresses in `text` whose domain isn't an example, test or project one. A domain starts

@@ -75,9 +75,26 @@ pub fn preview_pages(model: &ReceiptModel, size: PageSize, scale: f32) -> Vec<sl
     }
 }
 
+/// An https link, or plain http to a Worker on this PC (development). The host must be exactly
+/// localhost or 127.0.0.1, so "http://localhost.evil.example" and "http://localhost:80@evil.example"
+/// (where localhost is only a user name) don't pass.
+fn openable(url: &str) -> bool {
+    if url.starts_with("https://") {
+        return true;
+    }
+    let Some(rest) = url.strip_prefix("http://") else { return false };
+    let authority = rest.split(['/', '\\', '?', '#']).next().unwrap_or("");
+    let (host, port) = match authority.split_once(':') {
+        Some((host, port)) => (host, Some(port)),
+        None => (authority, None),
+    };
+    let port_ok = port.is_none_or(|p| !p.is_empty() && p.bytes().all(|b| b.is_ascii_digit()));
+    (host == "localhost" || host == "127.0.0.1") && port_ok
+}
+
 /// Opens a share link in the default browser (only fettle's own https links).
 pub fn open_in_browser(url: &str) -> bool {
-    if !url.starts_with("https://") && !url.starts_with("http://localhost") && !url.starts_with("http://127.0.0.1") {
+    if !openable(url) {
         return false;
     }
     #[cfg(windows)]
@@ -167,6 +184,39 @@ fn save_as(dialogs: &dyn Dialogs, owner: &slint::Window, report: &Report, model:
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn opens_https_links_and_the_local_worker() {
+        for url in [
+            "https://fettle.page/r/abc",
+            "http://localhost",
+            "http://localhost/r/abc",
+            "http://localhost:8787/r/abc",
+            "http://127.0.0.1:8787/r/abc",
+            "http://localhost?x=1",
+        ] {
+            assert!(openable(url), "{url}");
+        }
+    }
+
+    #[test]
+    fn refuses_links_that_only_look_like_the_local_worker() {
+        for url in [
+            "http://localhost.evil.example/",
+            "http://localhostevil.example",
+            "http://127.0.0.1.evil.example/",
+            "http://localhost@evil.example/",
+            "http://localhost:8787@evil.example/",
+            "http://127.0.0.1:80@evil.example",
+            "http://localhost:/",
+            "http://evil.example/",
+            "file:///C:/Windows/System32/calc.exe",
+            "ms-settings:",
+            "",
+        ] {
+            assert!(!openable(url), "{url}");
+        }
+    }
 
     #[test]
     fn the_suggested_name_is_the_scan_day() {

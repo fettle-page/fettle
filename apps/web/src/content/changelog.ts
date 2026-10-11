@@ -46,7 +46,7 @@ export const releases: Release[] = [
         "Su un portatile con due batterie, lo stato della batteria non mescola più i dati di una con quelli dell'altra.",
         "Gli SSD SATA Samsung (come l'860 EVO) ora mostrano la loro temperatura e ricevono un avviso quando scaldano troppo.",
         "Quando il Controllo approfondito non può usare la cartella di Fettle (per esempio una copia portatile su una cartella di rete), ora lo dice subito, invece di chiedere il permesso e poi attendere due minuti.",
-        "Fettle ora si avvia anche su un PC senza il runtime Microsoft Visual C++: l'installer e lo zip portatile contengono entrambi i tre file che servono.",
+        "Fettle ora si avvia anche su un PC senza il runtime Microsoft Visual C++: sia l'installer sia lo zip portatile contengono i tre file che servono.",
         "Fettle carica i file di Windows solo da Windows, così un file lasciato accanto a fettle.exe (per esempio in Download) non può essere caricato, nemmeno durante un Controllo approfondito.",
         "Un singolo visitatore non può più esaurire per tutti il limite di password sbagliate di un link condiviso: ogni visitatore ha 20 tentativi al giorno, e un link ne accetta al massimo 500 al giorno in tutto.",
         "Riaprire nello stesso browser un link condiviso con password lo mantiene aperto per altre 24 ore.",

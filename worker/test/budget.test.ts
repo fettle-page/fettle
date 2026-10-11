@@ -71,6 +71,14 @@ describe("reading limits", () => {
     expect((await call("/api/reports/7d-nothinghere00000", from(ip))).status).toBe(429);
   });
 
+  it("cap deletes per address, before looking the report up", { timeout: 60_000 }, async () => {
+    await untilFreshWindow();
+    const ip = freshIp();
+    const del = () => call("/api/reports/7d-nothinghere00000", from(ip, { method: "DELETE", headers: { authorization: "Bearer not-a-token" } }));
+    for (let i = 0; i < 60; i++) expect((await del()).status, `delete ${i}`).toBe(404);
+    expect((await del()).status).toBe(429);
+  });
+
   it("check the unlock limit before looking the report up", { timeout: 60_000 }, async () => {
     await untilFreshWindow();
     const ip = freshIp();

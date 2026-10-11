@@ -209,6 +209,9 @@ export async function unlockReport(request: Request, id: string, env: Env): Prom
 
 /** DELETE /api/reports/:id with `Authorization: Bearer <deleteToken>`. */
 export async function deleteReport(request: Request, id: string, env: Env): Promise<Response> {
+  // Before anything is read from R2, like reads and unlocks.
+  const { success } = await env.VIEW_LIMITER.limit({ key: clientKey(request) });
+  if (!success) return rateLimited();
   const token = /^Bearer (\S+)$/.exec(request.headers.get("authorization") ?? "")?.[1];
   if (!token) return apiError(401, "unauthorized");
   const meta = await liveMeta(env, id);

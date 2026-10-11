@@ -54,7 +54,7 @@ const en: Pages = {
         h: "What our server keeps",
         p: [
           "Our server logs what it did and to which link, for example \"a report was created\" with its ID and size. It doesn't log IP addresses, passwords or report contents.",
-          "To stop abuse, it counts uploads and password attempts per IP address, a minute at a time. Those counts aren't kept.",
+          "To stop abuse, it counts uploads and password attempts per IP address, a minute at a time. For a link with a password, it also counts each visitor's wrong passwords for the day, under a scrambled code made from the IP address with a key that changes every day. These counts are deleted when the day ends.",
         ],
       },
       {
@@ -199,7 +199,7 @@ const it: Pages = {
         h: "Cosa conserva il nostro server",
         p: [
           "Il nostro server registra cosa ha fatto e su quale link, per esempio \"è stato creato un report\" con il suo ID e la dimensione. Non registra indirizzi IP, password né il contenuto dei report.",
-          "Per evitare abusi, conta i caricamenti e i tentativi di password per indirizzo IP, un minuto alla volta. Questi conteggi non vengono conservati.",
+          "Per evitare abusi, conta i caricamenti e i tentativi di password per indirizzo IP, un minuto alla volta. Per un link con password conta anche le password sbagliate di ogni visitatore nella giornata, sotto un'impronta (hash) dell'indirizzo IP calcolata con una chiave che cambia ogni giorno. Questi conteggi vengono cancellati a fine giornata.",
         ],
       },
       {

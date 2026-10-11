@@ -139,8 +139,9 @@ export async function getReport(id: string, env: Env): Promise<Response> {
 /**
  * POST /api/reports/:id/unlock  `{ password | pass, locale? }` → the finished receipt in that language
  * (`en` unless `locale` is exactly "it"), built here with the Rust brain like a server-drawn page.
- * Wrong guesses are capped per report across all visitors, per minute and per day (UnlockGuard); requests per IP are capped
- * too, which bounds the hashing cost. Both checks run before the password is hashed.
+ * Wrong guesses are capped per report per minute, per visitor per day, and per report per day
+ * (UnlockGuard); requests per IP are capped too, which bounds the hashing cost. All of it runs
+ * before the password is hashed. Using a pass renews it, and the reply carries its new expiry.
  */
 export async function unlockReport(request: Request, id: string, env: Env): Promise<Response> {
   // Metadata only: the report itself is read once the password is right.
@@ -158,17 +159,20 @@ export async function unlockReport(request: Request, id: string, env: Env): Prom
   let issued: { pass: string; expiresAt: number } | undefined;
   if (meta.pwHash !== undefined) {
     const guard = env.UNLOCK_GUARD.getByName(id);
+    const visitor = clientKey(request);
     if (typeof pass === "string") {
       // A pass from an earlier right password: no guess counted, so a lockout can't touch it.
-      if (!(await guard.checkPass(pass))) return apiError(403, "invalid_pass");
+      const renewed = await guard.usePass(pass, Date.parse(meta.expiresAt ?? ""));
+      if (renewed === null) return apiError(403, "invalid_pass");
+      issued = { pass, expiresAt: renewed };
     } else {
-      const wait = await guard.begin();
+      const wait = await guard.begin(visitor);
       if (wait > 0) return rateLimited(wait);
       if (!(await passwordMatches(password as string, meta.pwSalt ?? "", meta.pwHash))) {
         console.log(JSON.stringify({ event: "unlock_failed", id }));
         return apiError(403, "wrong_password");
       }
-      await guard.succeeded();
+      await guard.succeeded(visitor);
       issued = await guard.issuePass(Date.parse(meta.expiresAt ?? ""));
     }
   }

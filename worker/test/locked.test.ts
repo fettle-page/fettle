@@ -3,6 +3,7 @@ import { runInDurableObject } from "cloudflare:test";
 import { brain } from "@fettle/brain/worker";
 import { parseReport } from "@fettle/report-schema";
 import { describe, expect, it } from "vitest";
+import { GUESSES_PER_DAY } from "../src/guard.ts";
 import { newId } from "../src/ids.ts";
 import { hashPassword } from "../src/passwords.ts";
 import { call, DAY, freshIp, share, tiredReport, untilFreshWindow, upload } from "./helpers.ts";
@@ -124,7 +125,7 @@ describe("password-protected reports", () => {
 
   it("cap guesses per report per day too, and say when the day is over", async () => {
     const { id } = await share({ password: "hunter22" });
-    await usedToday(id, 100);
+    await usedToday(id, GUESSES_PER_DAY);
     const limited = await unlock(id, "hunter22");
     expect(limited.status).toBe(429);
     expect(await limited.json()).toEqual({ error: "rate_limited" });
@@ -134,9 +135,9 @@ describe("password-protected reports", () => {
 
   it("give a right password's daily try back", async () => {
     const { id } = await share({ password: "hunter22" });
-    await usedToday(id, 99);
+    await usedToday(id, GUESSES_PER_DAY - 1);
     expect((await unlock(id, "hunter22")).status).toBe(200);
-    expect(await dayCountOf(id)).toBe(99);
+    expect(await dayCountOf(id)).toBe(GUESSES_PER_DAY - 1);
     expect((await unlock(id, "wrong-one")).status).toBe(403);
     expect((await unlock(id, "hunter22")).status).toBe(429);
   });

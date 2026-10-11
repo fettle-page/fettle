@@ -19,6 +19,8 @@ export const releases: Release[] = [
         "When the Deep check can't use Fettle's folder (a portable copy on a network share, say), it now says so straight away, instead of asking for permission and then waiting two minutes.",
         "Fettle now starts on a PC that doesn't have the Microsoft Visual C++ runtime: the installer and the portable zip both bring the three files it needs.",
         "Fettle loads Windows' own files only from Windows, so a file left beside fettle.exe (in Downloads, say) can't load into it, not even during a Deep check.",
+        "One visitor can no longer use up a share link's wrong-password limit for everyone: each visitor gets 20 tries a day, and a link takes up to 500 a day in all.",
+        "Reopening a password-protected share link in the same browser keeps it open for another 24 hours.",
       ],
       it: [
         "Su Windows 10, Fettle non dice più che un PC è iscritto agli Extended Security Updates solo perché ha installato un aggiornamento in ritardo. Ora lo ricava dalla build di Windows e, quando non può saperlo, ti chiede di controllare in Windows Update.",
@@ -30,6 +32,8 @@ export const releases: Release[] = [
         "Quando il Controllo approfondito non può usare la cartella di Fettle (per esempio una copia portatile su una cartella di rete), ora lo dice subito, invece di chiedere il permesso e poi attendere due minuti.",
         "Fettle ora si avvia anche su un PC senza il runtime Microsoft Visual C++: l'installer e lo zip portatile contengono entrambi i tre file che servono.",
         "Fettle carica i file di Windows solo da Windows, così un file lasciato accanto a fettle.exe (per esempio in Download) non può essere caricato, nemmeno durante un Controllo approfondito.",
+        "Un singolo visitatore non può più esaurire per tutti il limite di password sbagliate di un link condiviso: ogni visitatore ha 20 tentativi al giorno, e un link ne accetta al massimo 500 al giorno in tutto.",
+        "Riaprire nello stesso browser un link condiviso con password lo mantiene aperto per altre 24 ore.",
       ],
     },
   },

@@ -31,7 +31,8 @@ describe("unlock passes", () => {
     expect(res.status).toBe(200);
     const body = await res.json<any>();
     expect(body.model).toEqual(model);
-    expect(body.pass).toBeUndefined();
+    // The same pass comes back, renewed.
+    expect(body.pass).toBe(pass);
   });
 
   it("keep working while the guess limit is used up", { timeout: 30_000 }, async () => {
@@ -73,6 +74,19 @@ describe("unlock passes", () => {
     });
     await runDurableObjectAlarm(stub);
     expect((await unlock(id, { pass })).status).toBe(403);
+  });
+
+  it("are renewed for another 24 hours each time they're used", async () => {
+    const { id } = await share({ password: "hunter22" });
+    const { pass } = await opened(id);
+    await runInDurableObject(env.UNLOCK_GUARD.getByName(id), async (_, state) => {
+      for (const k of (await state.storage.list({ prefix: "pass:" })).keys()) await state.storage.put(k, Date.now() + 60_000);
+    });
+    const res = await unlock(id, { pass });
+    expect(res.status).toBe(200);
+    const body = await res.json<{ pass: string; passExpiresAt: string }>();
+    expect(body.pass).toBe(pass);
+    expect(Math.abs(Date.parse(body.passExpiresAt) - (Date.now() + DAY))).toBeLessThan(5000);
   });
 
   it("need a password or a pass", async () => {

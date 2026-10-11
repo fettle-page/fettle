@@ -61,6 +61,10 @@ Name: "it"; MessagesFile: "compiler:Languages\Italian.isl"; InfoBeforeFile: "pri
 [CustomMessages]
 en.RemoveData=Also remove what Fettle keeps on this PC: its settings, the remembered check and the list of links you shared?%n%nThe links themselves stay online until they expire. Without that list, Fettle can no longer delete them for you.
 it.RemoveData=Rimuovere anche ciò che Fettle conserva su questo PC: le impostazioni, l'ultimo controllo ricordato e l'elenco dei link condivisi?%n%nI link restano online fino alla scadenza. Senza quell'elenco, Fettle non potrà più eliminarli per te.
+en.RemoveDataAll=Also remove what Fettle keeps for each account on this PC (found for %1): their settings, remembered checks and lists of shared links?%n%nThe links themselves stay online until they expire. Without those lists, Fettle can no longer delete them.
+it.RemoveDataAll=Rimuovere anche ciò che Fettle conserva per ogni account di questo PC (trovati: %1): impostazioni, ultimi controlli ricordati ed elenchi dei link condivisi?%n%nI link restano online fino alla scadenza. Senza quegli elenchi, Fettle non potrà più eliminarli.
+en.RemoveDataLeft=Fettle couldn't remove these folders (a file in one may be in use). You can delete them yourself:
+it.RemoveDataLeft=Fettle non è riuscito a rimuovere queste cartelle (forse un file è in uso). Puoi eliminarle tu:
 en.UpdatesGroup=Updates:
 it.UpdatesGroup=Aggiornamenti:
 en.UpdateCheck=Check for a new version (only the version number is asked for; you can change this later in Settings)
@@ -123,16 +127,65 @@ begin
   end;
 end;
 
-// Uninstalling asks whether to remove Fettle's data too (it lives in the user's own AppData, so
-// the installer never put it there). A silent uninstall keeps it.
+// Every account's Fettle folder that exists, from Windows' list of user profiles (local and
+// Microsoft Entra accounts). An all-users uninstall runs as administrator, so it can reach them all.
+function AccountDataFolders: TArrayOfString;
+var
+  Sids: TArrayOfString;
+  I, Count: Integer;
+  Profile, Folder: String;
+begin
+  Count := 0;
+  SetArrayLength(Result, 0);
+  if not RegGetSubkeyNames(HKLM, 'SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList', Sids) then
+    Exit;
+  for I := 0 to GetArrayLength(Sids) - 1 do
+    if ((Pos('S-1-5-21-', Sids[I]) = 1) or (Pos('S-1-12-1-', Sids[I]) = 1)) and
+       RegQueryStringValue(HKLM, 'SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + Sids[I], 'ProfileImagePath', Profile) then
+    begin
+      StringChangeEx(Profile, '%SystemDrive%', GetEnv('SystemDrive'), True);
+      Folder := AddBackslash(Profile) + 'AppData\Local\Fettle';
+      if DirExists(Folder) then
+      begin
+        Count := Count + 1;
+        SetArrayLength(Result, Count);
+        Result[Count - 1] := Folder;
+      end;
+    end;
+end;
+
+// Uninstalling asks whether to remove Fettle's data too (it lives in each user's own AppData, so the
+// installer never put it there). For one user, that user's folder; for all users, every account's,
+// naming any folder that couldn't be removed. A silent uninstall keeps it all.
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 var
-  Data: String;
+  Data, Left: String;
+  Folders: TArrayOfString;
+  I: Integer;
 begin
-  if CurUninstallStep = usPostUninstall then
+  if (CurUninstallStep <> usPostUninstall) or UninstallSilent then
+    Exit;
+  if IsAdminInstallMode then
+  begin
+    Folders := AccountDataFolders;
+    if GetArrayLength(Folders) = 0 then
+      Exit;
+    if MsgBox(FmtMessage(CustomMessage('RemoveDataAll'), [IntToStr(GetArrayLength(Folders))]), mbConfirmation, MB_YESNO or MB_DEFBUTTON2) <> IDYES then
+      Exit;
+    Left := '';
+    for I := 0 to GetArrayLength(Folders) - 1 do
+    begin
+      DelTree(Folders[I], True, True, True);
+      if DirExists(Folders[I]) then
+        Left := Left + #13#10 + Folders[I];
+    end;
+    if Left <> '' then
+      MsgBox(CustomMessage('RemoveDataLeft') + #13#10 + Left, mbInformation, MB_OK);
+  end
+  else
   begin
     Data := ExpandConstant('{localappdata}\Fettle');
-    if DirExists(Data) and not UninstallSilent then
+    if DirExists(Data) then
       if MsgBox(CustomMessage('RemoveData'), mbConfirmation, MB_YESNO or MB_DEFBUTTON2) = IDYES then
         DelTree(Data, True, True, True);
   end;

@@ -90,6 +90,23 @@ describe("fettle.iss: privacy during installation", () => {
   });
 });
 
+describe("fettle.iss: uninstalling for all users", () => {
+  it("finds every account's Fettle folder from Windows' list of user profiles", () => {
+    assert.match(iss, /RegGetSubkeyNames\(HKLM, 'SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\ProfileList'/);
+    assert.match(iss, /'ProfileImagePath'/);
+    assert.match(iss, /'AppData\\Local\\Fettle'/);
+  });
+
+  it("asks once for all of them, in both languages, and says which folders it couldn't remove", () => {
+    for (const lang of ["en", "it"]) {
+      assert.match(iss, new RegExp(`^${lang}\\.RemoveDataAll=.*%1`, "m"));
+      assert.match(iss, new RegExp(`^${lang}\\.RemoveDataLeft=.+`, "m"));
+    }
+    assert.match(iss, /if IsAdminInstallMode then/);
+    assert.match(iss, /CustomMessage\('RemoveDataLeft'\)/);
+  });
+});
+
 describe("build.mjs", () => {
   it("tells portable users how to remove Fettle and how to turn off the update check", () => {
     assert.match(build, /delete this folder together with fettle\.exe/);

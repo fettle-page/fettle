@@ -4,7 +4,7 @@ import { brain } from "@fettle/brain/worker";
 import { renderSharePage, type SharePayload } from "@fettle/web/share-render";
 import { isValidId } from "./ids.ts";
 import { escapeHtml, inlineJson, LOCKED_OG, ogText, type OgText } from "./og.ts";
-import { loadReport } from "./reports.ts";
+import { clientKey, loadReport } from "./reports.ts";
 
 /** Strict CSP; the shell's own inline stylesheet and theme script (inlined at build time for speed) are allowed by hash. */
 const csp = (h: InlineHashes) =>
@@ -109,6 +109,14 @@ function ogTags(og: OgText, origin: string, url: string): string {
 export async function sharePage(request: Request, env: Env): Promise<Response> {
   if (request.method !== "GET" && request.method !== "HEAD") {
     return new Response("Method not allowed", { status: 405, headers: { allow: "GET, HEAD", "content-type": "text/plain; charset=utf-8" } });
+  }
+  // Before anything is read from R2, so a flood stays cheap.
+  const { success } = await env.VIEW_LIMITER.limit({ key: clientKey(request) });
+  if (!success) {
+    return new Response("Too many requests. Wait a minute and try again.\nTroppe richieste. Aspetta un minuto e riprova.\n", {
+      status: 429,
+      headers: { "retry-after": "60", "content-type": "text/plain; charset=utf-8" },
+    });
   }
   const url = new URL(request.url);
   // A bare request: the visitor's conditional headers must not turn the shell into a bodiless 304.

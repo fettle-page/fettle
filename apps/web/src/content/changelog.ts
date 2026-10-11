@@ -22,6 +22,7 @@ export const releases: Release[] = [
         "One visitor can no longer use up a share link's wrong-password limit for everyone: each visitor gets 20 tries a day, and a link takes up to 500 a day in all.",
         "Reopening a password-protected share link in the same browser keeps it open for another 24 hours.",
         "The share server's logs name a link by a short code instead of its ID, so the logs alone can't open a link.",
+        "The share server now limits each address to 100 uploads a day, and 60 share page views a minute.",
       ],
       it: [
         "Su Windows 10, Fettle non dice più che un PC è iscritto agli Extended Security Updates solo perché ha installato un aggiornamento in ritardo. Ora lo ricava dalla build di Windows e, quando non può saperlo, ti chiede di controllare in Windows Update.",
@@ -36,6 +37,7 @@ export const releases: Release[] = [
         "Un singolo visitatore non può più esaurire per tutti il limite di password sbagliate di un link condiviso: ogni visitatore ha 20 tentativi al giorno, e un link ne accetta al massimo 500 al giorno in tutto.",
         "Riaprire nello stesso browser un link condiviso con password lo mantiene aperto per altre 24 ore.",
         "I log del server di condivisione indicano un link con un breve codice invece del suo ID, così dai soli log non si può aprire un link.",
+        "Il server di condivisione ora limita ogni indirizzo a 100 caricamenti al giorno e a 60 visite al minuto alle pagine condivise.",
       ],
     },
   },

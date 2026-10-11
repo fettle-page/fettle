@@ -14,10 +14,20 @@
   // namespace_id is unique across the whole Cloudflare account, so Fettle's are picked to stay clear of other projects.
   "ratelimits": [
     { "name": "UPLOAD_LIMITER", "namespace_id": "59173", "simple": { "limit": 10, "period": 60 } },
-    { "name": "UNLOCK_LIMITER", "namespace_id": "59174", "simple": { "limit": 20, "period": 60 } }
+    { "name": "UNLOCK_LIMITER", "namespace_id": "59174", "simple": { "limit": 20, "period": 60 } },
+    { "name": "VIEW_LIMITER", "namespace_id": "59175", "simple": { "limit": 60, "period": 60 } }
   ],
-  "durable_objects": { "bindings": [{ "name": "UNLOCK_GUARD", "class_name": "UnlockGuard" }] },
-  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["UnlockGuard"] }],
+  // UPLOAD_BUDGET: one instance per address (named by a hash), for the daily upload cap.
+  "durable_objects": {
+    "bindings": [
+      { "name": "UNLOCK_GUARD", "class_name": "UnlockGuard" },
+      { "name": "UPLOAD_BUDGET", "class_name": "UploadBudget" }
+    ]
+  },
+  "migrations": [
+    { "tag": "v1", "new_sqlite_classes": ["UnlockGuard"] },
+    { "tag": "v2", "new_sqlite_classes": ["UploadBudget"] }
+  ],
   // Our own JSON logs only: invocation logs would record visitors' IPs and headers, and traces record R2 keys.
   "observability": { "enabled": true, "logs": { "invocation_logs": false }, "traces": { "enabled": false } }
 }

@@ -2,6 +2,7 @@
 import type { Locale } from "@fettle/brain";
 import { brain } from "@fettle/brain/worker";
 import { parseReport, type Report } from "@fettle/report-schema";
+import { budgetName } from "./budget.ts";
 import { apiError, json, MAX_UPLOAD_BYTES, readCapped } from "./http.ts";
 import { isValidId, keyFor, newId, TTL_DAYS, type Ttl } from "./ids.ts";
 import { hashPassword, PASSWORD_MAX, PASSWORD_MIN, passwordMatches } from "./passwords.ts";
@@ -34,7 +35,7 @@ export async function logRef(id: string): Promise<string> {
   return (await hashToken(`log:${id}`)).slice(0, 12);
 }
 
-const clientKey = (request: Request) => rateKey(request.headers.get("cf-connecting-ip") ?? "unknown");
+export const clientKey = (request: Request) => rateKey(request.headers.get("cf-connecting-ip") ?? "unknown");
 
 const isJson = (request: Request) => (request.headers.get("content-type") ?? "").toLowerCase().startsWith("application/json");
 
@@ -72,6 +73,9 @@ export async function createReport(request: Request, env: Env): Promise<Response
   if (!parsed.ok) return apiError(400, "invalid_report", { detail: parsed.error.slice(0, 1000) });
   // The schema only checks the timestamp's shape; the verdicts need a real date (no month 13).
   if (Number.isNaN(Date.parse(parsed.report.collected_at))) return apiError(400, "invalid_report", { detail: "collected_at is not a real date" });
+  // Only uploads that would be stored count against the address's day.
+  const wait = await env.UPLOAD_BUDGET.getByName(await budgetName(clientKey(request))).take();
+  if (wait > 0) return rateLimited(wait);
 
   const ttl: Ttl = (envelope.expires as Ttl | undefined) ?? "30d";
   const id = newId(ttl);
@@ -137,7 +141,10 @@ async function liveMeta(env: Env, id: string): Promise<Meta | null> {
 }
 
 /** GET /api/reports/:id */
-export async function getReport(id: string, env: Env): Promise<Response> {
+export async function getReport(request: Request, id: string, env: Env): Promise<Response> {
+  // Before anything is read from R2, like the share page.
+  const { success } = await env.VIEW_LIMITER.limit({ key: clientKey(request) });
+  if (!success) return rateLimited();
   const loaded = await loadReport(env, id);
   if (!loaded) return apiError(404, "not_found");
   if (loaded.locked) return apiError(401, "password_required");
@@ -152,11 +159,12 @@ export async function getReport(id: string, env: Env): Promise<Response> {
  * before the password is hashed. Using a pass renews it, and the reply carries its new expiry.
  */
 export async function unlockReport(request: Request, id: string, env: Env): Promise<Response> {
+  // Before anything is read from R2, so a flood stays cheap.
+  const { success } = await env.UNLOCK_LIMITER.limit({ key: clientKey(request) });
+  if (!success) return rateLimited();
   // Metadata only: the report itself is read once the password is right.
   const meta = await liveMeta(env, id);
   if (!meta) return apiError(404, "not_found");
-  const { success } = await env.UNLOCK_LIMITER.limit({ key: clientKey(request) });
-  if (!success) return rateLimited();
   const read = await readJson(request, 4096);
   if (!read.ok) return read.response;
   const body = isRecord(read.value) ? read.value : {};

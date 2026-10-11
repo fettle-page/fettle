@@ -3,6 +3,7 @@ import { apiError } from "./http.ts";
 import { createReport, deleteReport, getReport, unlockReport } from "./reports.ts";
 import { sharePage } from "./share.ts";
 
+export { UploadBudget } from "./budget.ts";
 export { UnlockGuard } from "./guard.ts";
 
 const notAllowed = (allow: string) => apiError(405, "method_not_allowed", { headers: { allow } });
@@ -12,7 +13,7 @@ async function api(request: Request, env: Env, path: string): Promise<Response> 
   const one = /^\/api\/reports\/([^/]+)$/.exec(path);
   if (one) {
     const id = one[1]!;
-    if (request.method === "GET") return getReport(id, env);
+    if (request.method === "GET") return getReport(request, id, env);
     if (request.method === "DELETE") return deleteReport(request, id, env);
     return notAllowed("GET, DELETE");
   }

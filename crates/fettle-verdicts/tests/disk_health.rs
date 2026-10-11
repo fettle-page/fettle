@@ -80,3 +80,18 @@ fn a_hard_drive_of_unknown_type_is_known_by_its_model() {
         assert!(!hot(ssd, 60), "{ssd}");
     }
 }
+
+// Crucial MX500 firmware is widely reported to set one pending sector and clear it again on its
+// own, so one on an SSD is worth watching rather than an alarm; more, or any on a hard drive, is.
+#[test]
+fn one_pending_sector_on_an_ssd_is_worth_watching() {
+    let pending = |media: &str, n: u64| {
+        let r = judge(disk(media, json!({ "pending_sectors": n })));
+        let l = find(&r, "disk-0-pending");
+        (l.level, l.action.as_ref().map(|a| a.key.clone()).unwrap_or_default())
+    };
+    assert_eq!(pending("ssd", 1), (Level::KeepAnEye, "storage.media_errors.action".to_string()));
+    assert_eq!(pending("ssd", 2).0, Level::ActSoon);
+    assert_eq!(pending("hdd", 1).0, Level::ActSoon);
+    assert_eq!(pending("unknown", 1).0, Level::ActSoon);
+}

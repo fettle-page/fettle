@@ -94,7 +94,10 @@ fn disk_lines(disk: &Disk, id: &str, elevated: bool) -> Vec<Line> {
         }
     } else if let Some(m) = disk.smart.as_ref().filter(|m| has_smart_health(m, ssd)) {
         if let Some(pending) = m.pending_sectors.filter(|p| *p > 0) {
-            issues.push(line(format!("{id}-pending"), Level::ActSoon, &plural("storage.pending_sectors", pending), &[("model", model.clone()), ("count", int(pending))], Action::Key("storage.pending_sectors.action")));
+            // Crucial MX500 firmware is widely reported to set one pending sector and clear it again
+            // by itself, so one on an SSD is worth watching; more, or any on a hard drive, is urgent.
+            let (level, action) = if ssd && pending == 1 { (Level::KeepAnEye, "storage.media_errors.action") } else { (Level::ActSoon, "storage.pending_sectors.action") };
+            issues.push(line(format!("{id}-pending"), level, &plural("storage.pending_sectors", pending), &[("model", model.clone()), ("count", int(pending))], Action::Key(action)));
         }
         // Sectors the drive's own scan couldn't read or repair (SMART 198): as serious as pending ones.
         if let Some(bad) = m.offline_uncorrectable.filter(|u| *u > 0) {

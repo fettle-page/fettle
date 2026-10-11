@@ -34,6 +34,7 @@ export const releases: Release[] = [
         "On Windows 10, a TPM chip that doesn't give its version (because it's switched off in the firmware, say) is no longer called older than version 2.0. Fettle says it couldn't check it.",
         "The same next step no longer shows twice in “What to do” when two warnings ask for it.",
         "A startup app whose name ends in a GUID is shown and shared without it, as already happened with long hex codes, so the name can't single out a PC.",
+        "A disk or memory figure too large to be real (some USB adapters send one) is now left out, instead of stopping the report from being shared.",
       ],
       it: [
         "Su Windows 10, Fettle non dice più che un PC è iscritto agli Extended Security Updates solo perché ha installato un aggiornamento in ritardo. Ora lo ricava dalla build di Windows e, quando non può saperlo, ti chiede di controllare in Windows Update.",
@@ -60,6 +61,7 @@ export const releases: Release[] = [
         "Su Windows 10, un chip TPM che non indica la sua versione (per esempio perché è disattivato nel firmware) non viene più descritto come precedente alla versione 2.0: Fettle dice che non è riuscito a controllarlo.",
         "Lo stesso passo non compare più due volte in «Da fare» quando lo chiedono due avvisi.",
         "Un'app all'avvio il cui nome termina con un GUID viene mostrata e condivisa senza, come già succedeva con i lunghi codici esadecimali, così il nome non può identificare un PC.",
+        "Un valore di disco o memoria troppo grande per essere vero (lo inviano alcuni adattatori USB) ora viene omesso, invece di impedire la condivisione del report.",
       ],
     },
   },

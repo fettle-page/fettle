@@ -58,7 +58,8 @@ fn the_report_round_trips_as_json() {
     assert_eq!(back, report);
 }
 
-/// The dump with values no PC should send: impossible dates in every date the scan reads.
+/// The dump with values no PC should send: impossible dates in every date the scan reads, and a
+/// memory size too big for a JSON number to carry exactly.
 fn hostile() -> (Dump, Raw) {
     let d = dump();
     let mut raw = d.sources.clone();
@@ -72,6 +73,7 @@ fn hostile() -> (Dump, Raw) {
     set("video_controllers", "DriverDate", "20261345000000.000000+000".into());
     set("os", "LastBootUpTime", "20261006256100.000000+000".into());
     set("hotfixes", "InstalledOn", "29/9/2026".into());
+    set("memory_modules", "Capacity", (1u64 << 60).into());
     (d, raw)
 }
 
@@ -88,6 +90,7 @@ fn a_report_from_impossible_values_still_fits_the_schema() {
     assert_eq!((w.last_update_installed.as_deref(), w.uptime_seconds), (None, None));
     assert_eq!(report.facts.system.as_ref().and_then(|s| s.data.as_ref()).unwrap().bios_date, None);
     assert!(report.facts.graphics.as_ref().and_then(|s| s.data.as_ref()).unwrap().adapters.iter().all(|a| a.driver_date.is_none()));
+    assert!(report.facts.memory.as_ref().and_then(|s| s.data.as_ref()).unwrap().modules.iter().all(|m| m.capacity_bytes.is_none()));
 
     let json = serde_json::to_value(&report).unwrap();
     if std::env::var_os("FETTLE_REGEN_GOLDENS").is_some() {

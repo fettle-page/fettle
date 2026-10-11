@@ -4,8 +4,13 @@
 use crate::Report;
 use serde_json::Value;
 
+/// The largest integer a JSON number carries exactly (2^53 - 1), and so the largest the upload
+/// check accepts for a 64-bit field.
+const MAX_SAFE_INTEGER: u64 = (1 << 53) - 1;
+
 /// Cuts every string in `report` to its schema's maxLength, counted in UTF-16 units like the
-/// upload check, and always on a character boundary.
+/// upload check, and always on a character boundary. A 64-bit number too big for the upload check
+/// becomes unknown.
 pub fn fit_limits(report: &mut Report) {
     let schema = serde_json::to_value(schemars::schema_for!(Report)).unwrap_or(Value::Null);
     let Ok(mut value) = serde_json::to_value(&*report) else { return };
@@ -27,6 +32,11 @@ fn walk(value: &mut Value, schema: &Value, root: &Value) {
         if let Some(branch) = branches.iter().map(|b| resolve(b, root)).find(|b| fits_type(value, b)) {
             walk(value, branch, root);
         }
+        return;
+    }
+    let wide = matches!(schema.get("format").and_then(Value::as_str), Some("uint64" | "int64"));
+    if wide && value.as_u64().map_or(value.as_i64().is_some_and(|n| n.unsigned_abs() > MAX_SAFE_INTEGER), |n| n > MAX_SAFE_INTEGER) {
+        *value = Value::Null;
         return;
     }
     match value {
@@ -107,6 +117,20 @@ mod tests {
 
     fn utf16(s: &str) -> usize {
         s.encode_utf16().count()
+    }
+
+    // A JSON number is exact only up to 2^53 - 1: a garbage counter above that (from a USB bridge,
+    // say) would get the whole report refused on upload, so it goes as unknown instead.
+    #[test]
+    fn a_number_too_big_to_share_becomes_unknown() {
+        let mut report = sample();
+        let disk = &mut report.facts.storage.as_mut().unwrap().data.as_mut().unwrap().disks[0];
+        disk.size_bytes = Some(1 << 60);
+        disk.smart = Some(crate::SmartSummary { power_on_hours: Some((1 << 53) - 1), ..Default::default() });
+        fit_limits(&mut report);
+        let disk = &report.facts.storage.as_ref().unwrap().data.as_ref().unwrap().disks[0];
+        assert_eq!(disk.size_bytes, None);
+        assert_eq!(disk.smart.as_ref().unwrap().power_on_hours, Some((1 << 53) - 1));
     }
 
     #[test]

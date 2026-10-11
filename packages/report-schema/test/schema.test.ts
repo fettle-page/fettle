@@ -67,6 +67,23 @@ describe("edge cases", () => {
     expect(parseReport({ ...base, collected_at: "garbage", facts: {} }).ok).toBe(false);
   });
 
+  it("holds numbers to what the Rust type can carry", () => {
+    const win = (data: object) => withFacts({ windows: { check: { status: "ok" }, data } });
+    const disk = (data: object) => withFacts({ storage: { check: { status: "ok" }, data: { disks: [{ model: "SSD", ...data }] } } });
+    // u32: the build number.
+    expect(parseReport(win({ build: 2 ** 32 - 1 })).ok).toBe(true);
+    expect(parseReport(win({ build: 2 ** 32 })).ok).toBe(false);
+    // u8: NVMe wear.
+    expect(parseReport(disk({ nvme: { percentage_used: 255 } })).ok).toBe(true);
+    expect(parseReport(disk({ nvme: { percentage_used: 256 } })).ok).toBe(false);
+    // i32: a temperature can be below zero, but not below what Rust can read.
+    expect(parseReport(disk({ smart: { temperature_c: -5 } })).ok).toBe(true);
+    expect(parseReport(disk({ smart: { temperature_c: -(2 ** 31) - 1 } })).ok).toBe(false);
+    // u64: JSON numbers stay exact only up to 2^53 - 1.
+    expect(parseReport(disk({ size_bytes: Number.MAX_SAFE_INTEGER })).ok).toBe(true);
+    expect(parseReport(disk({ size_bytes: 2 ** 60 })).ok).toBe(false);
+  });
+
   it("rejects oversized strings and arrays", () => {
     const disks = (n: number, model = "SSD") => withFacts({ storage: { check: { status: "ok" }, data: { disks: Array.from({ length: n }, () => ({ model })) } } });
     expect(parseReport(disks(2)).ok).toBe(true);

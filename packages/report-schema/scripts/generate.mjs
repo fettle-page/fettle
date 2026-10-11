@@ -18,9 +18,19 @@ function schemaFromRust() {
 }
 
 // Uploaded reports are untrusted, so every string and list gets a ceiling. Real reports are
-// far below these; the limits only stop abuse (the Worker also caps uploads at 256 KB).
+// far below these; the limits only stop abuse (the Worker also caps uploads at 64 KiB).
 const MAX_STRING = 512;
 const MAX_ITEMS = 256;
+// Each integer stays within what its Rust type can hold, so the brain can always read an upload. A
+// u64 stops at 2^53 - 1, beyond which JSON numbers aren't exact (the collector drops larger ones).
+const INTEGER_RANGES = {
+  uint8: [0, 255],
+  uint16: [0, 65535],
+  uint32: [0, 4294967295],
+  uint64: [0, Number.MAX_SAFE_INTEGER],
+  int32: [-2147483648, 2147483647],
+  int64: [Number.MIN_SAFE_INTEGER, Number.MAX_SAFE_INTEGER],
+};
 
 const hasType = (node, t) => node.type === t || (Array.isArray(node.type) && node.type.includes(t));
 
@@ -28,7 +38,7 @@ const hasType = (node, t) => node.type === t || (Array.isArray(node.type) && nod
  * Prepares the Rust schema for zod:
  * - drops every `default`: json-schema-to-zod ignores nested defaults but then treats the field
  *   as required, while Rust accepts it missing (`#[serde(default)]`). Optional fields stay optional.
- * - adds `maxLength` / `maxItems` limits for untrusted input.
+ * - adds `maxLength` / `maxItems` limits for untrusted input, and each integer's range.
  */
 function prepare(node) {
   if (Array.isArray(node)) return node.map(prepare);
@@ -36,6 +46,12 @@ function prepare(node) {
   const out = Object.fromEntries(Object.entries(node).filter(([k]) => k !== "default").map(([k, v]) => [k, prepare(v)]));
   if (hasType(out, "string") && out.maxLength === undefined) out.maxLength = MAX_STRING;
   if (hasType(out, "array") && out.maxItems === undefined) out.maxItems = MAX_ITEMS;
+  const range = hasType(out, "integer") ? INTEGER_RANGES[out.format] : undefined;
+  if (out.format !== undefined && hasType(out, "integer") && !range) throw new Error(`no range for integer format ${out.format}`);
+  if (range) {
+    out.minimum = Math.max(out.minimum ?? range[0], range[0]);
+    out.maximum = Math.min(out.maximum ?? range[1], range[1]);
+  }
   return out;
 }
 

@@ -46,7 +46,7 @@
         "modules": [
           {
             "bank_label": "P0 CHANNEL A",
-            "capacity_bytes": 17179869184,
+            "capacity_bytes": null,
             "configured_speed_mts": 6000,
             "configured_voltage_mv": 1100,
             "device_locator": "DIMM 1",
@@ -58,7 +58,7 @@
           },
           {
             "bank_label": "P0 CHANNEL B",
-            "capacity_bytes": 17179869184,
+            "capacity_bytes": null,
             "configured_speed_mts": 6000,
             "configured_voltage_mv": 1100,
             "device_locator": "DIMM 1",

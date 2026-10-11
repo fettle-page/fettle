@@ -29,8 +29,12 @@ export function apiError(status: number, code: ErrorCode, extra: { detail?: stri
   return json(body, status, extra.headers);
 }
 
-/** Reports are capped at 256 KB. */
-export const MAX_UPLOAD_BYTES = 262144;
+/**
+ * Reports are capped at 64 KiB. Every text field has its own length limit, so the largest real report
+ * is about 4 KB (5 KB with 26 startup apps), and one with every list long and every name at its limit
+ * is about 40 KB.
+ */
+export const MAX_UPLOAD_BYTES = 65536;
 
 /** Reads a request body as text, giving up as soon as it passes `max` bytes, without buffering the rest. */
 export async function readCapped(request: Request, max: number): Promise<{ ok: true; text: string } | { ok: false; reason: "too_large" }> {

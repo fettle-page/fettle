@@ -5,8 +5,8 @@ const post = (body: BodyInit, headers?: HeadersInit) =>
   new Request("http://example.com/api/reports", { method: "POST", body, headers });
 
 describe("readCapped", () => {
-  it("allows 256 KiB uploads", () => {
-    expect(MAX_UPLOAD_BYTES).toBe(262144);
+  it("allows 64 KiB uploads", () => {
+    expect(MAX_UPLOAD_BYTES).toBe(65536);
   });
 
   it("accepts a body of exactly the cap", async () => {

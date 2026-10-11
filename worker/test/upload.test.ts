@@ -71,13 +71,30 @@ describe("POST /api/reports", () => {
     expect((await newer.json<any>()).error).toBe("invalid_report");
   });
 
-  it("accepts exactly 256 KiB and refuses one byte more", async () => {
+  it("accepts exactly 64 KiB and refuses one byte more", async () => {
     const base = JSON.stringify({ report: tiredReport() });
     const pad = (n: number) => base + " ".repeat(n - new TextEncoder().encode(base).byteLength);
-    expect((await upload(pad(262144), { ip: freshIp() })).status).toBe(201);
-    const over = await upload(pad(262145), { ip: freshIp() });
+    expect((await upload(pad(65536), { ip: freshIp() })).status).toBe(201);
+    const over = await upload(pad(65537), { ip: freshIp() });
     expect(over.status).toBe(413);
     expect(await over.json()).toEqual({ error: "too_large" });
+  });
+
+  // The largest real report is about 4 KB (5 KB with 26 startup apps). This one is far past any real
+  // PC, with every name at its length limit, and still has to fit.
+  it("takes a report with every list long and every name at its limit", async () => {
+    const report = tiredReport();
+    const name = "N".repeat(128);
+    const f = report.facts;
+    f.startup.data.items = Array.from({ length: 100 }, () => ({ name, location: "run_key", enabled: true }));
+    f.storage.data.disks = Array.from({ length: 16 }, () => ({ ...f.storage.data.disks[0], model: name }));
+    f.graphics.data.adapters = Array.from({ length: 8 }, () => ({ ...f.graphics.data.adapters[0], name }));
+    f.memory.data.modules = Array.from({ length: 16 }, () => ({ ...f.memory.data.modules[0], part_number: name, manufacturer: name, bank_label: name, device_locator: name }));
+    f.system.data.displays = Array.from({ length: 8 }, () => ({ name }));
+    Object.assign(f.system.data, { cpu_name: name, board: name });
+    const body = JSON.stringify({ report });
+    expect(new TextEncoder().encode(body).byteLength).toBeGreaterThan(30_000);
+    expect((await upload(body, { ip: freshIp() })).status).toBe(201);
   });
 
   it("refuses an endless chunked upload", async () => {

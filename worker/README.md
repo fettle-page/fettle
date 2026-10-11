@@ -3,7 +3,7 @@
 One Cloudflare Worker serves the share links:
 
 - `POST /api/reports` takes `{ expires?, password?, report }`. It validates the report against `@fettle/report-schema` (unknown fields are dropped), stores it in R2 and returns `{ id, url, deleteUrl, deleteToken, expiresAt, locked }`.
-  - **Limits:** uploads are capped at 256 KiB and 10 per minute per IP.
+  - **Limits:** uploads are capped at 64 KiB (the largest real report is about 4 KB) and 10 per minute per IP.
   - **Expiry:** `7d`, `30d` (default) or `1y`.
 - `GET /api/reports/:id` returns `{ report, expiresAt }`. A password-protected report answers `401 password_required` instead.
 - `POST /api/reports/:id/unlock` takes `{ password, locale? }` and returns the finished receipt, built here with the Rust brain in that language (`en` unless `locale` is `it`): `{ model, expiresAt }`. Wrong guesses are capped at 10 a minute and 100 a day (UTC) per report, counted globally in a Durable Object (`UnlockGuard`); past the daily cap the answer is a 429 whose `retry-after` runs to midnight UTC, and the share page says to try again tomorrow. The minute cap alone would still allow 14,400 guesses a day; requests are also capped at 20 a minute per IP. Passwords are 8–128 characters. A right password also returns a 24-hour `pass` and `passExpiresAt` (`UnlockGuard` keeps only a hash); sending `{ pass, locale? }` instead reopens the receipt without counting as a guess, so a burst of wrong guesses can't lock out people who already opened it.

@@ -5,7 +5,7 @@ import type { Report } from "@fettle/report-schema";
 export type Expiry = "7d" | "30d" | "1y";
 export const PASSWORD_MIN = 8;
 export const PASSWORD_MAX = 128;
-export const MAX_UPLOAD_BYTES = 262_144;
+export const MAX_UPLOAD_BYTES = 65_536;
 
 export type ShareRequest = { report: Report; expires?: Expiry; password?: string };
 export type Shared = { id: string; url: string; deleteUrl: string; deleteToken: string; expiresAt: string; locked: boolean };

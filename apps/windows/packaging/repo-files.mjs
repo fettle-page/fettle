@@ -7,7 +7,7 @@ const ALLOWED_HIDDEN = [
   /^apps\/web\/public\/\.well-known\/[\w.-]+$/,
   /^spike\/\.cargo\/config\.toml$/,
 ];
-const ALLOWED_MARKDOWN = /^(.+\/)?README\.md$/;
+const ALLOWED_MARKDOWN = /^((.+\/)?README|SECURITY)\.md$/;
 
 /** Account SIDs in `text` that could be real: test data may only use ones whose three numbers are
  * each a single repeated digit (S-1-5-21-111111111-2222222222-333333333-1001, S-1-5-21-1-2-3-1001). */

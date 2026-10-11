@@ -29,9 +29,16 @@ describe("tracked files", () => {
     assert.deepEqual(unexpectedPaths(["notes.md", "docs/plan.md", ".hidden/x.json", "apps/web/.secret", "src/lib.rs"]), ["notes.md", "docs/plan.md", ".hidden/x.json", "apps/web/.secret"]);
   });
 
-  it("allows the repo's own dotfiles, the workflows, READMEs and the site's .well-known", () => {
-    const ok = [".gitattributes", ".gitignore", ".github/workflows/ci.yml", "README.md", "worker/README.md", "packages/brain/.gitignore", "apps/web/public/.well-known/security.txt", "spike/.cargo/config.toml"];
+  it("allows the repo's own dotfiles, the workflows, READMEs, SECURITY.md and the site's .well-known", () => {
+    const ok = [".gitattributes", ".gitignore", ".github/workflows/ci.yml", "README.md", "worker/README.md", "SECURITY.md", "packages/brain/.gitignore", "apps/web/public/.well-known/security.txt", "spike/.cargo/config.toml"];
     assert.deepEqual(unexpectedPaths(ok), []);
+    assert.deepEqual(unexpectedPaths(["docs/SECURITY.md"]), ["docs/SECURITY.md"]);
+  });
+
+  it("SECURITY.md gives the same contact as the site's security.txt", () => {
+    const root = join(import.meta.dirname, "../../../..");
+    const contact = /^Contact: mailto:(\S+)$/m.exec(readFileSync(join(root, "apps/web/public/.well-known/security.txt"), "utf8"))[1];
+    assert.ok(readFileSync(join(root, "SECURITY.md"), "utf8").includes(contact), contact);
   });
 
   it("holds for every file tracked in this repo", () => {

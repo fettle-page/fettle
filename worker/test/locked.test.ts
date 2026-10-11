@@ -113,7 +113,8 @@ describe("password-protected reports", () => {
     expect(await limited.json()).toEqual({ error: "rate_limited" });
   });
 
-  it("don't count right passwords against the guess limit", async () => {
+  // Twelve full password hashes in a row (deliberately slow): over 5 s on a busy CI machine.
+  it("don't count right passwords against the guess limit", { timeout: 30_000 }, async () => {
     const { id } = await share({ password: "hunter22" });
     for (let i = 0; i < 12; i++) expect((await unlock(id, "hunter22")).status, `unlock ${i}`).toBe(200);
   });

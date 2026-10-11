@@ -61,8 +61,8 @@ Name: "it"; MessagesFile: "compiler:Languages\Italian.isl"; InfoBeforeFile: "pri
 [CustomMessages]
 en.RemoveData=Also remove what Fettle keeps on this PC: its settings, the remembered check and the list of links you shared?%n%nThe links themselves stay online until they expire. Without that list, Fettle can no longer delete them for you.
 it.RemoveData=Rimuovere anche ciò che Fettle conserva su questo PC: le impostazioni, l'ultimo controllo ricordato e l'elenco dei link condivisi?%n%nI link restano online fino alla scadenza. Senza quell'elenco, Fettle non potrà più eliminarli per te.
-en.RemoveDataAll=Also remove what Fettle keeps for each account on this PC (found for %1): their settings, remembered checks and lists of shared links?%n%nThe links themselves stay online until they expire. Without those lists, Fettle can no longer delete them.
-it.RemoveDataAll=Rimuovere anche ciò che Fettle conserva per ogni account di questo PC (trovati: %1): impostazioni, ultimi controlli ricordati ed elenchi dei link condivisi?%n%nI link restano online fino alla scadenza. Senza quegli elenchi, Fettle non potrà più eliminarli.
+en.RemoveDataAll=Also remove what Fettle keeps for each account that used it on this PC (%1 in total): their settings, remembered checks and lists of shared links?%n%nThe links themselves stay online until they expire. Without those lists, Fettle can no longer delete them.
+it.RemoveDataAll=Rimuovere anche ciò che Fettle conserva per ogni account che lo ha usato su questo PC (%1 in tutto): impostazioni, ultimi controlli ricordati ed elenchi dei link condivisi?%n%nI link restano online fino alla scadenza. Senza quegli elenchi, Fettle non potrà più eliminarli.
 en.RemoveDataLeft=Fettle couldn't remove these folders (a file in one may be in use). You can delete them yourself:
 it.RemoveDataLeft=Fettle non è riuscito a rimuovere queste cartelle (forse un file è in uso). Puoi eliminarle tu:
 en.UpdatesGroup=Updates:

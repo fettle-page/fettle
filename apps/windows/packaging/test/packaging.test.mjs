@@ -124,6 +124,9 @@ describe("fettle.iss: uninstalling for all users", () => {
       assert.match(iss, new RegExp(`^${lang}\\.RemoveDataAll=.*%1`, "m"));
       assert.match(iss, new RegExp(`^${lang}\\.RemoveDataLeft=.+`, "m"));
     }
+    // The count reads right for one account as for several.
+    assert.match(iss, /^en\.RemoveDataAll=Also remove what Fettle keeps for each account that used it on this PC \(%1 in total\)/m);
+    assert.match(iss, /^it\.RemoveDataAll=Rimuovere anche ciò che Fettle conserva per ogni account che lo ha usato su questo PC \(%1 in tutto\)/m);
     assert.match(iss, /if IsAdminInstallMode then/);
     assert.match(iss, /CustomMessage\('RemoveDataLeft'\)/);
   });

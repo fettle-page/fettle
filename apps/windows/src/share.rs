@@ -10,9 +10,14 @@ pub const PASSWORD_MIN: usize = 8;
 pub const PASSWORD_MAX: usize = 128;
 pub const MAX_UPLOAD_BYTES: usize = 262_144;
 
-/// fettle.page, or a local Worker in development (FETTLE_SHARE_ORIGIN).
+/// fettle.page. A development build can point at a local Worker with FETTLE_SHARE_ORIGIN; a
+/// release build ignores it, so no setting outside the app can send shared reports elsewhere.
 pub fn origin() -> String {
-    std::env::var("FETTLE_SHARE_ORIGIN").unwrap_or_else(|_| "https://fettle.page".into())
+    origin_from(std::env::var("FETTLE_SHARE_ORIGIN").ok(), cfg!(debug_assertions))
+}
+
+fn origin_from(env: Option<String>, development: bool) -> String {
+    env.filter(|_| development).unwrap_or_else(|| "https://fettle.page".into())
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -468,6 +473,15 @@ mod tests {
         assert_eq!(problem(&Failure::new("password_too_short")), ("share.e.password_too_short", None));
         assert_eq!(problem(&Failure::new("password_too_long")), ("share.e.password_too_long", None));
         assert_eq!(problem(&Failure::new("forbidden")), ("share.e.other", None));
+    }
+
+    #[test]
+    fn only_a_development_build_can_send_shares_elsewhere() {
+        let local = Some("http://localhost:8788".to_string());
+        assert_eq!(origin_from(local.clone(), false), "https://fettle.page");
+        assert_eq!(origin_from(local, true), "http://localhost:8788");
+        assert_eq!(origin_from(None, true), "https://fettle.page");
+        assert_eq!(origin_from(None, false), "https://fettle.page");
     }
 }
 

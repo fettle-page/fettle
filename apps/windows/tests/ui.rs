@@ -1250,11 +1250,13 @@ fn the_deep_checks_time_leaves_out_the_time_spent_on_windows_prompt() {
 #[test]
 fn a_deep_checks_report_is_cleaned_again_with_the_users_own_names() {
     // The elevated part ran as another account, so its privacy pass knew that account's names, not
-    // the user's: an address of the user's could still be in it.
+    // the user's: the user's own name or address could still be in it. This account's name stands
+    // in for the user's (the messages never print it).
+    let me = std::env::var("USERNAME").unwrap();
     let mut admin = dump_report();
     admin.elevated = true;
     if let Some(disk) = admin.facts.storage.as_mut().and_then(|s| s.data.as_mut()).and_then(|d| d.disks.first_mut()) {
-        disk.model = Some("Backup of mario.rossi@example.com".into());
+        disk.model = Some(format!("Backup of {me} at mario.rossi@example.com"));
     }
     let a = admin.clone();
     let dir = temp_dir();
@@ -1264,6 +1266,6 @@ fn a_deep_checks_report_is_cleaned_again_with_the_users_own_names() {
     press(&h.app, "Run a Deep check");
     h.background.run_all(&h.app);
     let saved = std::fs::read_to_string(dir.join("last-report.json")).unwrap();
-    assert!(saved.contains("Backup of <email>"), "the Deep check's report, cleaned");
+    assert!(saved.contains("Backup of <user> at <email>"), "the Deep check's report, cleaned with this account's names");
     assert!(!saved.contains("mario.rossi@example.com"));
 }

@@ -107,7 +107,7 @@
           {
             "enabled": null,
             "location": "run_once",
-            "name": "msedge_cleanup_{56EB18F8-B008-4CBD-B6D2-8C97FE7E9062}"
+            "name": "msedge_cleanup"
           },
           {
             "enabled": true,

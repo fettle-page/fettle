@@ -56,11 +56,11 @@ fn acceptable(path: &Path) -> bool {
 pub fn deep_report_path(dir: &Path, pid: u32, nonce: u128) -> Result<PathBuf, DeepError> {
     let name = format!("fettle-deep-{pid}-{nonce}.json");
     if !acceptable(&dir.join(&name)) {
-        return Err(DeepError::Failed);
+        return Err(DeepError::Folder);
     }
-    let real = std::fs::canonicalize(dir).ok().and_then(local_form).ok_or(DeepError::Failed)?;
+    let real = std::fs::canonicalize(dir).ok().and_then(local_form).ok_or(DeepError::Folder)?;
     let path = real.join(name);
-    if acceptable(&path) && !through_a_link(&real).unwrap_or(true) { Ok(path) } else { Err(DeepError::Failed) }
+    if acceptable(&path) && !through_a_link(&real).unwrap_or(true) { Ok(path) } else { Err(DeepError::Folder) }
 }
 
 /// A path as `canonicalize` gives it (`\\?\C:\...`), as a plain drive path, or None when it's
@@ -193,7 +193,7 @@ pub fn deep_scan(owner: isize) -> Result<(Report, f64), DeepError> {
     let dir = crate::store::FileStore::default_dir();
     // A relative folder is refused below anyway; don't create one in whatever folder this started in.
     if !dir.is_absolute() {
-        return Err(DeepError::Failed);
+        return Err(DeepError::Folder);
     }
     std::fs::create_dir_all(&dir).map_err(|_| DeepError::Failed)?;
     let nonce = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or(0);
@@ -303,8 +303,8 @@ mod tests {
     fn a_folder_the_helper_would_refuse_is_caught_before_windows_asks() {
         // Portable data on a network share, or a relative folder when LOCALAPPDATA isn't set: the app
         // says the Deep check failed without a prompt, rather than starting a helper that can't write.
-        assert_eq!(deep_report_path(Path::new(r"\\nas\tools\Fettle data"), 7, 9), Err(DeepError::Failed));
-        assert_eq!(deep_report_path(Path::new("Fettle data"), 7, 9), Err(DeepError::Failed));
+        assert_eq!(deep_report_path(Path::new(r"\\nas\tools\Fettle data"), 7, 9), Err(DeepError::Folder));
+        assert_eq!(deep_report_path(Path::new("Fettle data"), 7, 9), Err(DeepError::Folder));
         let dir = scratch("target");
         let path = deep_report_path(&dir, 7, 9).expect("a local folder");
         assert_eq!(path, local_form(std::fs::canonicalize(&dir).unwrap()).unwrap().join("fettle-deep-7-9.json"));

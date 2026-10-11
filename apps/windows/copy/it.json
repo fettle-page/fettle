@@ -25,6 +25,7 @@
   "deep.why": "Windows chiederà l'accesso da amministratore. Fettle ne ha bisogno per leggere lo stato dei dischi e il chip di sicurezza, e continua solo a leggere.",
   "deep.cancelled": "Il controllo approfondito è stato annullato. Questo resta il controllo rapido.",
   "deep.failed": "Non è stato possibile avviare il controllo approfondito. Riprova.",
+  "deep.folder": "Il Controllo approfondito non può funzionare dalla cartella in cui Fettle tiene i suoi dati (per esempio una cartella di rete). Per usarlo, avvia Fettle da una cartella di questo PC.",
   "share.button": "Condividi con un link",
   "share.title": "Condividi questo scontrino",
   "share.intro": "Chiunque abbia il link può vedere lo scontrino a sinistra, esattamente com'è. Non contiene mai numeri di serie, il nome del PC, nomi utente o indirizzi email.",

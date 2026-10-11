@@ -171,6 +171,8 @@ pub enum DeepError {
     Cancelled,
     Busy,
     Failed,
+    /// Fettle's folder can't take the helper's report (a network share, say): trying again won't help.
+    Folder,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -504,6 +506,7 @@ impl State {
                     DeepError::Cancelled => "deep.cancelled",
                     DeepError::Busy => "scan.busy",
                     DeepError::Failed => "deep.failed",
+                    DeepError::Folder => "deep.folder",
                 });
                 vec![]
             }
@@ -840,6 +843,10 @@ mod tests {
         s.update(Event::DeepAsked);
         s.update(Event::DeepRefused(DeepError::Busy));
         assert_eq!(s.deep, Deep::Problem("scan.busy"));
+        // Trying again can't help when the folder itself won't do: it says so.
+        s.update(Event::DeepAsked);
+        s.update(Event::DeepRefused(DeepError::Folder));
+        assert_eq!(s.deep, Deep::Problem("deep.folder"));
     }
 
     fn latest(version: &str) -> crate::update::Latest {

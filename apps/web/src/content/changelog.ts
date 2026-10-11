@@ -12,10 +12,12 @@ export const releases: Release[] = [
       en: [
         "The “new version” note's download link now only ever opens a page on fettle.page.",
         "The share server now checks every uploaded report again before storing it, and removes any email address, IP address, account ID, server name or profile folder name, even from an older app.",
+        "A share link's language is now read only from whole language codes, so a ?lang= value or a browser language that merely starts with “it” (such as “items”) no longer shows the page in Italian. The share server and the page itself now pick the language the same way.",
       ],
       it: [
         "Il link per scaricare la nuova versione ora apre sempre e solo una pagina di fettle.page.",
         "Il server di condivisione ora ricontrolla ogni report caricato prima di conservarlo, e toglie ogni indirizzo email, indirizzo IP, ID di account, nome di server o nome di cartella del profilo, anche se arriva da un'app più vecchia.",
+        "La lingua di un link di condivisione ora si legge solo da codici di lingua interi: un valore ?lang= o una lingua del browser che comincia soltanto con “it” (come “items”) non mostra più la pagina in italiano. Il server di condivisione e la pagina stessa ora scelgono la lingua nello stesso modo.",
       ],
     },
   },

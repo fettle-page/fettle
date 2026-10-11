@@ -68,5 +68,8 @@ describe("pickLocale", () => {
     expect(pickLocale("", ["it-IT", "en"])).toBe("it");
     expect(pickLocale("", ["de-DE"])).toBe("en");
     expect(pickLocale("", ["de-DE", "it"])).toBe("it");
+    // The same exact rule as the server: a word that starts with "it" is no Italian.
+    expect(pickLocale("?lang=items", ["en-GB"])).toBe("en");
+    expect(pickLocale("", ["items", "en"])).toBe("en");
   });
 });

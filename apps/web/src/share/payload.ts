@@ -1,6 +1,6 @@
 // What the Worker puts in the share shell's <script id="fettle-share" type="application/json">.
 // The same contract binds worker/src/share.ts.
-import { LOCALES, type Locale, type ReceiptModel } from "@fettle/brain";
+import { LOCALES, pickLocale as pickFrom, type Locale, type ReceiptModel } from "@fettle/brain";
 
 /**
  * `locale` is decided by the server, so a server-drawn page hydrates in the same language.
@@ -49,12 +49,7 @@ export function readPayload(doc: Document): SharePayload {
   return MISSING;
 }
 
-/** `?lang=` wins, then the first browser language Fettle speaks, then English. */
+/** `?lang=` wins, then the first browser language Fettle speaks, then English: the server's own rule. */
 export function pickLocale(search: string, languages: readonly string[]): Locale {
-  const wanted = [new URLSearchParams(search).get("lang") ?? "", ...languages];
-  for (const tag of wanted) {
-    const lang = tag.slice(0, 2).toLowerCase();
-    if ((LOCALES as readonly string[]).includes(lang)) return lang as Locale;
-  }
-  return "en";
+  return pickFrom(new URLSearchParams(search).get("lang"), languages);
 }

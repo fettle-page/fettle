@@ -136,3 +136,14 @@ describe("the server's own privacy pass", () => {
     expect(privacy("it")).toContain("Il nostro server lo ricontrolla prima di conservarlo");
   });
 });
+
+describe("the 1.0.4 changelog", () => {
+  const notes = (locale: "en" | "it") => releases.find((r) => r.version === "1.0.4")!.notes[locale].join(" ");
+
+  it("says a share link's language is read only from whole language codes, the same way on page and server", () => {
+    expect(notes("en")).toContain("only from whole language codes");
+    expect(notes("en")).toContain("now pick the language the same way");
+    expect(notes("it")).toContain("solo da codici di lingua interi");
+    expect(notes("it")).toContain("ora scelgono la lingua nello stesso modo");
+  });
+});

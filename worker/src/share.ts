@@ -1,5 +1,5 @@
 // The /r/* pages: the static share shell, filled in per request with OG tags and the report.
-import { LOCALES, type Locale } from "@fettle/brain";
+import { acceptedLanguages, pickLocale, type Locale } from "@fettle/brain";
 import { brain } from "@fettle/brain/worker";
 import { renderSharePage, type SharePayload } from "@fettle/web/share-render";
 import { isValidId } from "./ids.ts";
@@ -30,29 +30,6 @@ async function inlineHashes(text: string): Promise<InlineHashes> {
 }
 
 type Page = { status: number; payload: SharePayload; og?: OgText };
-
-const speaks = (tag: string): Locale | undefined => {
-  const lang = tag.trim().slice(0, 2).toLowerCase();
-  return (LOCALES as readonly string[]).includes(lang) ? (lang as Locale) : undefined;
-};
-
-/** `?lang=` wins, then the first language in Accept-Language that Fettle speaks, then English. */
-function pickLocale(asked: string | null, acceptLanguage: string | null): Locale {
-  if (asked && speaks(asked) && asked.length === 2) return asked as Locale;
-  const ranked = (acceptLanguage ?? "")
-    .split(",")
-    .map((part, i) => {
-      const [tag = "", ...params] = part.split(";");
-      const q = Number(params.find((p) => p.trim().startsWith("q="))?.trim().slice(2) ?? "1");
-      return { tag, q: Number.isFinite(q) ? q : 0, i };
-    })
-    .sort((a, b) => b.q - a.q || a.i - b.i);
-  for (const { tag } of ranked) {
-    const locale = speaks(tag);
-    if (locale) return locale;
-  }
-  return "en";
-}
 
 function pageHeaders(hashes: InlineHashes): Headers {
   return new Headers({
@@ -132,7 +109,8 @@ export async function sharePage(request: Request, env: Env): Promise<Response> {
   const shellText = await shell.text();
   const hashes = await inlineHashes(shellText);
 
-  const locale = pickLocale(url.searchParams.get("lang"), request.headers.get("accept-language"));
+  // The same rule as the share page in the browser (@fettle/brain pickLocale).
+  const locale = pickLocale(url.searchParams.get("lang"), acceptedLanguages(request.headers.get("accept-language")));
   const page = await pageFor(env, url.pathname, locale);
   // Draw the page now, so it arrives with the HTML (the largest paint no longer waits for scripts, and
   // it reads without JavaScript). Not the delete page: its token is in the #fragment, which only the

@@ -87,6 +87,13 @@ describe("GET /r/:id", () => {
     expect(payloadOf(html).locale).toBe("it");
   });
 
+  it("takes only whole language tags, so 'items' is no Italian", async () => {
+    const html = await (await call(`/r/${newId("30d")}?lang=items`, { headers: { "accept-language": "items, en;q=0.5" } })).text();
+    expect(payloadOf(html).locale).toBe("en");
+    const notEnglish = await (await call(`/r/${newId("30d")}`, { headers: { "accept-language": "en;q=0, it;q=0.3" } })).text();
+    expect(payloadOf(notEnglish).locale).toBe("it");
+  });
+
   it("draws the receipt in the language asked for", async () => {
     const { id } = await share();
     const html = await (await call(`/r/${id}?lang=it`)).text();

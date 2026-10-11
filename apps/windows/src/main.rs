@@ -23,8 +23,10 @@ fn next_renderer(current: &str) -> Option<&'static str> {
 
 fn main() -> Result<(), slint::PlatformError> {
     // DLLs loaded later by name come from System32 only, like the ones the exe imports
-    // (/DEPENDENTLOADFLAG in build.rs), never from the folder fettle.exe sits in. The Visual C++
-    // runtime beside a packaged fettle.exe still loads: its manifest names it.
+    // (/DEPENDENTLOADFLAG in build.rs), never from the folder fettle.exe sits in: the graphics
+    // renderer loads d3d12.dll and others by name, and a fake one beside a portable copy in Downloads
+    // would otherwise load into the window. The Visual C++ runtime beside a packaged fettle.exe still
+    // loads: its manifest names it.
     #[cfg(windows)]
     // SAFETY: a plain flag for this process, set before any other thread exists.
     unsafe {

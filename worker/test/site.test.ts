@@ -13,4 +13,12 @@ describe("the website through the Worker", () => {
     expect(res.status).toBe(404);
     expect(await res.text()).toContain("This page isn");
   });
+
+  it("shows the Italian 404 for unknown paths under /it/", async () => {
+    const res = await call("/it/nulla/qui");
+    expect(res.status).toBe(404);
+    const html = await res.text();
+    expect(html).toMatch(/<html[^>]*lang="it"/);
+    expect(html).not.toContain("This page isn");
+  });
 });

@@ -7,7 +7,7 @@ const THEME_JS = readFileSync(join(DIST, "theme.js"), "utf8").trim();
 
 const SITE = "https://fettle.page";
 // Pages that are not part of the public site map (the share shell and the 404).
-const UTILITY = new Set(["share.html", "404.html"]);
+const UTILITY = new Set(["share.html", "404.html", "it/404.html"]);
 
 describe("every built page", () => {
   const all = pages();

@@ -1,0 +1,12 @@
+---
+// Served by Cloudflare for any missing /it/ address (the nearest 404.html), in Italian throughout.
+import NotFound from "../../components/NotFound.astro";
+import { pages } from "../../i18n/pages.ts";
+import Base from "../../layouts/Base.astro";
+
+const c = pages("it").notFound;
+---
+
+<Base locale="it" path="/404" title={c.title} description={c.description} utility>
+  <NotFound locale="it" />
+</Base>

@@ -8,12 +8,14 @@ import ThemeToggle from "./ThemeToggle.astro";
 interface Props {
   locale: Locale;
   path: string;
+  /** False on pages outside the nav (the 404, the share shell): then no link is the current page. */
+  marked?: boolean;
 }
 
-const { locale, path } = Astro.props;
+const { locale, path, marked = true } = Astro.props;
 const other: Locale = locale === "en" ? "it" : "en";
 const to = (p: string) => localePath(locale, p);
-const current = (p: string) => (p === path ? "page" : undefined);
+const current = (p: string) => (marked && p === path ? "page" : undefined);
 ---
 
 <nav class="nav" aria-label={t(locale, "nav.label")}>

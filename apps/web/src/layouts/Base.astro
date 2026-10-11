@@ -67,7 +67,7 @@ const here = alt[locale];
       <div class="ruler" aria-hidden="true">
         {Array.from({ length: 12 }, (_, i) => <span data-n={i * 5} />)}
       </div>
-      <Nav locale={locale} path={navPath} />
+      <Nav locale={locale} path={navPath} marked={!utility} />
       <main id="main">
         <slot />
       </main>

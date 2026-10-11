@@ -32,8 +32,8 @@ pub fn battery_rules(s: Option<&Section<Battery>>) -> Option<SectionVerdict> {
     Some(SectionVerdict { section: SectionId::Battery, lines: vec![line("battery", level, key, &[("pct", Param::Int(pct))], Action::Default)] })
 }
 
-// The "probably running below its rated speed" guess waits for a machine with XMP/EXPO off
-// (spike FINDINGS open question 2): WMI's Speed field didn't behave as assumed.
+// The "probably running below its rated speed" guess waits for a test on a machine with XMP/EXPO
+// off: WMI's Speed field didn't behave as assumed.
 pub fn memory_rules(s: Option<&Section<Memory>>) -> SectionVerdict {
     let problem = section_problem(SectionId::Memory, s.map(|s| &s.check));
     let data = s.and_then(|s| s.data.as_ref());

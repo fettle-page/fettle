@@ -45,6 +45,8 @@ describe("Entra ID account SIDs in tracked files", () => {
 describe("email addresses in tracked files", () => {
   it("allows example and project addresses only", () => {
     assert.deepEqual(realLookingEmails("mario.rossi@example.com, info@studio.example, a@b.example.co.uk, hello@fettle.page, 1+x@users.noreply.github.com, dev@contoso.com, pkg@1.0.0"), []);
+    // Not addresses: an image at twice the size, a package version.
+    assert.deepEqual(realLookingEmails("logo@2x.png and pkg@1.0.0-beta.rc"), []);
     // Built at run time, so this file doesn't hold a real-looking address itself.
     const real = ["mario.rossi", "gmail.com"].join("@");
     assert.deepEqual(realLookingEmails(`write to ${real}`), [real]);
@@ -63,6 +65,11 @@ describe("serial numbers in tracked files", () => {
     assert.deepEqual(realLookingSerials('"SerialNumber": "<private>", "SerialNumber": "TES12345", "FruId": "F1AKES2E345678R", "VolumeSerialNumber": "ABCD1234", "SerialNumber": "S123", "UUID": "00000000"'), []);
     const real = JSON.stringify({ ["Serial" + "Number"]: ["S6B0NL0", "W123987K"].join("") });
     assert.equal(realLookingSerials(real).length, 1);
+    // A marker counts only at the start: a real serial can hold "1234" anywhere.
+    assert.equal(realLookingSerials(JSON.stringify({ ["Serial" + "Number"]: ["WD-WCC4E", "1234567"].join("") })).length, 1);
+    // Rust and JavaScript fields, not just JSON keys.
+    assert.equal(realLookingSerials(`serial: "${["S6B0NL0", "W123987K"].join("")}".into()`).length, 1);
+    assert.deepEqual(realLookingSerials('serial: "FAKE0001".into(), serial_number: Some("TEST-1".into())'), []);
   });
 
   it("holds for every file tracked in this repo", () => {

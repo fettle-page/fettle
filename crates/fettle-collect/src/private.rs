@@ -87,7 +87,7 @@ mod tests {
     fn reads_the_name_and_each_real_serial() {
         let got = from_rows(
             &json!([{ "Name": "DESKTOP-ABC123" }]),
-            &json!([{ "IdentifyingNumber": " PF3XYZ12 " }]),
+            &json!([{ "IdentifyingNumber": " XYZ3PF12 " }]),
             &json!([{ "SerialNumber": "TES12345" }]),
             &json!([{ "FriendlyName": "Samsung SSD 9100 PRO 1TB", "SerialNumber": " T1ESTS2 " }, { "FriendlyName": "CT1000MX500SSD1", "SerialNumber": "1234T56E" }]),
         );
@@ -95,7 +95,7 @@ mod tests {
         assert_eq!(
             got.items,
             vec![
-                PrivateItem { kind: PrivateKind::System, label: None, serial: "PF3XYZ12".into() },
+                PrivateItem { kind: PrivateKind::System, label: None, serial: "XYZ3PF12".into() },
                 PrivateItem { kind: PrivateKind::Board, label: None, serial: "TES12345".into() },
                 PrivateItem { kind: PrivateKind::Disk, label: Some("Samsung SSD 9100 PRO 1TB".into()), serial: "T1ESTS2".into() },
                 PrivateItem { kind: PrivateKind::Disk, label: Some("CT1000MX500SSD1".into()), serial: "1234T56E".into() },

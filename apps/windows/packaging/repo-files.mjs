@@ -44,16 +44,19 @@ export function unexpectedPaths(paths) {
  * the project's own, and GitHub's no-reply one. */
 const FAKE_MAIL_DOMAINS = /^(.+\.)?(example(\.(com|org|net|co\.uk))?|contoso(-group)?\.com|fettle\.page|users\.noreply\.github\.com)$/i;
 
-/** Email addresses in `text` whose domain isn't an example, test or project one. */
+/** Email addresses in `text` whose domain isn't an example, test or project one. A domain starts
+ * with a letter, so "logo@2x.png" and "pkg@1.0.0-beta.rc" aren't addresses. */
 export function realLookingEmails(text) {
-  return [...text.matchAll(/[\w.%+'-]+@([A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,})/g)].filter((m) => !FAKE_MAIL_DOMAINS.test(m[1])).map((m) => m[0]);
+  return [...text.matchAll(/[\w.%+'-]+@([A-Za-z][A-Za-z0-9-]*(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,})\b/g)].filter((m) => !FAKE_MAIL_DOMAINS.test(m[1])).map((m) => m[0]);
 }
 
 /** Serial-number values in `text` that could be real: test data may only use a placeholder, a
- * value of up to four characters, one repeated character, or one marked as made up (FAKE, TEST,
- * XYZ, ABCD, 1234). */
+ * value of up to four characters, one repeated character, or one that starts with a made-up
+ * marker (FAKE, TEST, XYZ, ABCD, 1234). Checked in JSON ("SerialNumber": "…") and in Rust or
+ * JavaScript fields (serial: "…"). */
 export function realLookingSerials(text) {
-  const fields = /"((?:\w*serial\w*)|FruId|UUID|IdentifyingNumber)"\s*:\s*"([^"]*)"/gi;
-  const fake = (v) => /^<[\w-]+>$/.test(v) || v.length <= 4 || /^(.)\1*$/.test(v) || /FAKE|F1AKE|TEST|T1EST|TES\d|XYZ|ABCD|1234/i.test(v);
-  return [...text.matchAll(fields)].map((m) => m[2].trim()).filter((v) => !fake(v));
+  const json = /"((?:\w*serial\w*)|FruId|UUID|IdentifyingNumber)"\s*:\s*"([^"]*)"/gi;
+  const code = /\b(serial(?:_?number)?)\s*:\s*(?:Some\()?"([^"]*)"/gi;
+  const fake = (v) => /^<[\w-]+>$/.test(v) || v.length <= 4 || /^(.)\1*$/.test(v) || /^(FAKE|F1AKE|TEST|T1EST|TES\d|XYZ|ABCD|1234)/i.test(v);
+  return [...text.matchAll(json), ...text.matchAll(code)].map((m) => m[2].trim()).filter((v) => !fake(v));
 }

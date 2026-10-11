@@ -53,3 +53,14 @@ fn a_hard_drive_runs_hot_sooner_than_an_ssd() {
     // Without a known type, the SSD limit: no false alarm.
     assert!(!hot("unknown", 65));
 }
+
+// Two warnings whose next steps read the same, word for word, list that step once.
+#[test]
+fn a_next_step_with_the_same_words_is_listed_once() {
+    let r = judge(json!({ "storage": { "check": { "status": "ok" }, "data": { "disks": [
+        { "bus": "nvme", "media": "ssd", "model": "WD SN770", "nvme": { "percentage_used": 3, "media_errors": 2 } },
+        { "bus": "sata", "media": "hdd", "model": "ST2000DM008", "smart": { "reallocated_sectors": 8 } }
+    ] } } }));
+    let keys: Vec<&str> = r.summary.actions.iter().map(|a| a.key.as_str()).collect();
+    assert_eq!(keys, ["storage.media_errors.action"]);
+}

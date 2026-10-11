@@ -1,5 +1,5 @@
 use crate::thresholds::SUMMARY_MAX_ACTIONS;
-use crate::{Level, Line, MessageRef, SectionId, SectionVerdict, Summary};
+use crate::{Level, Line, Locale, MessageRef, SectionId, SectionVerdict, Summary, render};
 
 /// The receipt's top line and its top actions, act_soon before keep_an_eye.
 pub fn summarize(sections: &[SectionVerdict]) -> Summary {
@@ -33,7 +33,9 @@ pub fn summarize(sections: &[SectionVerdict]) -> Summary {
     // The Deep check comes after the warnings: it finds things out, they fix things.
     let deep_check = disks_unchecked.then(|| MessageRef::key("summary.action.deep_check"));
     for a in actions_for(Level::ActSoon).chain(actions_for(Level::KeepAnEye)).chain(deep_check) {
-        if !actions.iter().any(|b| b.key == a.key) {
+        // The same step twice, even under two keys, reads as a mistake: compare the words too.
+        let same = |b: &MessageRef| b.key == a.key || [Locale::En, Locale::It].iter().all(|&l| render(b, l) == render(&a, l));
+        if !actions.iter().any(same) {
             actions.push(a);
         }
     }

@@ -32,6 +32,7 @@ export const releases: Release[] = [
         "FAQ questions are now headings, so screen readers can jump from one question to the next.",
         "Hard drives now get the running-hot warning above 55 °C, since most are rated to about 60 °C. SSDs still warn above 70 °C.",
         "On Windows 10, a TPM chip that doesn't give its version (because it's switched off in the firmware, say) is no longer called older than version 2.0. Fettle says it couldn't check it.",
+        "The same next step no longer shows twice in “What to do” when two warnings ask for it.",
       ],
       it: [
         "Su Windows 10, Fettle non dice più che un PC è iscritto agli Extended Security Updates solo perché ha installato un aggiornamento in ritardo. Ora lo ricava dalla build di Windows e, quando non può saperlo, ti chiede di controllare in Windows Update.",
@@ -56,6 +57,7 @@ export const releases: Release[] = [
         "Le domande delle FAQ ora sono titoli, così chi usa uno screen reader può passare da una domanda all'altra.",
         "I dischi rigidi ora ricevono l'avviso di temperatura alta sopra i 55 °C, perché quasi tutti sono progettati per arrivare a circa 60 °C. Per gli SSD la soglia resta 70 °C.",
         "Su Windows 10, un chip TPM che non indica la sua versione (per esempio perché è disattivato nel firmware) non viene più descritto come precedente alla versione 2.0: Fettle dice che non è riuscito a controllarlo.",
+        "Lo stesso passo non compare più due volte in «Da fare» quando lo chiedono due avvisi.",
       ],
     },
   },

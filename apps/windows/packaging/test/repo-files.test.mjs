@@ -47,6 +47,8 @@ describe("email addresses in tracked files", () => {
     assert.deepEqual(realLookingEmails("mario.rossi@example.com, info@studio.example, a@b.example.co.uk, hello@fettle.page, 1+x@users.noreply.github.com, dev@contoso.com, pkg@1.0.0"), []);
     // Not addresses: an image at twice the size, a package version.
     assert.deepEqual(realLookingEmails("logo@2x.png and pkg@1.0.0-beta.rc"), []);
+    // Nor an Inno Setup import ("function@library.dll") or a file name.
+    assert.deepEqual(realLookingEmails("'GetFileAttributesW@kernel32.dll stdcall' and icon@large.png"), []);
     // Built at run time, so this file doesn't hold a real-looking address itself.
     const real = ["mario.rossi", "gmail.com"].join("@");
     assert.deepEqual(realLookingEmails(`write to ${real}`), [real]);

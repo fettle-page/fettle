@@ -44,10 +44,13 @@ export function unexpectedPaths(paths) {
  * the project's own, and GitHub's no-reply one. */
 const FAKE_MAIL_DOMAINS = /^(.+\.)?(example(\.(com|org|net|co\.uk))?|contoso(-group)?\.com|fettle\.page|users\.noreply\.github\.com)$/i;
 
+/** Endings that make "name@thing.ext" a file, not an address ("GetFileAttributesW@kernel32.dll"). */
+const FILE_ENDINGS = /\.(dll|exe|sys|ocx|drv|png|jpe?g|gif|svg|webp|ico|css|js|mjs|ts|json|wasm|txt)$/i;
+
 /** Email addresses in `text` whose domain isn't an example, test or project one. A domain starts
- * with a letter, so "logo@2x.png" and "pkg@1.0.0-beta.rc" aren't addresses. */
+ * with a letter, so "logo@2x.png" and "pkg@1.0.0-beta.rc" aren't addresses, nor are file names. */
 export function realLookingEmails(text) {
-  return [...text.matchAll(/[\w.%+'-]+@([A-Za-z][A-Za-z0-9-]*(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,})\b/g)].filter((m) => !FAKE_MAIL_DOMAINS.test(m[1])).map((m) => m[0]);
+  return [...text.matchAll(/[\w.%+'-]+@([A-Za-z][A-Za-z0-9-]*(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,})\b/g)].filter((m) => !FAKE_MAIL_DOMAINS.test(m[1]) && !FILE_ENDINGS.test(m[1])).map((m) => m[0]);
 }
 
 /** Serial-number values in `text` that could be real: test data may only use a placeholder, a

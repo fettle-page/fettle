@@ -13,6 +13,7 @@ import { homedir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { writeNotices } from "./notices.mjs";
+import { encodedRustFlags, remapFlags, timesIn } from "./paths.mjs";
 import { loadFlags, missing, runtimeFor } from "./pe.mjs";
 import { checkStarts, findCrtDir, manifestFiles } from "./runtime.mjs";
 import { sums } from "./release.mjs";
@@ -36,7 +37,18 @@ const iscc = find(
 );
 
 console.log(`Fettle ${version}: release build`);
-execFileSync(cargo, ["build", "--release", "-p", "fettle-windows"], { cwd: root, stdio: "inherit", env: { ...process.env, FETTLE_APP_LOCAL_RUNTIME: "1" } });
+// Exactly what Cargo.lock says, with this machine's folders (user name included) renamed in the exe.
+const folders = {
+  home: homedir(),
+  cargoHome: process.env.CARGO_HOME ?? join(homedir(), ".cargo"),
+  rustupHome: process.env.RUSTUP_HOME ?? join(homedir(), ".rustup"),
+  root,
+};
+execFileSync(cargo, ["build", "--release", "--locked", "-p", "fettle-windows"], {
+  cwd: root,
+  stdio: "inherit",
+  env: { ...process.env, FETTLE_APP_LOCAL_RUNTIME: "1", CARGO_ENCODED_RUSTFLAGS: encodedRustFlags(remapFlags(folders)) },
+});
 const exe = join(exeDir, "fettle.exe");
 
 rmSync(out, { recursive: true, force: true });
@@ -44,6 +56,8 @@ mkdirSync(out, { recursive: true });
 
 console.log("Visual C++ runtime");
 const exeBytes = readFileSync(exe);
+const leaks = timesIn(exeBytes, homedir());
+if (leaks) throw new Error(`fettle.exe holds this PC's user folder (${homedir()}) ${leaks} times`);
 if (loadFlags(exeBytes) !== 0x800) throw new Error("fettle.exe may load DLLs from its own folder: build.rs sets /DEPENDENTLOADFLAG:0x800");
 const runtime = runtimeFor(exe, findCrtDir());
 const runtimeNames = runtime.map((p) => basename(p).toLowerCase());

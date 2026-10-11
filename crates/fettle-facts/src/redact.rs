@@ -3,7 +3,7 @@
 //! The report format has no fields for serials, product keys or network details, so what is left
 //! to catch is identifying text that slips into ordinary strings: the PC's name, account names,
 //! the account's full name, the domain and email addresses in error details and startup names,
-//! profile folders in paths, account SIDs, and (in error details only) MAC and IPv4 addresses and
+//! profile folders in paths, account SIDs, and (in error details only) MAC, IPv4 and IPv6 addresses and
 //! network server names. The app gathers the names on Windows; this module only rewrites text.
 
 use crate::startup_names::friendly_startup_name;
@@ -13,9 +13,10 @@ use crate::{Check, Report};
 #[derive(Debug, Clone, Default)]
 pub struct Redactor {
     usernames: Vec<String>,
-    /// Account names under `MIN_NAME_LEN`: hidden only right after a `\` or `/`, where they name
-    /// the account (`PC\al`, `/home/al`), since as plain words they'd match too much.
-    short_names: Vec<String>,
+    /// Account names that are too short or too common to match as plain words ("al", "User",
+    /// "Ufficio"): hidden only right after a `\` or `/`, where they name the account (`PC\al`,
+    /// `/home/al`); a profile folder is hidden whatever its name.
+    context_names: Vec<String>,
     hostnames: Vec<String>,
     domains: Vec<String>,
 }
@@ -48,10 +49,10 @@ impl Redactor {
         let mut r = Redactor::default();
         for name in usernames.into_iter().map(Into::into) {
             let name = name.trim().to_string();
-            if name.chars().count() >= MIN_NAME_LEN {
+            if name.chars().count() >= MIN_NAME_LEN && !is_common_word(&name) {
                 add_name(&mut r.usernames, name);
-            } else if !name.is_empty() && !r.short_names.iter().any(|n| n.eq_ignore_ascii_case(&name)) {
-                r.short_names.push(name);
+            } else if !name.is_empty() && !r.context_names.iter().any(|n| n.eq_ignore_ascii_case(&name)) {
+                r.context_names.push(name);
             }
         }
         r.with_hostname(hostname)
@@ -132,7 +133,7 @@ impl Redactor {
         for name in &self.usernames {
             s = replace_word(&s, name, "<user>");
         }
-        for name in &self.short_names {
+        for name in &self.context_names {
             s = replace_after_separator(&s, name, "<user>");
         }
         s
@@ -140,7 +141,7 @@ impl Redactor {
 
     /// Free text such as error details, which may also quote network addresses and servers.
     pub fn detail(&self, s: &str) -> String {
-        replace_unc_servers(&replace_ipv4(&replace_macs(&self.text(s))))
+        replace_unc_servers(&replace_ipv4(&replace_ipv6(&replace_macs(&self.text(s)))))
     }
 
     /// Rewrites every text field in the report, and gives startup items their readable names.
@@ -323,29 +324,37 @@ fn inside_placeholder(s: &str, i: usize) -> bool {
     })
 }
 
-/// `needle` (ASCII case-insensitive) where it stands as a whole word, skipping placeholders.
+/// The byte length of `needle` at byte `i` of `s`, ignoring letter case in any alphabet ("JOSÉ" is
+/// "josé"), or None when it isn't there.
+fn match_ignoring_case(s: &str, i: usize, needle: &str) -> Option<usize> {
+    let mut hay = s[i..].char_indices();
+    for n in needle.chars() {
+        let (_, h) = hay.next()?;
+        if h != n && !h.to_lowercase().eq(n.to_lowercase()) {
+            return None;
+        }
+    }
+    Some(hay.next().map_or(s.len() - i, |(at, _)| at))
+}
+
+/// `needle` (in any letter case) where it stands as a whole word, skipping placeholders.
 fn replace_word(s: &str, needle: &str, with: &str) -> String {
     if needle.chars().count() < MIN_NAME_LEN {
         return s.to_string();
     }
     replace_matches(s, with, |s, i| {
-        let end = i + needle.len();
-        let found = s.get(i..end).is_some_and(|w| w.eq_ignore_ascii_case(needle))
-            && !is_word_char(s[..i].chars().next_back())
-            && !is_word_char(s[end..].chars().next())
-            && !inside_placeholder(s, i);
-        found.then_some(needle.len())
+        let len = match_ignoring_case(s, i, needle)?;
+        let found = !is_word_char(s[..i].chars().next_back()) && !is_word_char(s[i + len..].chars().next()) && !inside_placeholder(s, i);
+        found.then_some(len)
     })
 }
 
-/// `name` (ASCII case-insensitive) as a whole word right after a `\` or `/`.
+/// `name` (in any letter case) as a whole word right after a `\` or `/`.
 fn replace_after_separator(s: &str, name: &str, with: &str) -> String {
     replace_matches(s, with, |s, i| {
-        let end = i + name.len();
-        let found = s.get(i..end).is_some_and(|w| w.eq_ignore_ascii_case(name))
-            && matches!(s[..i].chars().next_back(), Some('\\' | '/'))
-            && !is_word_char(s[end..].chars().next());
-        found.then_some(name.len())
+        let len = match_ignoring_case(s, i, name)?;
+        let found = matches!(s[..i].chars().next_back(), Some('\\' | '/')) && !is_word_char(s[i + len..].chars().next());
+        found.then_some(len)
     })
 }
 
@@ -396,6 +405,31 @@ fn replace_unc_servers(s: &str) -> String {
     }
     out.push_str(rest);
     out
+}
+
+/// IPv6 addresses: hex groups of up to four digits joined by ':', either all eight or shortened with
+/// "::", with an optional zone ("%12"). Times ("10:20:30") and "std::io" don't qualify.
+fn replace_ipv6(s: &str) -> String {
+    replace_matches(s, "<ip>", |s, i| {
+        let b = s.as_bytes();
+        let edge = |c: Option<&u8>| c.is_some_and(|c| c.is_ascii_alphanumeric() || *c == b':' || *c == b'.');
+        if edge(i.checked_sub(1).and_then(|j| b.get(j))) || !(b[i].is_ascii_hexdigit() || b[i] == b':') {
+            return None;
+        }
+        let run = b[i..].iter().take_while(|c| c.is_ascii_hexdigit() || **c == b':').count();
+        let addr = &s[i..i + run];
+        let groups: Vec<&str> = addr.split(':').collect();
+        let colons = groups.len() - 1;
+        let shape = addr.contains("::") && !addr.contains(":::") || colons == 7;
+        let ok = shape && colons >= 2 && colons <= 7 && groups.iter().all(|g| g.len() <= 4) && addr.bytes().any(|c| c.is_ascii_digit());
+        if !ok {
+            return None;
+        }
+        // A zone ("%12", "%eth0") belongs to the address.
+        let zone = if b.get(i + run) == Some(&b'%') { 1 + b[i + run + 1..].iter().take_while(|c| c.is_ascii_alphanumeric()).count() } else { 0 };
+        let end = i + run + zone;
+        (!b.get(end).is_some_and(u8::is_ascii_alphanumeric)).then_some(end - i)
+    })
 }
 
 /// Six hex pairs joined by ':' or '-', the same one throughout.
@@ -555,10 +589,10 @@ mod tests {
 
     #[test]
     fn edge_cases_stay_readable() {
-        // A user called "user" doesn't eat the placeholders, and "jdoe.CONTOSO" goes whole.
+        // A user called "user" eats neither the placeholders nor the word, and "jdoe.CONTOSO" goes whole.
         let r = Redactor::new(["user", "jdoe", "jdoe.CONTOSO"], "DESKTOP-ABC");
         assert_eq!(r.text(r"C:\Users\jdoe.CONTOSO\x"), r"C:\Users\<user>\x");
-        assert_eq!(r.text("user jdoe.CONTOSO"), "<user> <user>");
+        assert_eq!(r.text("user jdoe.CONTOSO <user>"), "user <user> <user>");
         // Accented text around a name, and an address ending a sentence.
         assert_eq!(r.text("Caffè di jdoe, perché sì"), "Caffè di <user>, perché sì");
         assert_eq!(r.detail("non raggiungibile: 10.0.0.7."), "non raggiungibile: <ip>.");
@@ -646,6 +680,41 @@ mod tests {
     #[test]
     fn an_address_with_an_apostrophe_is_hidden_whole() {
         assert_eq!(r().text("o'brien@example.com"), "<email>");
+    }
+
+    #[test]
+    fn an_account_named_with_a_common_word_is_hidden_only_where_it_names_the_account() {
+        // Accounts called "User", "Admin" or "Ufficio" would garble ordinary words everywhere else.
+        let r = Redactor::new(["User", "Ufficio"], "DESKTOP-ABC");
+        assert_eq!(r.text("Dell SupportAssist User Agent"), "Dell SupportAssist User Agent");
+        assert_eq!(r.detail("The user name or password is incorrect."), "The user name or password is incorrect.");
+        assert_eq!(r.text(r"DESKTOP-ABC\User"), r"<pc-name>\<user>");
+        assert_eq!(r.text(r"C:\Users\Ufficio\AppData"), r"C:\Users\<user>\AppData");
+    }
+
+    #[test]
+    fn names_with_accents_are_hidden_in_any_case() {
+        let r = Redactor::new(["José"], "DESKTOP-ABC").with_full_name("José Nuñez");
+        assert_eq!(r.text("JOSÉ NUÑEZ backup"), "<user> backup");
+        assert_eq!(r.text("Nuñez e josé"), "<user> e <user>");
+        // Same letters but a different word: left alone.
+        assert_eq!(r.text("Joséphine"), "Joséphine");
+    }
+
+    #[test]
+    fn ipv6_addresses_in_details_are_hidden() {
+        assert_eq!(r().detail("no route to fe80::1c2b:3d4e:5f60:7a8b%12 now"), "no route to <ip> now");
+        assert_eq!(r().detail("server 2001:db8:85a3:0:0:8a2e:370:7334."), "server <ip>.");
+        // Times and ordinary colons stay.
+        assert_eq!(r().detail("at 10:20:30, std::io failed: code 5"), "at 10:20:30, std::io failed: code 5");
+    }
+
+    #[test]
+    fn the_pcs_full_dns_name_and_the_company_tenant_are_hidden() {
+        let r = Redactor::new(["jdoe"], "PC01").with_hostname("PC01.corp.contoso-group.com").with_domain("corp.contoso-group.com").with_domain("Contoso Ltd");
+        assert_eq!(r.detail("can't reach PC01.corp.contoso-group.com"), "can't reach <pc-name>");
+        assert_eq!(r.detail("dc1.corp.contoso-group.com refused"), "dc1.<domain> refused");
+        assert_eq!(r.text("OneDrive - Contoso Ltd"), "OneDrive - <domain>");
     }
 
     /// Every text field in the report is either cleaned by `Redactor::report` or can't hold a

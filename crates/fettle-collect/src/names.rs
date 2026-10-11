@@ -23,10 +23,25 @@ pub fn redactor() -> fettle_facts::redact::Redactor {
     let r = hosts.fold(fettle_facts::redact::Redactor::new(users, first), |r, h| r.with_hostname(h));
     let r = full.into_iter().fold(r, |r, n| r.with_full_name(n));
     let r = account_emails().into_iter().fold(r, |r, e| r.with_email(e));
-    match std::env::var("USERDOMAIN") {
-        Ok(domain) => r.with_domain(domain),
-        Err(_) => r,
+    domains().into_iter().fold(r, |r, d| r.with_domain(d))
+}
+
+/// The company's names: the account's domain (CONTOSO), the PC's DNS domain (corp.contoso.com), and
+/// the organisations OneDrive for work or school is signed in to ("OneDrive - Contoso Ltd").
+#[cfg(windows)]
+pub fn domains() -> Vec<String> {
+    use windows::Win32::System::SystemInformation::ComputerNameDnsDomain;
+    use winreg::RegKey;
+    use winreg::enums::HKEY_CURRENT_USER;
+
+    let mut domains: Vec<String> = ["USERDOMAIN", "USERDNSDOMAIN"].iter().filter_map(|v| std::env::var(v).ok()).collect();
+    domains.extend(computer_name(ComputerNameDnsDomain));
+    if let Ok(accounts) = RegKey::predef(HKEY_CURRENT_USER).open_subkey(r"Software\Microsoft\OneDrive\Accounts") {
+        for account in accounts.enum_keys().flatten().filter(|a| a.starts_with("Business")) {
+            domains.extend(accounts.open_subkey(&account).ok().and_then(|k| k.get_value::<String, _>("DisplayName").ok()));
+        }
     }
+    domains
 }
 
 /// The full names of the people using this PC ("Mario Rossi"): the local accounts with a profile
@@ -106,7 +121,7 @@ fn user_name_ex_now(format: windows::Win32::Security::Authentication::Identity::
 
 /// Every account name on this PC, not just the one running the scan: an admin run under IT
 /// credentials still sees the employee's startup entries. Plus the computer's names: the short
-/// one in `COMPUTERNAME` (cut to 15 characters) and the full DNS one.
+/// one in `COMPUTERNAME` (cut to 15 characters), the DNS one and the DNS one with its domain.
 #[cfg(windows)]
 pub fn machine_names() -> (Vec<String>, Vec<String>) {
     use winreg::RegKey;
@@ -122,20 +137,22 @@ pub fn machine_names() -> (Vec<String>, Vec<String>) {
             names.extend(path.and_then(|p| profile_leaf(&p)));
         }
     }
-    // Redactor drops duplicates, empty names and names too short to match safely.
-    let hosts = [std::env::var("COMPUTERNAME").ok(), dns_hostname()].into_iter().flatten().collect();
+    // Redactor drops duplicates, empty names and names too short to match safely. The full name
+    // with the domain (PC01.corp.contoso.com) goes first, whole.
+    use windows::Win32::System::SystemInformation::{ComputerNameDnsFullyQualified, ComputerNameDnsHostname};
+    let hosts = [std::env::var("COMPUTERNAME").ok(), computer_name(ComputerNameDnsHostname), computer_name(ComputerNameDnsFullyQualified)].into_iter().flatten().collect();
     (names, hosts)
 }
 
 #[cfg(windows)]
-fn dns_hostname() -> Option<String> {
-    use windows::Win32::System::SystemInformation::{ComputerNameDnsHostname, GetComputerNameExW};
+fn computer_name(format: windows::Win32::System::SystemInformation::COMPUTER_NAME_FORMAT) -> Option<String> {
+    use windows::Win32::System::SystemInformation::GetComputerNameExW;
     use windows::core::PWSTR;
     let mut len = 0u32;
     // The first call fails on purpose and reports the size needed.
-    let _ = unsafe { GetComputerNameExW(ComputerNameDnsHostname, None, &mut len) };
+    let _ = unsafe { GetComputerNameExW(format, None, &mut len) };
     let mut buf = vec![0u16; len as usize];
-    unsafe { GetComputerNameExW(ComputerNameDnsHostname, Some(PWSTR(buf.as_mut_ptr())), &mut len) }.ok()?;
+    unsafe { GetComputerNameExW(format, Some(PWSTR(buf.as_mut_ptr())), &mut len) }.ok()?;
     Some(String::from_utf16_lossy(&buf[..len as usize])).filter(|h| !h.is_empty())
 }
 

@@ -50,10 +50,26 @@ fn acceptable(path: &Path) -> bool {
 }
 
 /// The report file the helper is asked to write into `dir`, checked the way the helper will check it,
-/// so a folder it would refuse fails here, before Windows asks for permission.
+/// so a folder it would refuse fails here, before Windows asks for permission. The folder goes by its
+/// real path: one reached through a junction (a profile moved to another drive, say) still works, and
+/// a mapped network drive shows up as the share it is (which the elevated helper couldn't even see).
 pub fn deep_report_path(dir: &Path, pid: u32, nonce: u128) -> Result<PathBuf, DeepError> {
-    let path = dir.join(format!("fettle-deep-{pid}-{nonce}.json"));
-    if acceptable(&path) && !through_a_link(dir).unwrap_or(true) { Ok(path) } else { Err(DeepError::Failed) }
+    let name = format!("fettle-deep-{pid}-{nonce}.json");
+    if !acceptable(&dir.join(&name)) {
+        return Err(DeepError::Failed);
+    }
+    let real = std::fs::canonicalize(dir).ok().and_then(local_form).ok_or(DeepError::Failed)?;
+    let path = real.join(name);
+    if acceptable(&path) && !through_a_link(&real).unwrap_or(true) { Ok(path) } else { Err(DeepError::Failed) }
+}
+
+/// A path as `canonicalize` gives it (`\\?\C:\...`), as a plain drive path, or None when it's
+/// anything else (a network share, a volume with no drive letter).
+fn local_form(path: PathBuf) -> Option<PathBuf> {
+    let text = path.to_str()?;
+    let plain = text.strip_prefix(r"\\?\").unwrap_or(text);
+    let drive = plain.as_bytes();
+    (drive.len() >= 3 && drive[0].is_ascii_alphabetic() && drive[1] == b':' && drive[2] == b'\\').then(|| PathBuf::from(plain))
 }
 
 /// Writes `report` to a file that must not exist yet (never overwrites one).
@@ -264,8 +280,17 @@ mod tests {
         assert_eq!(deep_report_path(Path::new("Fettle data"), 7, 9), Err(DeepError::Failed));
         let dir = scratch("target");
         let path = deep_report_path(&dir, 7, 9).expect("a local folder");
-        assert_eq!(path, dir.join("fettle-deep-7-9.json"));
+        assert_eq!(path, local_form(std::fs::canonicalize(&dir).unwrap()).unwrap().join("fettle-deep-7-9.json"));
         assert_eq!(helper_target(args(&["fettle.exe", "--deep-scan", path.to_str().unwrap()])), Helper::Write(path.clone()));
+    }
+
+    #[test]
+    fn a_real_path_on_this_pc_is_kept_and_a_network_one_refused() {
+        // What canonicalize gives: a drive path, or a share (a mapped network drive resolves to one).
+        assert_eq!(local_form(PathBuf::from(r"\\?\C:\Users\x\AppData\Local\Fettle")), Some(PathBuf::from(r"C:\Users\x\AppData\Local\Fettle")));
+        assert_eq!(local_form(PathBuf::from(r"\\?\UNC\nas\tools\Fettle data")), None);
+        assert_eq!(local_form(PathBuf::from(r"\\?\Volume{0a1b2c3d-0000-0000-0000-000000000000}\Fettle")), None);
+        assert_eq!(local_form(PathBuf::from(r"D:\Fettle data")), Some(PathBuf::from(r"D:\Fettle data")));
     }
 
     #[test]
@@ -286,7 +311,11 @@ mod tests {
         std::fs::create_dir_all(real.join("Fettle data")).unwrap();
         assert!(write_report(&link.join("Fettle data").join("fettle-deep-1-2.json"), &a_report()).is_err(), "a junction further up");
         assert!(!real.join("Fettle data").join("fettle-deep-1-2.json").exists());
-        assert_eq!(deep_report_path(&link.join("Fettle data"), 1, 2), Err(DeepError::Failed), "caught before Windows asks");
+        // The app hands the helper the folder's real path, so a profile folder moved with a junction
+        // still gets its Deep check.
+        let real_data = local_form(std::fs::canonicalize(real.join("Fettle data")).unwrap()).unwrap();
+        assert_eq!(deep_report_path(&link.join("Fettle data"), 1, 2), Ok(real_data.join("fettle-deep-1-2.json")));
+        assert!(write_report(&real_data.join("fettle-deep-1-2.json"), &a_report()).is_ok());
         // The junction goes with the test: tools that clean folders (git's worktree removal) stop at one.
         std::fs::remove_dir(&link).unwrap();
         let _ = std::fs::remove_dir_all(&dir);

@@ -9,8 +9,12 @@ export const releases: Release[] = [
     version: "1.0.4",
     date: null,
     notes: {
-      en: [],
-      it: [],
+      en: [
+        "The “new version” note's download link now only ever opens a page on fettle.page.",
+      ],
+      it: [
+        "Il link per scaricare la nuova versione ora apre sempre e solo una pagina di fettle.page.",
+      ],
     },
   },
   {

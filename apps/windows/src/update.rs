@@ -81,18 +81,27 @@ pub fn newer(candidate: &str, current: &str) -> bool {
     }
 }
 
-/// The website's answer: {"version": "x.y.z", "page": {"en": https URL, "it": https URL}}.
-pub fn parse(body: &[u8]) -> Option<Latest> {
+/// The website's answer: {"version": "x.y.z", "page": {"en": URL, "it": URL}}. A download page is
+/// kept only if it's on `origin` (the website asked); any other, or none, gives way to the website's
+/// own download page, so the answer can't send anyone elsewhere.
+pub fn parse(body: &[u8], origin: &str) -> Option<Latest> {
     let v: serde_json::Value = serde_json::from_slice(body).ok()?;
     let version = v["version"].as_str().filter(|s| semver(s).is_some())?;
-    let page = |lang: &str| v["page"][lang].as_str().filter(|u| u.starts_with("https://")).map(String::from);
-    Some(Latest { version: version.into(), page_en: page("en")?, page_it: page("it")? })
+    let origin = origin.trim_end_matches('/');
+    let page = |lang: &str, own: &str| v["page"][lang].as_str().filter(|u| on_origin(u, origin)).map(String::from).unwrap_or_else(|| format!("{origin}{own}"));
+    Some(Latest { version: version.into(), page_en: page("en", "/download"), page_it: page("it", "/it/download") })
+}
+
+/// Whether `url` is on `origin` itself: the origin, then nothing or a path, in plain printable
+/// characters (so no look-alike letters, spaces, or a user name that makes the origin a disguise).
+fn on_origin(url: &str, origin: &str) -> bool {
+    url.bytes().all(|b| b.is_ascii_graphic()) && !url.contains('\\') && url.strip_prefix(origin).is_some_and(|rest| rest.is_empty() || rest.starts_with(['/', '?', '#']))
 }
 
 /// One plain GET to the website. None for anything but a good answer.
 pub fn fetch(http: &dyn Http, origin: &str) -> Option<Latest> {
     let response = http.send("GET", &format!("{}{PATH}", origin.trim_end_matches('/')), &[], None).ok()?;
-    (response.status == 200).then(|| parse(&response.body)).flatten()
+    (response.status == 200).then(|| parse(&response.body, origin)).flatten()
 }
 
 #[cfg(test)]
@@ -188,20 +197,56 @@ mod tests {
 
     const GOOD: &str = r#"{"version":"0.2.0","page":{"en":"https://fettle.page/download","it":"https://fettle.page/it/download"}}"#;
 
+    const ORIGIN: &str = "https://fettle.page";
+
     #[test]
     fn the_websites_answer_is_read_strictly() {
-        let latest = parse(GOOD.as_bytes()).expect("the site's answer");
+        let latest = parse(GOOD.as_bytes(), ORIGIN).expect("the site's answer");
         assert_eq!(latest, Latest { version: "0.2.0".into(), page_en: "https://fettle.page/download".into(), page_it: "https://fettle.page/it/download".into() });
-        for bad in [
-            "",
-            "not json",
-            r#"{"version":"0.2.0"}"#,
-            r#"{"version":"0.2","page":{"en":"https://fettle.page/download","it":"https://fettle.page/it/download"}}"#,
-            r#"{"version":"0.2.0","page":{"en":"http://fettle.page/download","it":"https://fettle.page/it/download"}}"#,
-            r#"{"version":"0.2.0","page":{"en":"https://fettle.page/download","it":"javascript:alert(1)"}}"#,
-        ] {
-            assert_eq!(parse(bad.as_bytes()), None, "{bad}");
+        for bad in ["", "not json", r#"{"page":{"en":"https://fettle.page/download","it":"https://fettle.page/it/download"}}"#, r#"{"version":"0.2","page":{}}"#] {
+            assert_eq!(parse(bad.as_bytes(), ORIGIN), None, "{bad}");
         }
+    }
+
+    fn pages_for(page: &str, origin: &str) -> (String, String) {
+        let body = serde_json::json!({ "version": "0.2.0", "page": { "en": page, "it": page } }).to_string();
+        let latest = parse(body.as_bytes(), origin).expect("the version is good");
+        (latest.page_en, latest.page_it)
+    }
+
+    #[test]
+    fn a_download_page_off_the_website_gives_way_to_fettles_own() {
+        let own = ("https://fettle.page/download".to_string(), "https://fettle.page/it/download".to_string());
+        for page in [
+            "https://fettle.page.evil.example/",
+            "https://fettle.pageevil.example/download",
+            "https://evil.example/?fettle.page",
+            "https://evil.example/https://fettle.page/download",
+            "https://fettle.page@evil.example/",
+            "https://fettle.page:443@evil.example/",
+            "https://fettle.page\\@evil.example/",
+            "http://fettle.page/download",
+            "https://fettl\u{0435}.page/download",
+            "https://xn--fettl-3ve.page/download",
+            "https://fettle.page/download page",
+            "javascript:alert(1)",
+            "//evil.example/",
+            "",
+        ] {
+            assert_eq!(pages_for(page, ORIGIN), own, "{page}");
+        }
+        let missing = parse(br#"{"version":"0.2.0"}"#, ORIGIN).expect("the version is enough");
+        assert_eq!((missing.page_en, missing.page_it), own);
+    }
+
+    #[test]
+    fn a_download_page_on_the_website_is_kept() {
+        for page in ["https://fettle.page/download", "https://fettle.page/it/download?from=app", "https://fettle.page/changelog#1.0.4"] {
+            assert_eq!(pages_for(page, ORIGIN), (page.to_string(), page.to_string()));
+        }
+        // A development build's own origin (a local Worker).
+        assert_eq!(pages_for("http://localhost:8787/download", "http://localhost:8787").0, "http://localhost:8787/download");
+        assert_eq!(pages_for("https://fettle.page/download", "http://localhost:8787").0, "http://localhost:8787/download");
     }
 
     struct Site(u16, &'static str, Mutex<Vec<(String, String, usize, bool)>>);

@@ -375,20 +375,26 @@ mod tests {
         assert!(f.calls().is_empty());
     }
 
-    /// A report with `n` startup apps of 100 characters each, and the size of its upload.
-    fn with_startup_apps(n: usize) -> (Report, usize) {
+    /// A report with `n` startup apps of 100 characters and `n` disks with 128-character models, and
+    /// the size of its upload once fitted to the limits (each list keeps at most 256 entries).
+    fn with_apps_and_disks(n: usize) -> (Report, usize) {
+        let ok = || fettle_facts::Check { status: fettle_facts::CheckStatus::Ok, detail: None };
         let item = fettle_facts::StartupItem { name: Some("x".repeat(100)), location: None, enabled: Some(true) };
-        let startup = fettle_facts::Section { check: fettle_facts::Check { status: fettle_facts::CheckStatus::Ok, detail: None }, data: Some(fettle_facts::Startup { items: vec![item; n] }) };
-        let r = Report { facts: Facts { startup: Some(startup), ..Facts::default() }, ..report() };
-        let size = serde_json::json!({ "report": r }).to_string().len();
+        let startup = fettle_facts::Section { check: ok(), data: Some(fettle_facts::Startup { items: vec![item; n] }) };
+        let disk = fettle_facts::Disk { model: Some("y".repeat(128)), ..Default::default() };
+        let storage = fettle_facts::Section { check: ok(), data: Some(fettle_facts::Storage { disks: vec![disk; n], volumes: vec![] }) };
+        let r = Report { facts: Facts { startup: Some(startup), storage: Some(storage), ..Facts::default() }, ..report() };
+        let mut sent = r.clone();
+        fettle_facts::fit::fit_limits(&mut sent);
+        let size = serde_json::json!({ "report": sent }).to_string().len();
         (r, size)
     }
 
     #[test]
     fn refuses_a_report_over_64_kib_before_sending_it() {
         let f = Fake::new(|| json(201, created()));
-        // Long text is shortened to the limits first, so it takes many entries to pass 64 KiB.
-        let (big, size) = with_startup_apps(700);
+        // Long text and long lists are cut to the limits first, so it takes two full lists to pass 64 KiB.
+        let (big, size) = with_apps_and_disks(256);
         assert!(size > 65_536 && size < 262_144, "over the limit, under the old one: {size}");
         assert_eq!(share_report(&f, ORIGIN, &big, None, None).unwrap_err().error, "too_large");
         assert!(f.calls().is_empty());
@@ -397,7 +403,7 @@ mod tests {
     #[test]
     fn sends_a_report_just_under_64_kib() {
         let f = Fake::new(|| json(201, created()));
-        let (report, size) = with_startup_apps(450);
+        let (report, size) = with_apps_and_disks(170);
         assert!(size > 50_000 && size < 65_536, "{size}");
         assert!(share_report(&f, ORIGIN, &report, None, None).is_ok());
         assert_eq!(f.calls().len(), 1);

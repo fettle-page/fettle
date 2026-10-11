@@ -13,11 +13,13 @@ export const releases: Release[] = [
         "Wear on SATA SSDs is read the way each maker defines it. Before, a drive built on a SandForce controller (such as a Kingston SV300) could wrongly show as 100% worn.",
         "Power-on hours are right on drives that pack other counters into that value, and impossible values are no longer shown.",
         "After a Deep check, a PC without a TPM chip says so, instead of saying it couldn't tell.",
+        "A share link with a password now takes at most 100 wrong passwords a day, on top of 10 a minute, so nobody can keep guessing it.",
       ],
       it: [
         "L'usura degli SSD SATA viene letta come la definisce ciascun produttore. Prima un disco con controller SandForce (come un Kingston SV300) poteva risultare usurato al 100% per errore.",
         "Le ore di accensione sono corrette anche sui dischi che inseriscono altri contatori in quel valore, e i valori impossibili non vengono più mostrati.",
         "Dopo un Controllo approfondito, un PC senza chip TPM lo dice, invece di dire che non è riuscito a verificarlo.",
+        "Un link condiviso con password ora accetta al massimo 100 password sbagliate al giorno, oltre alle 10 al minuto, così nessuno può continuare a tentare.",
       ],
     },
   },

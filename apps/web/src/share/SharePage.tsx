@@ -214,7 +214,7 @@ function forgetPass(id: string) {
   }
 }
 
-type LockedState = { status: "idle" | "busy" | "wrong" | "limited" | "offline" | "failed" } | { status: "open"; model: ReceiptModel; expiresAt: string } | { status: "missing" };
+type LockedState = { status: "idle" | "busy" | "wrong" | "limited" | "limited_today" | "offline" | "failed" } | { status: "open"; model: ReceiptModel; expiresAt: string } | { status: "missing" };
 
 function Locked({ id, locale, fetcher }: { id: string; locale: Locale; fetcher: Fetcher }) {
   const [pass] = useState(() => savedPass(id));
@@ -262,7 +262,8 @@ function Locked({ id, locale, fetcher }: { id: string; locale: Locale; fetcher: 
         setState({ status: "wrong" });
         field.current?.focus();
       } else if (res.status === 429) {
-        setState({ status: "limited" });
+        // A wait past the minute means the report's tries for the day are used up.
+        setState({ status: Number(res.headers.get("retry-after")) > 60 ? "limited_today" : "limited" });
       } else if (res.status === 404) {
         setState({ status: "missing" });
       } else {
@@ -278,6 +279,8 @@ function Locked({ id, locale, fetcher }: { id: string; locale: Locale; fetcher: 
       ? "locked.wrong"
       : state.status === "limited"
         ? "locked.limited"
+        : state.status === "limited_today"
+          ? "locked.limited_today"
         : state.status === "offline"
           ? "offline"
           : state.status === "failed"

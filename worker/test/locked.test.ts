@@ -1,10 +1,11 @@
 import { env } from "cloudflare:workers";
+import { runInDurableObject } from "cloudflare:test";
 import { brain } from "@fettle/brain/worker";
 import { parseReport } from "@fettle/report-schema";
 import { describe, expect, it } from "vitest";
 import { newId } from "../src/ids.ts";
 import { hashPassword } from "../src/passwords.ts";
-import { call, freshIp, share, tiredReport, untilFreshWindow, upload } from "./helpers.ts";
+import { call, DAY, freshIp, share, tiredReport, untilFreshWindow, upload } from "./helpers.ts";
 
 const unlock = (id: string, password: string, ip = freshIp(), locale?: unknown) =>
   call(`/api/reports/${id}/unlock`, {
@@ -111,6 +112,33 @@ describe("password-protected reports", () => {
     expect(limited.status).toBe(429);
     expect(limited.headers.get("retry-after")).toBe("60");
     expect(await limited.json()).toEqual({ error: "rate_limited" });
+  });
+
+  // A day's worth of wrong guesses, as the guard keeps them (the minute's own count is fresh).
+  const usedToday = (id: string, dayCount: number) =>
+    runInDurableObject(env.UNLOCK_GUARD.getByName(id), (_, state) =>
+      state.storage.put("state", { window: Math.floor(Date.now() / 60_000), count: 0, day: Math.floor(Date.now() / DAY), dayCount }),
+    );
+  const dayCountOf = (id: string) =>
+    runInDurableObject(env.UNLOCK_GUARD.getByName(id), async (_, state) => (await state.storage.get<{ dayCount: number }>("state"))?.dayCount);
+
+  it("cap guesses per report per day too, and say when the day is over", async () => {
+    const { id } = await share({ password: "hunter22" });
+    await usedToday(id, 100);
+    const limited = await unlock(id, "hunter22");
+    expect(limited.status).toBe(429);
+    expect(await limited.json()).toEqual({ error: "rate_limited" });
+    const untilMidnight = Math.ceil((DAY - (Date.now() % DAY)) / 1000);
+    expect(Math.abs(Number(limited.headers.get("retry-after")) - untilMidnight)).toBeLessThan(5);
+  });
+
+  it("give a right password's daily try back", async () => {
+    const { id } = await share({ password: "hunter22" });
+    await usedToday(id, 99);
+    expect((await unlock(id, "hunter22")).status).toBe(200);
+    expect(await dayCountOf(id)).toBe(99);
+    expect((await unlock(id, "wrong-one")).status).toBe(403);
+    expect((await unlock(id, "hunter22")).status).toBe(429);
   });
 
   // Twelve full password hashes in a row (deliberately slow): over 5 s on a busy CI machine.

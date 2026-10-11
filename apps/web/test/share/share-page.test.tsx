@@ -210,6 +210,13 @@ describe("SharePage · locked", () => {
     expect(await screen.findByText("Too many tries. Wait a minute and try again.")).toBeTruthy();
   });
 
+  it("says to come back tomorrow once the day's tries are used up", async () => {
+    const tomorrow = () => Promise.resolve(new Response(JSON.stringify({ error: "rate_limited" }), { status: 429, headers: { "content-type": "application/json", "retry-after": "36000" } }));
+    render(<SharePage payload={locked} locale="en" fetcher={tomorrow} />);
+    submit("nope");
+    expect(await screen.findByText("Too many tries for today. Try again tomorrow.")).toBeTruthy();
+  });
+
   it("says when Fettle can't be reached", async () => {
     render(<SharePage payload={locked} locale="en" fetcher={() => Promise.reject(new TypeError("offline"))} />);
     submit("hunter22");

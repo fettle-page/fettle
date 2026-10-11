@@ -3,11 +3,19 @@ import { base64url, hashToken } from "./tokens.ts";
 
 /** Wrong passwords allowed per report per minute, across every visitor and data centre. */
 export const GUESSES_PER_MINUTE = 10;
+/**
+ * Wrong passwords allowed per report per day (UTC). The minute cap alone still allows 14,400 a day;
+ * 100 is far more than anyone mistyping their own password needs, and it keeps even a weak 8-character
+ * password out of reach (a dictionary of 10,000 common passwords would take over three months).
+ */
+export const GUESSES_PER_DAY = 100;
 /** How long a browser that gave the right password can reopen the report without it. */
 export const PASS_MS = 86_400_000;
 const WINDOW_MS = 60_000;
+const DAY_MS = 86_400_000;
 
-type State = { window: number; count: number };
+/** `window`/`count`: this minute's tries; `day`/`dayCount`: this UTC day's. */
+type State = { window: number; count: number; day: number; dayCount: number };
 
 /**
  * One instance per password-protected report (keyed by its id), so the count is global, unlike the
@@ -19,20 +27,31 @@ type State = { window: number; count: number };
  * guess limit, so someone burning through wrong guesses can't lock out people who already opened it.
  */
 export class UnlockGuard extends DurableObject<Env> {
-  async begin(): Promise<boolean> {
-    const window = Math.floor(Date.now() / WINDOW_MS);
+  /** Reserves a try: 0 when allowed, otherwise the seconds to wait (the minute's or the day's end). */
+  async begin(): Promise<number> {
+    const now = Date.now();
+    const window = Math.floor(now / WINDOW_MS);
+    const day = Math.floor(now / DAY_MS);
     const saved = await this.ctx.storage.get<State>("state");
-    const state = saved && saved.window === window ? saved : { window, count: 0 };
-    if (state.count >= GUESSES_PER_MINUTE) return false;
+    const sameDay = saved !== undefined && saved.day === day;
+    const state: State = {
+      window,
+      count: sameDay && saved.window === window ? saved.count : 0,
+      day,
+      dayCount: sameDay ? saved.dayCount : 0,
+    };
+    if (state.dayCount >= GUESSES_PER_DAY) return Math.ceil(((day + 1) * DAY_MS - now) / 1000);
+    if (state.count >= GUESSES_PER_MINUTE) return 60;
     state.count += 1;
+    state.dayCount += 1;
     await this.ctx.storage.put("state", state);
-    await this.cleanUpBy((window + 2) * WINDOW_MS);
-    return true;
+    await this.cleanUpBy((day + 1) * DAY_MS);
+    return 0;
   }
 
   async succeeded(): Promise<void> {
     const state = await this.ctx.storage.get<State>("state");
-    if (state && state.count > 0) await this.ctx.storage.put("state", { ...state, count: state.count - 1 });
+    if (state && state.count > 0) await this.ctx.storage.put("state", { ...state, count: state.count - 1, dayCount: Math.max(0, state.dayCount - 1) });
   }
 
   /** A new pass, valid for 24 hours but never past `notAfter` (the report's own expiry, in ms). */
@@ -50,12 +69,14 @@ export class UnlockGuard extends DurableObject<Env> {
     return expiresAt !== undefined && expiresAt > Date.now();
   }
 
-  /** Drops an old guess window and expired passes, and wakes again for the next pass to expire. */
+  /** Drops a past day's guesses and expired passes, and wakes again for whichever ends next. */
   async alarm(): Promise<void> {
     const now = Date.now();
     const state = await this.ctx.storage.get<State>("state");
-    if (state && state.window < Math.floor(now / WINDOW_MS)) await this.ctx.storage.delete("state");
     let next = Infinity;
+    // A count saved before the daily cap has no day: it's from an earlier day either way.
+    if (state && !(state.day >= Math.floor(now / DAY_MS))) await this.ctx.storage.delete("state");
+    else if (state) next = (state.day + 1) * DAY_MS;
     for (const [key, expiresAt] of await this.ctx.storage.list<number>({ prefix: "pass:" })) {
       if (expiresAt <= now) await this.ctx.storage.delete(key);
       else next = Math.min(next, expiresAt);

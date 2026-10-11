@@ -30,7 +30,7 @@ const clientKey = (request: Request) => rateKey(request.headers.get("cf-connecti
 
 const isJson = (request: Request) => (request.headers.get("content-type") ?? "").toLowerCase().startsWith("application/json");
 
-export const rateLimited = () => apiError(429, "rate_limited", { headers: { "retry-after": "60" } });
+export const rateLimited = (seconds = 60) => apiError(429, "rate_limited", { headers: { "retry-after": String(seconds) } });
 
 /** Reads a capped JSON body; on failure returns the error response to send instead. */
 export async function readJson(request: Request, max: number): Promise<{ ok: true; value: unknown } | { ok: false; response: Response }> {
@@ -139,7 +139,7 @@ export async function getReport(id: string, env: Env): Promise<Response> {
 /**
  * POST /api/reports/:id/unlock  `{ password | pass, locale? }` → the finished receipt in that language
  * (`en` unless `locale` is exactly "it"), built here with the Rust brain like a server-drawn page.
- * Wrong guesses are capped per report across all visitors (UnlockGuard); requests per IP are capped
+ * Wrong guesses are capped per report across all visitors, per minute and per day (UnlockGuard); requests per IP are capped
  * too, which bounds the hashing cost. Both checks run before the password is hashed.
  */
 export async function unlockReport(request: Request, id: string, env: Env): Promise<Response> {
@@ -162,7 +162,8 @@ export async function unlockReport(request: Request, id: string, env: Env): Prom
       // A pass from an earlier right password: no guess counted, so a lockout can't touch it.
       if (!(await guard.checkPass(pass))) return apiError(403, "invalid_pass");
     } else {
-      if (!(await guard.begin())) return rateLimited();
+      const wait = await guard.begin();
+      if (wait > 0) return rateLimited(wait);
       if (!(await passwordMatches(password as string, meta.pwSalt ?? "", meta.pwHash))) {
         console.log(JSON.stringify({ event: "unlock_failed", id }));
         return apiError(403, "wrong_password");

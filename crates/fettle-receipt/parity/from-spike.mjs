@@ -143,7 +143,9 @@ function battery(s) {
   const cim = rows(s.battery_cimv2);
   if (cim && cim.length === 0) return { check: { status: "not_present" } };
   // With two batteries, the rows are matched on the battery's instance name.
-  const first = rows(s.battery_static)?.[0];
+  // The first name is judged, so it's the same battery whichever order Windows lists them in.
+  const byName = (a, b) => (String(a.InstanceName ?? "") < String(b.InstanceName ?? "") ? -1 : String(a.InstanceName ?? "") > String(b.InstanceName ?? "") ? 1 : 0);
+  const first = [...(rows(s.battery_static) ?? [])].sort(byName)[0];
   const row = (src) => (first?.InstanceName != null ? rows(src)?.find((r) => r.InstanceName === first.InstanceName) : rows(src)?.[0]);
   const design = first?.DesignedCapacity;
   const full = row(s.battery_full_capacity)?.FullChargedCapacity;

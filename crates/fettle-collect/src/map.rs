@@ -357,8 +357,9 @@ fn battery(s: &Sources) -> Section<Battery> {
         return status(CheckStatus::NotPresent, None);
     }
     // Each value comes from its own query. With two batteries, the rows are matched on the
-    // battery's instance name, so one battery's charge isn't judged against the other's design.
-    let first = s.first("battery_static");
+    // battery's instance name, so one battery's charge isn't judged against the other's design,
+    // and the first name is judged, so it's the same battery whichever order Windows lists them in.
+    let first = s.rows("battery_static").and_then(|rows| rows.iter().min_by_key(|r| str_of(r, "InstanceName").unwrap_or("")));
     let name = first.and_then(|r| str_of(r, "InstanceName"));
     let row = |source: &str| match name {
         Some(n) => s.rows(source).and_then(|rows| rows.iter().find(|r| str_of(r, "InstanceName") == Some(n))),
@@ -538,6 +539,11 @@ mod tests {
         ]);
         let b = battery(&Sources(&r)).data.unwrap();
         assert_eq!((b.design_capacity_mwh, b.full_charge_capacity_mwh, b.cycle_count), (Some(23000), Some(20000), Some(300)));
+
+        // The same battery every time, whichever order Windows lists them in.
+        let mut swapped = r.clone();
+        swapped.get_mut("battery_static").unwrap().data.as_mut().unwrap().as_array_mut().unwrap().reverse();
+        assert_eq!(battery(&Sources(&swapped)).data.unwrap(), b);
     }
 
     #[test]

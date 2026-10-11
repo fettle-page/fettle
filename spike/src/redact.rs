@@ -46,16 +46,20 @@ pub fn redact(value: &mut Value, names: &Redactor, include_private: bool) {
         Value::Object(map) => {
             map.retain(|k, _| !key_in(ALWAYS_REMOVED, k));
             for (k, v) in map.iter_mut() {
-                if !include_private && is_private_key(k) {
+                if include_private {
+                    redact(v, names, include_private);
+                } else if is_private_key(k) {
                     *v = Value::String("<private>".into());
+                } else if let (Value::String(s), true) = (&mut *v, k.to_ascii_lowercase().contains("version")) {
+                    // A version number can look like an IPv4 address ("2.0.0.0"): names only.
+                    *s = names.text(s);
                 } else {
                     redact(v, names, include_private);
                 }
             }
         }
         Value::Array(items) => items.iter_mut().for_each(|v| redact(v, names, include_private)),
-        // Data, not error text: an address-shaped version number ("2.0.0.0") stays as it is.
-        Value::String(s) if !include_private => *s = names.text(s),
+        Value::String(s) if !include_private => *s = names.detail(s),
         _ => {}
     }
 }
@@ -177,9 +181,17 @@ mod tests {
 
     #[test]
     fn data_keeps_version_numbers_that_look_like_addresses() {
-        let mut v = json!({"Version": "2.0.0.0"});
+        let mut v = json!({"Version": "2.0.0.0", "DriverVersion": "1.2.3.4"});
         redact(&mut v, &names(), false);
-        assert_eq!(v, json!({"Version": "2.0.0.0"}));
+        assert_eq!(v, json!({"Version": "2.0.0.0", "DriverVersion": "1.2.3.4"}));
+    }
+
+    #[test]
+    fn data_hides_network_servers_and_addresses() {
+        // Win32_StartupCommand can run a logon script from a server.
+        let mut v = json!([{"Command": r"\\fs01\netlogon\map.bat", "Location": "dc at 10.0.0.7"}]);
+        redact(&mut v, &names(), false);
+        assert_eq!(v, json!([{"Command": r"\\<server>\netlogon\map.bat", "Location": "dc at <ip>"}]));
     }
 
     #[test]

@@ -5,7 +5,7 @@ import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import { describe, it } from "node:test";
 import { readFileSync } from "node:fs";
-import { realLookingEdgeCodes, realLookingProcessorIds, realLookingSids, unexpectedPaths } from "../repo-files.mjs";
+import { realLookingAutoLaunchCodes, realLookingProcessorIds, realLookingSids, unexpectedPaths } from "../repo-files.mjs";
 
 // Test data must use obviously fake identifiers: a real account SID once slipped into a test.
 describe("account SIDs in tracked files", () => {
@@ -36,6 +36,8 @@ describe("Entra ID account SIDs in tracked files", () => {
     assert.deepEqual(realLookingSids("HKU\\S-1-12-1-1111111111-2222222222-3333333333-4444444444\\Run"), []);
     const random = ["S-1-12-1", "3623811015", "1336104434", "3030082011", "2013431744"].join("-");
     assert.equal(realLookingSids(`HKU\\${random}\\Run`).length, 1);
+    // Windows writes SIDs in either case.
+    assert.equal(realLookingSids(random.toLowerCase()).length, 1);
   });
 });
 
@@ -53,16 +55,18 @@ describe("CPU ProcessorIds in tracked files", () => {
   });
 });
 
-// Edge names its startup entry after a hash of the browser profile's path, which holds the account name.
-describe("Edge startup codes in tracked files", () => {
+// Edge and Chrome name their startup entries after a hash of the browser profile's path, which
+// holds the account name.
+describe("browser startup codes in tracked files", () => {
   it("allows only obviously fake ones", () => {
-    assert.deepEqual(realLookingEdgeCodes("MicrosoftEdgeAutoLaunch_0123456789ABCDEF0123456789ABCDEF and MicrosoftEdgeAutoLaunch_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"), []);
+    assert.deepEqual(realLookingAutoLaunchCodes("MicrosoftEdgeAutoLaunch_0123456789ABCDEF0123456789ABCDEF and MicrosoftEdgeAutoLaunch_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"), []);
     const random = ["5D0C93F1", "2B7E44A0", "9C1F08E3", "D47A6B25"].join("");
-    assert.equal(realLookingEdgeCodes(`MicrosoftEdgeAutoLaunch_${random}`).length, 1);
+    assert.equal(realLookingAutoLaunchCodes(`MicrosoftEdgeAutoLaunch_${random}`).length, 1);
+    assert.equal(realLookingAutoLaunchCodes(`GoogleChromeAutoLaunch_${random}`).length, 1);
   });
 
   it("holds for every file tracked in this repo", () => {
-    assert.deepEqual(trackedTexts().filter(([, text]) => realLookingEdgeCodes(text).length).map(([p]) => p), []);
+    assert.deepEqual(trackedTexts().filter(([, text]) => realLookingAutoLaunchCodes(text).length).map(([p]) => p), []);
   });
 });
 

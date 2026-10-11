@@ -131,19 +131,21 @@ pub fn redact_str(s: &str, ctx: &RedactContext, include_private: bool) -> String
 }
 
 /// Local and domain account SIDs (S-1-5-21-…) and Entra ID account SIDs (S-1-12-1-…) identify
-/// this PC and its users. Well-known SIDs like S-1-5-18 are left alone.
+/// this PC and its users, in any letter case. Well-known SIDs like S-1-5-18 are left alone.
 fn replace_account_sids(s: &str) -> String {
-    const PREFIXES: [&str; 2] = ["S-1-5-21-", "S-1-12-1-"];
+    const PREFIXES: [&str; 2] = ["s-1-5-21-", "s-1-12-1-"];
+    // ASCII lowercasing keeps byte offsets identical to `s`.
+    let lower = s.to_ascii_lowercase();
     let mut out = String::with_capacity(s.len());
-    let mut rest = s;
-    while let Some((pos, prefix)) = PREFIXES.iter().filter_map(|p| rest.find(p).map(|i| (i, *p))).min() {
-        out.push_str(&rest[..pos]);
-        let tail = &rest[pos + prefix.len()..];
+    let mut i = 0;
+    while let Some((pos, prefix)) = PREFIXES.iter().filter_map(|p| lower[i..].find(p).map(|at| (i + at, *p))).min() {
+        out.push_str(&s[i..pos]);
+        let tail = &s[pos + prefix.len()..];
         let len = tail.find(|c: char| !(c.is_ascii_digit() || c == '-')).unwrap_or(tail.len());
         out.push_str("<sid>");
-        rest = &tail[len..];
+        i = pos + prefix.len() + len;
     }
-    out.push_str(rest);
+    out.push_str(&s[i..]);
     out
 }
 
@@ -278,6 +280,8 @@ mod tests {
             r"HKU\<sid>\Software\Run"
         );
         assert_eq!(redact_str("S-1-5-32-544", &ctx(), false), "S-1-5-32-544");
+        // Windows writes SIDs in either case.
+        assert_eq!(redact_str("s-1-12-1-1111111111-2222222222-3333333333-4444444444 and s-1-5-21-1-2-3-1001", &ctx(), false), "<sid> and <sid>");
     }
 
     #[test]

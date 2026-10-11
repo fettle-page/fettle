@@ -61,7 +61,7 @@ mod tests {
     #[test]
     fn edge_and_chrome_get_their_product_names() {
         assert_eq!(name("MicrosoftEdgeAutoLaunch_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"), "Microsoft Edge");
-        assert_eq!(name("GoogleChromeAutoLaunch_8C0D9D7E4B1F4F2AA1B2C3D4E5F60718"), "Google Chrome");
+        assert_eq!(name("GoogleChromeAutoLaunch_BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB"), "Google Chrome");
     }
 
     #[test]

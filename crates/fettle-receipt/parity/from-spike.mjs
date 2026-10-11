@@ -11,9 +11,17 @@ const failed = (detail) => ({ check: { status: "failed", detail } });
 const rows = (src) => (src?.ok && Array.isArray(src.data) ? src.data : null);
 const accessDenied = (src) => typeof src?.error === "string" && src.error.includes("0x80041003");
 
+/** A UTC date for any year: Date.UTC would read years 0 to 99 as 1900 to 1999. */
+function utc(y, mo, d, h = 0, mi = 0, sec = 0) {
+  const date = new Date(0);
+  date.setUTCFullYear(y, mo - 1, d);
+  date.setUTCHours(h, mi, sec, 0);
+  return date;
+}
+
 /** Whether year-month-day names a real calendar day (no month 0 or 13, no 30 February). */
 function realDay(y, m, d) {
-  const date = new Date(Date.UTC(y, m - 1, d));
+  const date = utc(y, m, d);
   return m >= 1 && m <= 12 && d >= 1 && date.getUTCFullYear() === y && date.getUTCMonth() === m - 1 && date.getUTCDate() === d;
 }
 
@@ -23,7 +31,7 @@ function wmiDate(s) {
   if (!m) return null;
   const [, y, mo, d, h, mi, sec, off] = m;
   if (!realDay(+y, +mo, +d) || +h > 23 || +mi > 59 || +sec > 60) return null;
-  return new Date(Date.UTC(+y, +mo - 1, +d, +h, +mi, +sec) - Number(off) * 60000);
+  return new Date(utc(+y, +mo, +d, +h, +mi, +sec).getTime() - Number(off) * 60000);
 }
 const isoDay = (date) => (date ? date.toISOString().slice(0, 10) : null);
 

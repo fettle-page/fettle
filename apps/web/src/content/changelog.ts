@@ -6,6 +6,14 @@ export type Release = { version: string; date: string | null; notes: Record<Loca
 
 export const releases: Release[] = [
   {
+    version: "1.0.4",
+    date: null,
+    notes: {
+      en: [],
+      it: [],
+    },
+  },
+  {
     version: "1.0.3",
     date: "2026-10-11",
     notes: {

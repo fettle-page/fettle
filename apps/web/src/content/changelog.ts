@@ -42,6 +42,7 @@ export const releases: Release[] = [
         "When the update check can't get an answer, Fettle waits an hour before trying again, then two, then four, and never more often than you chose, instead of trying every ten minutes in each open window.",
         "Saving with a name that doesn't end in .pdf (receipt.txt, say) now adds .pdf to it, and never replaces a file Windows didn't ask you about.",
         "In Italian, Windows' print queue now shows the receipt as “Scontrino Fettle”.",
+        "A Deep check that takes longer than two minutes no longer leaves a file behind in Fettle's folder.",
       ],
       it: [
         "Su Windows 10, Fettle non dice più che un PC è iscritto agli Extended Security Updates solo perché ha installato un aggiornamento in ritardo. Ora lo ricava dalla build di Windows e, quando non può saperlo, ti chiede di controllare in Windows Update.",
@@ -76,6 +77,7 @@ export const releases: Release[] = [
         "Quando il controllo degli aggiornamenti non riceve risposta, Fettle aspetta un'ora prima di riprovare, poi due, poi quattro, e mai più spesso di quanto hai scelto, invece di riprovare ogni dieci minuti in ogni finestra aperta.",
         "Salvando con un nome che non finisce in .pdf (per esempio scontrino.txt), ora Fettle aggiunge .pdf, e non sostituisce mai un file per cui Windows non ti ha chiesto conferma.",
         "In italiano, la coda di stampa di Windows ora mostra lo scontrino come «Scontrino Fettle».",
+        "Un Controllo approfondito che dura più di due minuti non lascia più un file nella cartella di Fettle.",
       ],
     },
   },

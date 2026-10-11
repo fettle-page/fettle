@@ -90,10 +90,26 @@ pub fn for_the_app(mut report: Report) -> Report {
     report
 }
 
+/// How long the app waits for the helper, from when Windows starts it.
+pub const APP_WAIT: std::time::Duration = std::time::Duration::from_secs(120);
+/// How long the helper may take and still write its report: well inside the app's wait, so a report
+/// it writes is one the app reads (and deletes), never one left behind after the app gave up.
+pub const HELPER_DEADLINE: std::time::Duration = std::time::Duration::from_secs(110);
+
 /// The helper's whole job, run before any window exists: scan, write the report, and say how it
 /// went in the exit code (0 written, 1 not).
 pub fn run_helper(path: &Path) -> i32 {
-    if write_report(path, &for_the_app(crate::scan::scan_quietly())).is_ok() { 0 } else { 1 }
+    let started = std::time::Instant::now();
+    let report = for_the_app(crate::scan::scan_quietly());
+    finish_helper(path, &report, started.elapsed())
+}
+
+/// Writes the helper's report if it's in time (`took` is how long the scan ran), and says how it went.
+pub fn finish_helper(path: &Path, report: &Report, took: std::time::Duration) -> i32 {
+    if took >= HELPER_DEADLINE {
+        return 1;
+    }
+    if write_report(path, report).is_ok() { 0 } else { 1 }
 }
 
 /// Clears Deep-check report files a helper wrote after the app had stopped waiting (it gave up, or
@@ -178,7 +194,7 @@ fn run_elevated(owner: isize, path: &Path) -> Result<f64, DeepError> {
             return Err(DeepError::Failed);
         }
         let started = std::time::Instant::now();
-        let finished = WaitForSingleObject(info.hProcess, 120_000) == WAIT_OBJECT_0;
+        let finished = WaitForSingleObject(info.hProcess, APP_WAIT.as_millis() as u32) == WAIT_OBJECT_0;
         let mut code = 1u32;
         let _ = GetExitCodeProcess(info.hProcess, &mut code);
         let _ = CloseHandle(info.hProcess);
@@ -286,6 +302,19 @@ mod tests {
         write_report(&path, &for_the_app(report)).unwrap();
         let written: Report = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
         assert_eq!(written.facts.startup, None);
+    }
+
+    #[test]
+    fn a_helper_that_finishes_after_the_app_stopped_waiting_writes_nothing() {
+        // It stops in time for the app to read the file and delete it, rather than leave one behind.
+        assert!(HELPER_DEADLINE + std::time::Duration::from_secs(5) < APP_WAIT, "a margin for the helper starting late");
+        let dir = scratch("late");
+        let in_time = dir.join("fettle-deep-1-1.json");
+        assert_eq!(finish_helper(&in_time, &a_report(), std::time::Duration::from_secs(30)), 0);
+        assert!(in_time.exists());
+        let late = dir.join("fettle-deep-1-2.json");
+        assert_eq!(finish_helper(&late, &a_report(), HELPER_DEADLINE), 1);
+        assert!(!late.exists(), "the app has given up on it");
     }
 
     #[test]

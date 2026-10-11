@@ -21,6 +21,8 @@ pub mod limits {
     pub const SHORT: usize = 64;
     /// Why a section couldn't be read.
     pub const DETAIL: usize = 256;
+    /// Entries in any list (disks, startup apps…), as the upload check counts them.
+    pub const ITEMS: usize = 256;
 }
 
 /// Bumped whenever the shape changes in a way old readers can't handle.

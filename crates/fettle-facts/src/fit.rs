@@ -9,8 +9,8 @@ use serde_json::Value;
 const MAX_SAFE_INTEGER: u64 = (1 << 53) - 1;
 
 /// Cuts every string in `report` to its schema's maxLength, counted in UTF-16 units like the
-/// upload check, and always on a character boundary. A 64-bit number too big for the upload check
-/// becomes unknown.
+/// upload check, and always on a character boundary. A list keeps its first `limits::ITEMS`
+/// entries, and a 64-bit number too big for the upload check becomes unknown.
 pub fn fit_limits(report: &mut Report) {
     let schema = serde_json::to_value(schemars::schema_for!(Report)).unwrap_or(Value::Null);
     let Ok(mut value) = serde_json::to_value(&*report) else { return };
@@ -55,6 +55,7 @@ fn walk(value: &mut Value, schema: &Value, root: &Value) {
             }
         }
         Value::Array(items) => {
+            items.truncate(crate::limits::ITEMS);
             if let Some(item) = schema.get("items") {
                 for v in items {
                     walk(v, item, root);
@@ -131,6 +132,19 @@ mod tests {
         let disk = &report.facts.storage.as_ref().unwrap().data.as_ref().unwrap().disks[0];
         assert_eq!(disk.size_bytes, None);
         assert_eq!(disk.smart.as_ref().unwrap().power_on_hours, Some((1 << 53) - 1));
+    }
+
+    // The upload check takes at most limits::ITEMS entries in a list; a PC with more startup apps
+    // still shares, with the first ones.
+    #[test]
+    fn a_long_list_is_cut_to_the_limit() {
+        let mut report = sample();
+        let startup = report.facts.startup.as_mut().unwrap().data.as_mut().unwrap();
+        startup.items = (0..300).map(|i| crate::StartupItem { name: Some(format!("App {i}")), ..Default::default() }).collect();
+        fit_limits(&mut report);
+        let items = &report.facts.startup.as_ref().unwrap().data.as_ref().unwrap().items;
+        assert_eq!(items.len(), limits::ITEMS);
+        assert_eq!(items[0].name.as_deref(), Some("App 0"));
     }
 
     #[test]

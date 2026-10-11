@@ -20,7 +20,8 @@ function schemaFromRust() {
 // Uploaded reports are untrusted, so every string and list gets a ceiling. Real reports are
 // far below these; the limits only stop abuse (the Worker also caps uploads at 64 KiB).
 const MAX_STRING = 512;
-const MAX_ITEMS = 256;
+/** The same as `limits::ITEMS` in crates/fettle-facts, which cuts the app's lists to fit (a test holds them together). */
+export const MAX_ITEMS = 256;
 // Each integer stays within what its Rust type can hold, so the brain can always read an upload. A
 // u64 stops at 2^53 - 1, beyond which JSON numbers aren't exact (the collector drops larger ones).
 const INTEGER_RANGES = {

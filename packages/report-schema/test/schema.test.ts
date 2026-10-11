@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { generate } from "../scripts/generate.mjs";
+import { generate, MAX_ITEMS } from "../scripts/generate.mjs";
 import { parseReport, SCHEMA_VERSION } from "../src/index.ts";
 
 const base = { schema_version: 1, app_version: "0.0.0", collected_at: "2026-10-06T23:00:00Z", elevated: false };
@@ -53,6 +53,11 @@ describe("edge cases", () => {
   it("rejects a newer schema_version", () => {
     const r = parseReport({ ...base, schema_version: SCHEMA_VERSION + 1, facts: {} });
     expect(r.ok).toBe(false);
+  });
+
+  it("caps lists where the app cuts them", () => {
+    const rust = readFileSync(new URL("../../../crates/fettle-facts/src/lib.rs", import.meta.url), "utf8");
+    expect(Number(/pub const ITEMS: usize = (\d+);/.exec(rust)?.[1])).toBe(MAX_ITEMS);
   });
 
   it("SCHEMA_VERSION matches the Rust constant", () => {

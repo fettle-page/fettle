@@ -50,8 +50,8 @@ fn a_hard_drive_runs_hot_sooner_than_an_ssd() {
     assert!(!hot("ssd", 65));
     assert!(!hot("ssd", 70));
     assert!(hot("ssd", 71));
-    // Without a known type, the SSD limit: no false alarm.
-    assert!(!hot("unknown", 65));
+    // Without a known type, the model decides: this one (ST2000DM008) is a Seagate hard drive.
+    assert!(hot("unknown", 60));
 }
 
 // Two warnings whose next steps read the same, word for word, list that step once.
@@ -63,4 +63,20 @@ fn a_next_step_with_the_same_words_is_listed_once() {
     ] } } }));
     let keys: Vec<&str> = r.summary.actions.iter().map(|a| a.key.as_str()).collect();
     assert_eq!(keys, ["storage.media_errors.action"]);
+}
+
+// Windows sometimes reports a drive's type as unknown. A model name that only hard drives use
+// gets the hard-drive limit; anything else keeps the SSD one, so nothing warns wrongly.
+#[test]
+fn a_hard_drive_of_unknown_type_is_known_by_its_model() {
+    let hot = |model: &str, t: i32| {
+        let facts = json!({ "storage": { "check": { "status": "ok" }, "data": { "disks": [{ "bus": "sata", "media": "unknown", "model": model, "smart": { "reallocated_sectors": 0, "temperature_c": t } }] } } });
+        lines(&judge(facts)).iter().any(|l| l.headline.key == "storage.disk_hot")
+    };
+    for hdd in ["ST2000DM008-2FR102", "WDC WD10EZEX-08WN4A0", "HGST HTS721010A9E630", "TOSHIBA DT01ACA100", "Hitachi HDS721010CLA332"] {
+        assert!(hot(hdd, 60), "{hdd}");
+    }
+    for ssd in ["WDC WDS500G2B0A", "Samsung SSD 860 EVO 1TB", "CT1000MX500SSD1", "Some Drive"] {
+        assert!(!hot(ssd, 60), "{ssd}");
+    }
 }

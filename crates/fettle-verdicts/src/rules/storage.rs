@@ -63,6 +63,16 @@ fn wear_line(id: &str, model: &Param, used: u8) -> Option<Line> {
     Some(line(format!("{id}-wear"), level, key, &[("model", model.clone()), ("pct", Param::Int(used.min(100).into()))], Action::Default))
 }
 
+/// Model names only hard drives use, for a drive whose type Windows doesn't know (Fettle doesn't
+/// read the rotation speed): Seagate's "ST" + digits, WD's "WDC WD" + digits (its SSDs are "WDS…"),
+/// HGST, Hitachi and Toshiba's hard-drive lines. Anything else keeps the SSD limit, so an unknown
+/// drive is never warned about too soon.
+fn hdd_model(model: &str) -> bool {
+    let m = model.trim().to_ascii_uppercase();
+    let digit_after = |prefix: &str| m.strip_prefix(prefix).is_some_and(|rest| rest.starts_with(|c: char| c.is_ascii_digit()));
+    digit_after("ST") || digit_after("WDC WD") || ["HGST ", "HITACHI HD", "HITACHI HT", "TOSHIBA DT", "TOSHIBA MQ", "TOSHIBA MG", "TOSHIBA HDW"].iter().any(|p| m.starts_with(p))
+}
+
 fn disk_lines(disk: &Disk, id: &str, elevated: bool) -> Vec<Line> {
     let model: Param = disk.model.clone().unwrap_or_else(|| "?".into()).into();
     let mut issues = Vec::new();
@@ -110,7 +120,8 @@ fn disk_lines(disk: &Disk, id: &str, elevated: bool) -> Vec<Line> {
     }
 
     let temp = disk.nvme.as_ref().and_then(|n| n.temperature_c).or_else(|| disk.smart.as_ref().and_then(|m| m.temperature_c));
-    let limit = if disk.media == Some(Media::Hdd) { HDD_TEMP_KEEP_AN_EYE_C } else { DISK_TEMP_KEEP_AN_EYE_C };
+    let hdd = disk.media == Some(Media::Hdd) || (disk.media != Some(Media::Ssd) && disk.model.as_deref().is_some_and(hdd_model));
+    let limit = if hdd { HDD_TEMP_KEEP_AN_EYE_C } else { DISK_TEMP_KEEP_AN_EYE_C };
     if let Some(t) = temp.filter(|t| *t > limit) {
         issues.push(line(format!("{id}-temp"), Level::KeepAnEye, "storage.disk_hot", &[("model", model.clone()), ("temp", Param::Int(t.into()))], Action::Default));
     }

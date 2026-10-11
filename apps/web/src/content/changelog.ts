@@ -47,6 +47,7 @@ export const releases: Release[] = [
         "Fettle reads only a drive's SMART table itself, so the data that follows it can no longer pass for a warning or a temperature.",
         "“In fine fettle” also needs everything else checked: when a section couldn't be read, or Fettle doesn't know your version of Windows, the receipt says Fettle couldn't check everything.",
         "A Windows 10 PC that hasn't had a security update since November 2025 is now marked ACT, with the way to get them again.",
+        "A hard drive that Windows doesn't label as one is now recognised by its model name, so it gets the hard-drive temperature warning too.",
       ],
       it: [
         "Su Windows 10, Fettle non dice più che un PC è iscritto agli Extended Security Updates solo perché ha installato un aggiornamento in ritardo. Ora lo ricava dalla build di Windows e, quando non può saperlo, ti chiede di controllare in Windows Update.",
@@ -86,6 +87,7 @@ export const releases: Release[] = [
         "Fettle legge solo la tabella SMART del disco, così i dati che la seguono non possono più sembrare un avviso o una temperatura.",
         "«In gran forma» richiede anche che tutto il resto sia stato controllato: quando una sezione non si è potuta leggere, o Fettle non conosce la tua versione di Windows, lo scontrino dice che Fettle non è riuscito a controllare tutto.",
         "Un PC con Windows 10 che non riceve aggiornamenti di sicurezza da novembre 2025 ora viene segnato AGISCI, con il modo per riaverli.",
+        "Un disco rigido che Windows non indica come tale ora viene riconosciuto dal nome del modello, così riceve anche lui l'avviso di temperatura dei dischi rigidi.",
       ],
     },
   },

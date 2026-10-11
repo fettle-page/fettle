@@ -100,7 +100,7 @@ const en: Pages = {
     formats: ["Installer, about 12 MB, with an update check you can turn off. To remove it: Windows Settings > Apps, then Fettle > Uninstall.", "Portable zip, about 14 MB: nothing to install, and it keeps its settings in its own folder. To remove it, delete its folder."],
     warningH: "About the Windows warning",
     warning: [
-      "New apps without a code-signing certificate get a SmartScreen warning the first time they run. Fettle has applied to the SignPath Foundation, which signs open-source projects for free; until its releases are signed, you may see \"Windows protected your PC\".",
+      "New apps without a code-signing certificate get a SmartScreen warning the first time they run, and Fettle's downloads aren't signed yet, so you may see \"Windows protected your PC\".",
       "Choose \"More info\", then \"Run anyway\". The source code is public and every release is built in the open, so you can check what you're running.",
     ],
     signingLink: "Code signing policy",
@@ -114,7 +114,7 @@ const en: Pages = {
     unsigned: {
       h: "Signing",
       p: [
-        "Fettle's releases aren't signed yet. Fettle has applied to the SignPath Foundation, which signs open-source projects for free. Until then, Windows may say the publisher is unknown the first time you run it.",
+        "Fettle's releases aren't signed yet: a signing certificate costs money, and the free ones for open-source projects go to projects that are already widely known. Fettle is new. Until it's signed, Windows may say the publisher is unknown the first time you run it.",
         "Each release lists the SHA-256 checksum of every download, so you can check that the file you have is the one that was built.",
       ],
     },
@@ -245,7 +245,7 @@ const it: Pages = {
     formats: ["Installer, circa 12 MB, con un controllo degli aggiornamenti che puoi disattivare. Per rimuoverlo: Impostazioni di Windows > App, poi Fettle > Disinstalla.", "Zip portatile, circa 14 MB: niente da installare, e tiene le impostazioni nella sua cartella. Per rimuoverlo, elimina la sua cartella."],
     warningH: "Sull'avviso di Windows",
     warning: [
-      "Le app nuove senza certificato di firma del codice ricevono un avviso di SmartScreen al primo avvio. Fettle ha chiesto la firma gratuita alla SignPath Foundation, che firma i progetti open source; finché le versioni non saranno firmate potresti vedere \"PC protetto da Windows\".",
+      "Le app nuove senza certificato di firma del codice ricevono un avviso di SmartScreen al primo avvio, e i download di Fettle non sono ancora firmati, quindi potresti vedere \"PC protetto da Windows\".",
       "Scegli \"Ulteriori informazioni\", poi \"Esegui comunque\". Il codice sorgente è pubblico e ogni versione viene compilata alla luce del sole, così puoi verificare cosa stai avviando.",
     ],
     signingLink: "Policy di firma del codice",
@@ -259,7 +259,7 @@ const it: Pages = {
     unsigned: {
       h: "Firma",
       p: [
-        "Le versioni di Fettle non sono ancora firmate. Fettle ha chiesto la firma alla SignPath Foundation, che firma gratis i progetti open source. Fino ad allora, al primo avvio Windows potrebbe dire che l'editore è sconosciuto.",
+        "Le versioni di Fettle non sono ancora firmate: un certificato di firma costa, e quelli gratuiti per i progetti open source vanno a progetti già molto conosciuti. Fettle è nuovo. Finché non sarà firmato, al primo avvio Windows potrebbe dire che l'editore è sconosciuto.",
         "Ogni versione elenca il checksum SHA-256 di ogni download, così puoi verificare che il file che hai sia proprio quello compilato.",
       ],
     },

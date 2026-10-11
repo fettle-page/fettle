@@ -34,7 +34,7 @@ const en: Faq[] = [
     id: "warning",
     q: "Why does Windows warn me about the publisher?",
     a: [
-      "New apps without a code-signing certificate get a SmartScreen warning. Fettle has applied for free code signing for open-source projects through the SignPath Foundation.",
+      "New apps without a code-signing certificate get a SmartScreen warning, and Fettle's downloads aren't signed yet: free signing for open-source projects goes to projects that are already widely known, and Fettle is new.",
       "Until then the warning can appear. The source code is public and every release is built in the open, so you can check what you're running.",
     ],
   },
@@ -115,7 +115,7 @@ const it: Faq[] = [
     id: "warning",
     q: "Perché Windows mi avvisa sull'editore?",
     a: [
-      "Le app nuove senza un certificato di firma del codice ricevono un avviso di SmartScreen. Fettle ha chiesto la firma gratuita per progetti open source alla SignPath Foundation.",
+      "Le app nuove senza un certificato di firma del codice ricevono un avviso di SmartScreen, e i download di Fettle non sono ancora firmati: la firma gratuita per i progetti open source va a progetti già molto conosciuti, e Fettle è nuovo.",
       "Fino ad allora l'avviso può comparire. Il codice sorgente è pubblico e ogni versione viene compilata alla luce del sole, così puoi verificare cosa stai avviando.",
     ],
   },

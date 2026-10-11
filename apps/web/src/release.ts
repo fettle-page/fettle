@@ -8,7 +8,7 @@
 //   4. Build and deploy the site.
 // For a later version, the same 2–4: until `published` changes, the site and its /app/latest.json
 // keep pointing at the last published version, whatever apps/windows/Cargo.toml says.
-// Once SignPath signs the downloads, set `signed: true`.
+// Once the downloads are signed, set `signed: true` (codeSigning.signed has SignPath's credit; change it if another service signs).
 //
 // The download page runs checkRelease at build time, so a half-set switch fails the build.
 import type { Release as ChangelogEntry } from "./content/changelog.ts";
@@ -20,7 +20,7 @@ export type Release = {
   contact: string | null;
   /** The version whose GitHub release is public, e.g. "1.0.0": the site links its files. */
   published: string | null;
-  /** Releases are signed through the SignPath Foundation. */
+  /** The downloads are code-signed. */
   signed: boolean;
 };
 

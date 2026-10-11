@@ -77,12 +77,17 @@ describe("the code signing policy page", () => {
     expect(sitemap).toMatch(/\/it\/code-signing</);
   });
 
-  // SignPath's application form: the download page must say the project uses the SignPath Foundation.
-  it("the download page names the SignPath Foundation, and nothing still says Fettle will apply", () => {
-    expect(text(page("download.html"))).toContain("SignPath Foundation");
-    expect(text(page("it/download.html"))).toContain("SignPath Foundation");
+  // SignPath declined for now (2026-10-11: too new to be widely known). Until a release is signed, the
+  // site says plainly that the downloads aren't signed and claims no application in progress; SignPath's
+  // credit stays ready in codeSigning.signed for the day one is.
+  it("says plainly the downloads aren't signed yet, and claims no signing application", () => {
+    if (release.signed) return;
+    expect(text(page("download.html"))).toContain("aren't signed yet");
+    expect(text(page("it/download.html"))).toContain("non sono ancora firmati");
     for (const locale of ["en", "it"] as const) {
-      expect(JSON.stringify([copy(locale), faqs(locale)])).not.toMatch(/will apply|chiederà la firma/);
+      const c = copy(locale);
+      const shown = JSON.stringify([c.download, c.codeSigning.unsigned, c.codeSigning.sections, faqs(locale), home(locale)]);
+      expect(shown).not.toMatch(/SignPath|has applied|will apply|ha chiesto la firma|chiederà la firma/);
     }
   });
 

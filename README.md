@@ -75,7 +75,7 @@ Fettle runs on Windows 10 and 11 (64-bit). Get it from [fettle.page/download](ht
 gh attestation verify Fettle-Setup-1.0.1.exe --repo fettle-page/fettle
 ```
 
-The [code signing policy](https://fettle.page/code-signing) explains how releases are built and approved, and the plan to sign them through the SignPath Foundation.
+The [code signing policy](https://fettle.page/code-signing) explains how releases are built and approved, and why they aren't signed yet.
 
 ## What's in this repo
 

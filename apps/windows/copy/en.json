@@ -27,7 +27,7 @@
   "deep.failed": "The Deep check couldn't start. Try again.",
   "share.button": "Share a link",
   "share.title": "Share this receipt",
-  "share.intro": "Anyone with the link can see the receipt on the left, exactly as it is. It never includes serial numbers, the PC's name or usernames.",
+  "share.intro": "Anyone with the link can see the receipt on the left, exactly as it is. It never includes serial numbers, the PC's name, usernames or email addresses.",
   "share.json": "Advanced: show the JSON that will be sent",
   "share.expiry": "Keep the link for",
   "share.7d": "7 days",

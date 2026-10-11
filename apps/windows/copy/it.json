@@ -27,7 +27,7 @@
   "deep.failed": "Non è stato possibile avviare il controllo approfondito. Riprova.",
   "share.button": "Condividi con un link",
   "share.title": "Condividi questo scontrino",
-  "share.intro": "Chiunque abbia il link può vedere lo scontrino a sinistra, esattamente com'è. Non contiene mai numeri di serie, il nome del PC o nomi utente.",
+  "share.intro": "Chiunque abbia il link può vedere lo scontrino a sinistra, esattamente com'è. Non contiene mai numeri di serie, il nome del PC, nomi utente o indirizzi email.",
   "share.json": "Avanzate: mostra il JSON che verrà inviato",
   "share.expiry": "Mantieni il link per",
   "share.7d": "7 giorni",

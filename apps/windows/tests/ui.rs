@@ -1091,7 +1091,7 @@ fn opening_the_json_fold_moves_nothing_above_it() {
         let e = ElementHandle::find_by_accessible_label(h.app.window(), label).next().unwrap_or_else(|| panic!("no {label:?}"));
         (e.absolute_position().y, e.size().height)
     };
-    let intro = "Anyone with the link can see the receipt on the left, exactly as it is. It never includes serial numbers, the PC's name or usernames.";
+    let intro = "Anyone with the link can see the receipt on the left, exactly as it is. It never includes serial numbers, the PC's name, usernames or email addresses.";
     let before = [place(intro), place("7 days"), place("Lock it with a password"), place("Advanced: show the JSON that will be sent")];
     press(&h.app, "Advanced: show the JSON that will be sent");
     h.app.pump();

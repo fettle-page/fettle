@@ -45,6 +45,7 @@ export const releases: Release[] = [
         "A Deep check that takes longer than two minutes no longer leaves a file behind in Fettle's folder.",
         "Uninstalling a copy installed for all users now offers to remove Fettle's data for every account on the PC, not only yours, and names any folder it couldn't remove.",
         "Fettle reads only a drive's SMART table itself, so the data that follows it can no longer pass for a warning or a temperature.",
+        "“In fine fettle” also needs everything else checked: when a section couldn't be read, or Fettle doesn't know your version of Windows, the receipt says Fettle couldn't check everything.",
       ],
       it: [
         "Su Windows 10, Fettle non dice più che un PC è iscritto agli Extended Security Updates solo perché ha installato un aggiornamento in ritardo. Ora lo ricava dalla build di Windows e, quando non può saperlo, ti chiede di controllare in Windows Update.",
@@ -82,6 +83,7 @@ export const releases: Release[] = [
         "Un Controllo approfondito che dura più di due minuti non lascia più un file nella cartella di Fettle.",
         "Disinstallando una copia installata per tutti gli utenti, ora Fettle propone di rimuovere i suoi dati per ogni account del PC, non solo il tuo, e indica le cartelle che non è riuscito a rimuovere.",
         "Fettle legge solo la tabella SMART del disco, così i dati che la seguono non possono più sembrare un avviso o una temperatura.",
+        "«In gran forma» richiede anche che tutto il resto sia stato controllato: quando una sezione non si è potuta leggere, o Fettle non conosce la tua versione di Windows, lo scontrino dice che Fettle non è riuscito a controllare tutto.",
       ],
     },
   },

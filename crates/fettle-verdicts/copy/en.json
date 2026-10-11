@@ -1,6 +1,7 @@
 {
   "summary.fine": "In fine fettle.",
   "summary.fine_unchecked": "Fine so far, but Fettle couldn't read the disks' health.",
+  "summary.fine_partial": "Fine so far, but Fettle couldn't check everything.",
   "summary.action.deep_check": "Run a Deep check to read the disks' health.",
   "summary.some": "Needs a little fettling.",
   "summary.attention": "Needs attention.",

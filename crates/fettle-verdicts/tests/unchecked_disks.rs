@@ -6,7 +6,17 @@ use fettle_facts::Facts;
 use fettle_verdicts::{Line, Receipt, evaluate, fmt};
 use serde_json::{Value, json};
 
-fn judge(facts: Value, now: &str, elevated: bool) -> Receipt {
+/// Judges `facts`, with the sections a real scan always has (memory, startup apps, graphics) read
+/// and fine unless the test sets them: a section that's missing reads as one Fettle couldn't check.
+fn judge(mut facts: Value, now: &str, elevated: bool) -> Receipt {
+    let rest = json!({
+        "memory": ok(json!({ "modules": [{ "capacity_bytes": 17179869184u64, "speed_mts": 3200, "configured_speed_mts": 3200 }] })),
+        "startup": ok(json!({ "items": [] })),
+        "graphics": ok(json!({ "adapters": [{ "name": "GPU", "driver_date": "2026-09-01" }] })),
+    });
+    for (k, v) in rest.as_object().unwrap() {
+        facts.as_object_mut().unwrap().entry(k.clone()).or_insert(v.clone());
+    }
     let facts: Facts = serde_json::from_value(facts).expect("facts");
     evaluate(&facts, fmt::parse_rfc3339(now).expect("now"), elevated)
 }
@@ -102,4 +112,31 @@ fn a_disks_check_that_needs_admin_offers_the_deep_check() {
 fn no_disks_at_all_is_not_plain_fine() {
     let r = judge(fine_windows_and(ok(json!({ "disks": [] }))), "2026-10-11T10:00:00Z", true);
     assert_eq!(r.summary.key, "summary.fine_unchecked");
+}
+
+// "In fine fettle" also needs the rest checked: Windows' support known and fine, and no section that
+// couldn't be read. Otherwise the summary says Fettle couldn't check everything.
+fn healthy_disk() -> Value {
+    ok(json!({ "disks": [{ "bus": "nvme", "model": "X", "nvme": { "percentage_used": 3 } }] }))
+}
+
+#[test]
+fn a_section_that_couldnt_be_read_is_not_plain_fine() {
+    let failed = json!({ "check": { "status": "failed" } });
+    let windows_failed = judge(json!({ "storage": healthy_disk(), "windows": failed }), "2026-10-11T10:00:00Z", true);
+    assert_eq!(windows_failed.summary.key, "summary.fine_partial");
+    let startup_failed = judge(json!({ "storage": healthy_disk(), "windows": windows("Windows 11 Pro", "Professional", 26200, "25H2"), "startup": failed }), "2026-10-11T10:00:00Z", true);
+    assert_eq!(startup_failed.summary.key, "summary.fine_partial");
+}
+
+#[test]
+fn a_windows_version_fettle_doesnt_know_is_not_plain_fine() {
+    let r = judge(json!({ "storage": healthy_disk(), "windows": windows("Windows Server 2025", "ServerStandard", 26100, "24H2") }), "2026-10-11T10:00:00Z", true);
+    assert_eq!(r.summary.key, "summary.fine_partial");
+}
+
+#[test]
+fn everything_read_and_fine_is_plain_fine() {
+    let r = judge(json!({ "storage": healthy_disk(), "windows": windows("Windows 11 Pro", "Professional", 26200, "25H2") }), "2026-10-11T10:00:00Z", true);
+    assert_eq!(r.summary.key, "summary.fine");
 }

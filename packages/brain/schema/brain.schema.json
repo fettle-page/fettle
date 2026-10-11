@@ -204,10 +204,11 @@
             "type": "array"
           },
           "key": {
-            "description": "summary.fine, summary.fine_unchecked (fine, but the disks' health is unknown), summary.some,\nsummary.attention or summary.partial.",
+            "description": "summary.fine, summary.fine_unchecked (fine, but the disks' health is unknown),\nsummary.fine_partial (fine, but something else couldn't be checked), summary.some,\nsummary.attention or summary.partial.",
             "enum": [
               "summary.fine",
               "summary.fine_unchecked",
+              "summary.fine_partial",
               "summary.some",
               "summary.attention",
               "summary.partial"

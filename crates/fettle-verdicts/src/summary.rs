@@ -15,12 +15,19 @@ pub fn summarize(sections: &[SectionVerdict]) -> Summary {
     let disks_unknown = disks_unchecked
         || storage.iter().any(|l| l.headline.key == "storage.no_health" || l.id == "storage-check")
         || !storage.iter().any(|l| l.id.starts_with("disk-") && l.level == Level::Fine);
+    // Anything else left unknown: a section that couldn't be read, or a Windows Fettle can't judge.
+    // The TPM line on Windows 10 is about readiness for Windows 11, not this PC's health.
+    let windows_fine = lines.iter().any(|l| l.id == "windows-support" && l.level == Level::Fine);
+    let others_unknown = !windows_fine
+        || sections.iter().filter(|s| s.section != SectionId::Storage).flat_map(|s| &s.lines).any(|l| l.level == Level::CouldntCheck && l.id != "windows-tpm");
     // Only say "In fine fettle" when something was actually found to be fine, and nothing important
     // was left unchecked.
     let key = if has(Level::ActSoon) {
         "summary.attention"
     } else if has(Level::KeepAnEye) {
         "summary.some"
+    } else if has(Level::Fine) && others_unknown {
+        "summary.fine_partial"
     } else if has(Level::Fine) && disks_unknown {
         "summary.fine_unchecked"
     } else if has(Level::Fine) {

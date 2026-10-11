@@ -32,6 +32,9 @@ const COMMON_WORDS: &[&str] = &[
     "user", "users", "admin", "administrator", "owner", "guest", "windows", "microsoft", "home", "office", "family", "local",
     "account", "utente", "amministratore", "proprietario", "famiglia", "casa", "ufficio", "the", "and", "del", "della", "van",
     "von", "dell", "lenovo", "acer", "asus", "msi", "toshiba", "samsung", "sony", "fujitsu", "surface", "medion", "gigabyte",
+    // The name part of shared addresses ("info@…", "segreteria@…").
+    "info", "mail", "email", "contact", "contacts", "support", "sales", "hello", "noreply", "contatti", "segreteria",
+    "amministrazione", "ufficio", "commerciale", "assistenza",
 ];
 
 /// What Windows puts in USERDOMAIN when the account isn't in a company domain.
@@ -58,13 +61,28 @@ impl Redactor {
     /// common one, so a disk renamed "Rossi backup" doesn't give the surname away.
     pub fn with_full_name(mut self, name: impl Into<String>) -> Redactor {
         let name = name.into().trim().to_string();
-        for word in name.split_whitespace().filter(|w| !COMMON_WORDS.iter().any(|c| c.eq_ignore_ascii_case(w))) {
+        // "Rossi, Mario (Contoso)": words end at anything that can't be part of a name.
+        let words = name.split(|c: char| !(c.is_alphanumeric() || c == '\'' || c == '-')).filter(|w| !w.is_empty());
+        for word in words.filter(|w| !is_common_word(w)) {
             if word.chars().count() >= MIN_NAME_LEN {
                 add_name(&mut self.usernames, word.to_string());
             }
         }
         if name.chars().count() >= MIN_NAME_LEN {
             add_name(&mut self.usernames, name);
+        }
+        self
+    }
+
+    /// An address the account signs in with. The address itself is hidden wherever it appears;
+    /// its name part ("mario.rossi") is hidden on its own too, unless it's a shared word ("info@…").
+    pub fn with_email(mut self, email: impl Into<String>) -> Redactor {
+        let email = email.into();
+        if let Some((name, _)) = email.trim().split_once('@')
+            && name.chars().count() >= MIN_NAME_LEN
+            && !is_common_word(name)
+        {
+            add_name(&mut self.usernames, name.to_string());
         }
         self
     }
@@ -214,6 +232,10 @@ fn add_name(names: &mut Vec<String>, name: String) {
     }
 }
 
+fn is_common_word(word: &str) -> bool {
+    COMMON_WORDS.iter().any(|c| c.eq_ignore_ascii_case(word))
+}
+
 fn is_shared_profile(name: &str) -> bool {
     SHARED_PROFILES.iter().any(|p| p.eq_ignore_ascii_case(name))
 }
@@ -329,7 +351,7 @@ fn replace_after_separator(s: &str, name: &str, with: &str) -> String {
 
 /// Email addresses: a name, an @ and a domain with at least one dot that ends in letters.
 fn replace_emails(s: &str) -> String {
-    let local = |c: u8| c.is_ascii_alphanumeric() || b"._%+_-".contains(&c);
+    let local = |c: u8| c.is_ascii_alphanumeric() || b"._%+_-'".contains(&c);
     replace_matches(s, "<email>", |s, i| {
         let b = s.as_bytes();
         if i > 0 && local(b[i - 1]) {
@@ -350,17 +372,22 @@ fn replace_emails(s: &str) -> String {
     })
 }
 
-/// The server in a network path (`\\NAS\share` → `\\<server>\share`). Windows' own `\\?\` and
-/// `\\.\` prefixes aren't servers.
+/// The server in a network path (`\\NAS\share` and the long form `\\?\UNC\NAS\share` →
+/// `<server>`). Windows' own `\\?\` and `\\.\` prefixes aren't servers.
 fn replace_unc_servers(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
     let mut rest = s;
     while let Some(at) = rest.find(r"\\") {
-        let (before, after) = rest.split_at(at + 2);
+        let (before, mut after) = rest.split_at(at + 2);
         out.push_str(before);
-        let len = after.bytes().take_while(|c| c.is_ascii_alphanumeric() || *c == b'-' || *c == b'_' || *c == b'.').count();
+        const LONG_FORM: &str = r"?\UNC\";
+        if let Some(long) = after.get(..LONG_FORM.len()).filter(|p| p.eq_ignore_ascii_case(LONG_FORM)) {
+            out.push_str(long);
+            after = &after[LONG_FORM.len()..];
+        }
+        let len: usize = after.chars().take_while(|c| c.is_alphanumeric() || matches!(c, '-' | '_' | '.')).map(char::len_utf8).sum();
         let server = &after[..len];
-        if !server.is_empty() && server != "." && after[len..].starts_with('\\') {
+        if server.chars().any(char::is_alphanumeric) {
             out.push_str("<server>");
             rest = &after[len..];
         } else {
@@ -590,6 +617,35 @@ mod tests {
         // On a PC outside a domain, the domain is the PC's own name.
         let r = Redactor::new(["jdoe"], "DESKTOP-ABC").with_domain("DESKTOP-ABC");
         assert_eq!(r.text("DESKTOP-ABC"), "<pc-name>");
+    }
+
+    #[test]
+    fn a_full_name_written_surname_first_is_hidden_by_its_words() {
+        let r = Redactor::new(["mario"], "DESKTOP-ABC").with_full_name("Rossi, Mario (Contoso)");
+        assert_eq!(r.text("Rossi backup"), "<user> backup");
+        assert_eq!(r.text("Contoso Sync"), "<user> Sync");
+    }
+
+    #[test]
+    fn long_form_and_unusual_network_paths_are_hidden() {
+        assert_eq!(r().detail(r"open \\?\UNC\NAS-ROSSI\share\x"), r"open \\?\UNC\<server>\share\x");
+        assert_eq!(r().detail(r"can't reach \\NAS-ROSSI"), r"can't reach \\<server>");
+        assert_eq!(r().detail(r"\\SERVÈR\x"), r"\\<server>\x");
+        // A web address isn't a network path.
+        assert_eq!(r().detail("https://fettle.page/x"), "https://fettle.page/x");
+    }
+
+    #[test]
+    fn a_shared_address_doesn_t_hide_ordinary_words() {
+        let r = Redactor::new(["mario"], "DESKTOP-ABC").with_email("info@studio-rossi.it").with_email("office@example.com").with_email("mario.rossi@example.com");
+        assert_eq!(r.text("Microsoft Office info"), "Microsoft Office info");
+        assert_eq!(r.text("mario.rossi backup"), "<user> backup");
+        assert_eq!(r.text("info@studio-rossi.it"), "<email>");
+    }
+
+    #[test]
+    fn an_address_with_an_apostrophe_is_hidden_whole() {
+        assert_eq!(r().text("o'brien@example.com"), "<email>");
     }
 
     /// Every text field in the report is either cleaned by `Redactor::report` or can't hold a

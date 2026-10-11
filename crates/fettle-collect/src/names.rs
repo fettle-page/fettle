@@ -16,24 +16,25 @@ pub fn profile_leaf(path: &str) -> Option<String> {
 /// The privacy pass for this PC, with every name it goes by.
 #[cfg(windows)]
 pub fn redactor() -> fettle_facts::redact::Redactor {
-    let (mut users, hosts) = machine_names();
-    // An address is hidden whole wherever it appears; its name part ("mario.rossi") can also turn
-    // up on its own.
-    users.extend(account_emails().iter().filter_map(|e| e.split_once('@')).map(|(name, _)| name.to_string()));
+    let (users, hosts) = machine_names();
+    let full = full_names(&users);
     let mut hosts = hosts.into_iter();
     let first = hosts.next().unwrap_or_default();
     let r = hosts.fold(fettle_facts::redact::Redactor::new(users, first), |r, h| r.with_hostname(h));
-    let r = full_names().into_iter().fold(r, |r, n| r.with_full_name(n));
+    let r = full.into_iter().fold(r, |r, n| r.with_full_name(n));
+    let r = account_emails().into_iter().fold(r, |r, e| r.with_email(e));
     match std::env::var("USERDOMAIN") {
         Ok(domain) => r.with_domain(domain),
         Err(_) => r,
     }
 }
 
-/// The full names on this PC's accounts ("Mario Rossi"): every local account's (a Microsoft
-/// account's is its owner's name), and the signed-in account's from its domain or Entra ID.
+/// The full names of the people using this PC ("Mario Rossi"): the local accounts with a profile
+/// folder among `people` (a Microsoft account's full name is its owner's name; accounts that
+/// software creates and nobody signs in to have product names there instead), and the signed-in
+/// account's from its domain or Entra ID.
 #[cfg(windows)]
-pub fn full_names() -> Vec<String> {
+pub fn full_names(people: &[String]) -> Vec<String> {
     use windows::Win32::NetworkManagement::NetManagement::{FILTER_NORMAL_ACCOUNT, MAX_PREFERRED_LENGTH, NetApiBufferFree, NetUserEnum, USER_INFO_10};
     use windows::Win32::Security::Authentication::Identity::NameDisplay;
     use windows::core::PCWSTR;
@@ -44,7 +45,11 @@ pub fn full_names() -> Vec<String> {
     let status = unsafe { NetUserEnum(PCWSTR::null(), 10, FILTER_NORMAL_ACCOUNT, &mut buf, MAX_PREFERRED_LENGTH, &mut read, &mut total, None) };
     if status == 0 && !buf.is_null() {
         let users = unsafe { std::slice::from_raw_parts(buf as *const USER_INFO_10, read as usize) };
-        names.extend(users.iter().filter_map(|u| unsafe { u.usri10_full_name.to_string() }.ok()).filter(|n| !n.trim().is_empty()));
+        let text = |p: windows::core::PWSTR| if p.is_null() { None } else { unsafe { p.to_string() }.ok() };
+        for user in users {
+            let person = text(user.usri10_name).is_some_and(|n| people.iter().any(|p| p.eq_ignore_ascii_case(&n)));
+            names.extend(text(user.usri10_full_name).filter(|n| person && !n.trim().is_empty()));
+        }
     }
     if !buf.is_null() {
         unsafe { NetApiBufferFree(Some(buf as *const _)) };
@@ -75,9 +80,18 @@ pub fn account_emails() -> Vec<String> {
     emails
 }
 
-/// The signed-in account's name in one of Windows' formats, when it has one in that format.
+/// The signed-in account's name in one of Windows' formats, when it has one in that format. A
+/// domain PC away from its network can wait a long time for the domain to answer, so this gives
+/// up after two seconds.
 #[cfg(windows)]
 fn user_name_ex(format: windows::Win32::Security::Authentication::Identity::EXTENDED_NAME_FORMAT) -> Option<String> {
+    let (tx, rx) = std::sync::mpsc::channel();
+    std::thread::spawn(move || tx.send(user_name_ex_now(format)));
+    rx.recv_timeout(std::time::Duration::from_secs(2)).ok().flatten()
+}
+
+#[cfg(windows)]
+fn user_name_ex_now(format: windows::Win32::Security::Authentication::Identity::EXTENDED_NAME_FORMAT) -> Option<String> {
     use windows::Win32::Security::Authentication::Identity::GetUserNameExW;
     use windows::core::PWSTR;
     let mut len = 0u32;
@@ -161,7 +175,7 @@ mod tests {
     #[test]
     fn this_pcs_full_names_and_addresses_are_hidden() {
         let r = super::redactor();
-        for name in super::full_names().iter().map(|n| n.trim()).filter(|n| n.chars().count() >= 3) {
+        for name in super::full_names(&super::machine_names().0).iter().map(|n| n.trim()).filter(|n| n.chars().count() >= 3) {
             assert!(!r.text(&format!("{name} backup")).contains(name), "a full name on this PC wasn't hidden");
         }
         for email in super::account_emails() {

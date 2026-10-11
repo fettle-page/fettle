@@ -671,10 +671,10 @@ mod tests {
 
     #[test]
     fn a_shared_address_doesn_t_hide_ordinary_words() {
-        let r = Redactor::new(["mario"], "DESKTOP-ABC").with_email("info@studio-rossi.it").with_email("office@example.com").with_email("mario.rossi@example.com");
+        let r = Redactor::new(["mario"], "DESKTOP-ABC").with_email("info@studio.example").with_email("office@example.com").with_email("mario.rossi@example.com");
         assert_eq!(r.text("Microsoft Office info"), "Microsoft Office info");
         assert_eq!(r.text("mario.rossi backup"), "<user> backup");
-        assert_eq!(r.text("info@studio-rossi.it"), "<email>");
+        assert_eq!(r.text("info@studio.example"), "<email>");
     }
 
     #[test]

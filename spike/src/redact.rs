@@ -1,46 +1,14 @@
+//! The kit's privacy pass. Fields that are private by name (serials, product keys, owner and
+//! network fields) are hidden here; free text goes through the app's own pass
+//! (`fettle_facts::redact::Redactor`), so a dump hides every name a report does: account, full and
+//! PC names, the domain, email addresses, profile folders and account SIDs.
+
+use fettle_facts::redact::Redactor;
 use serde_json::Value;
-use winreg::RegKey;
-use winreg::enums::HKEY_LOCAL_MACHINE;
 
-/// The current machine's names, which must not leak into dumps through free text.
-pub struct RedactContext {
-    pub usernames: Vec<String>,
-    pub hostname: String,
-}
-
-impl RedactContext {
-    /// Collects every account name on this PC, not just the one running the tool:
-    /// an admin run under IT credentials still sees the employee's startup entries.
-    pub fn from_env() -> RedactContext {
-        let mut usernames: Vec<String> = Vec::new();
-        let mut add = |name: String| {
-            if !name.is_empty() && !usernames.iter().any(|n| n.eq_ignore_ascii_case(&name)) {
-                usernames.push(name);
-            }
-        };
-        add(std::env::var("USERNAME").unwrap_or_default());
-        if let Some(leaf) = std::env::var("USERPROFILE").ok().and_then(|p| profile_leaf(&p)) {
-            add(leaf);
-        }
-        let profiles = RegKey::predef(HKEY_LOCAL_MACHINE).open_subkey(PROFILE_LIST);
-        for sid in profiles.iter().flat_map(|k| k.enum_keys().flatten()) {
-            let path: Option<String> = profiles.as_ref().ok().and_then(|k| k.open_subkey(&sid).ok()).and_then(|k| k.get_value("ProfileImagePath").ok());
-            if let Some(leaf) = path.and_then(|p| profile_leaf(&p)) {
-                add(leaf);
-            }
-        }
-        RedactContext { usernames, hostname: std::env::var("COMPUTERNAME").unwrap_or_default() }
-    }
-}
-
-const PROFILE_LIST: &str = r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList";
-
-/// The account folder name of a personal profile path, or None for system and shared profiles.
-fn profile_leaf(path: &str) -> Option<String> {
-    let trimmed = path.trim_end_matches('\\');
-    let (parent, leaf) = trimmed.rsplit_once('\\')?;
-    let is_users_dir = parent.rsplit('\\').next().is_some_and(|p| p.eq_ignore_ascii_case("Users"));
-    (is_users_dir && !leaf.is_empty() && !key_in(SHARED_PROFILES, leaf)).then(|| leaf.to_string())
+/// This PC's names, as the app gathers them.
+pub fn this_pc() -> Redactor {
+    fettle_collect::names::redactor()
 }
 
 /// Product keys: deleted even with --include-private (Fettle never collects them).
@@ -63,12 +31,6 @@ const PRIVATE: &[&str] = &[
     "FruId", "UserSID", "ProcessorId", "AssetTag",
 ];
 
-/// Profile folders that belong to no one in particular.
-const SHARED_PROFILES: &[&str] = &["Public", "Default", "Default User", "All Users", "<user>"];
-
-/// Names shorter than this are too likely to match unrelated text.
-const MIN_NAME_LEN: usize = 3;
-
 fn key_in(list: &[&str], key: &str) -> bool {
     list.iter().any(|k| k.eq_ignore_ascii_case(key))
 }
@@ -79,7 +41,7 @@ fn is_private_key(key: &str) -> bool {
     key_in(PRIVATE, key) || key.to_ascii_lowercase().contains("serial")
 }
 
-pub fn redact(value: &mut Value, ctx: &RedactContext, include_private: bool) {
+pub fn redact(value: &mut Value, names: &Redactor, include_private: bool) {
     match value {
         Value::Object(map) => {
             map.retain(|k, _| !key_in(ALWAYS_REMOVED, k));
@@ -87,19 +49,20 @@ pub fn redact(value: &mut Value, ctx: &RedactContext, include_private: bool) {
                 if !include_private && is_private_key(k) {
                     *v = Value::String("<private>".into());
                 } else {
-                    redact(v, ctx, include_private);
+                    redact(v, names, include_private);
                 }
             }
         }
-        Value::Array(items) => items.iter_mut().for_each(|v| redact(v, ctx, include_private)),
-        Value::String(s) => *s = redact_str(s, ctx, include_private),
+        Value::Array(items) => items.iter_mut().for_each(|v| redact(v, names, include_private)),
+        // Data, not error text: an address-shaped version number ("2.0.0.0") stays as it is.
+        Value::String(s) if !include_private => *s = names.text(s),
         _ => {}
     }
 }
 
 /// Like `redact`, plus fields that are private only in one source: Win32_OperatingSystem's
 /// Description is the description the owner typed for the PC.
-pub fn redact_source(source: &str, value: &mut Value, ctx: &RedactContext, include_private: bool) {
+pub fn redact_source(source: &str, value: &mut Value, names: &Redactor, include_private: bool) {
     if source == "os" && !include_private {
         let rows: Vec<&mut Value> = match &mut *value {
             Value::Array(rows) => rows.iter_mut().collect(),
@@ -111,96 +74,12 @@ pub fn redact_source(source: &str, value: &mut Value, ctx: &RedactContext, inclu
             }
         }
     }
-    redact(value, ctx, include_private);
+    redact(value, names, include_private);
 }
 
-pub fn redact_str(s: &str, ctx: &RedactContext, include_private: bool) -> String {
-    if include_private {
-        return s.to_string();
-    }
-    let mut s = replace_account_sids(s);
-    s = hide_usbstor_instance(&s);
-    s = replace_profile_folders(&s);
-    // The PC name first: it often starts with the username ("MARIOARI12"), and replacing the
-    // username first would leave the rest of the PC name behind.
-    s = replace_ignore_case(&s, &ctx.hostname, "<pc-name>");
-    for name in &ctx.usernames {
-        s = replace_ignore_case(&s, name, "<user>");
-    }
-    s
-}
-
-/// Local and domain account SIDs (S-1-5-21-…) and Entra ID account SIDs (S-1-12-1-…) identify
-/// this PC and its users, in any letter case. Well-known SIDs like S-1-5-18 are left alone.
-fn replace_account_sids(s: &str) -> String {
-    const PREFIXES: [&str; 2] = ["s-1-5-21-", "s-1-12-1-"];
-    // ASCII lowercasing keeps byte offsets identical to `s`.
-    let lower = s.to_ascii_lowercase();
-    let mut out = String::with_capacity(s.len());
-    let mut i = 0;
-    while let Some((pos, prefix)) = PREFIXES.iter().filter_map(|p| lower[i..].find(p).map(|at| (i + at, *p))).min() {
-        out.push_str(&s[i..pos]);
-        let tail = &s[pos + prefix.len()..];
-        let len = tail.find(|c: char| !(c.is_ascii_digit() || c == '-')).unwrap_or(tail.len());
-        out.push_str("<sid>");
-        i = pos + prefix.len() + len;
-    }
-    out.push_str(&s[i..]);
-    out
-}
-
-/// USB disk device IDs end with the device's serial: USBSTOR\<model>\<serial>&0.
-fn hide_usbstor_instance(s: &str) -> String {
-    let is_usbstor = s.get(..8).is_some_and(|p| p.eq_ignore_ascii_case(r"USBSTOR\"));
-    match s.rfind('\\') {
-        Some(pos) if is_usbstor && pos > 7 => format!("{}<private>", &s[..=pos]),
-        _ => s.to_string(),
-    }
-}
-
-/// Replaces the folder name after any `\Users\`, so profiles of other or renamed
-/// accounts don't leak even when their name isn't known.
-fn replace_profile_folders(s: &str) -> String {
-    const MARKER: &str = r"\users\";
-    // ASCII lowercasing keeps byte offsets identical to `s`.
-    let lower = s.to_ascii_lowercase();
-    let mut out = String::with_capacity(s.len());
-    let mut i = 0;
-    while let Some(found) = lower[i..].find(MARKER) {
-        let seg_start = i + found + MARKER.len();
-        let seg_len = s[seg_start..].find(['\\', '"', '\'']).unwrap_or(s.len() - seg_start);
-        let segment = &s[seg_start..seg_start + seg_len];
-        out.push_str(&s[i..seg_start]);
-        if segment.is_empty() || key_in(SHARED_PROFILES, segment) {
-            out.push_str(segment);
-        } else {
-            out.push_str("<user>");
-        }
-        i = seg_start + seg_len;
-    }
-    out.push_str(&s[i..]);
-    out
-}
-
-fn replace_ignore_case(s: &str, needle: &str, with: &str) -> String {
-    if needle.chars().count() < MIN_NAME_LEN {
-        return s.to_string();
-    }
-    let (hay, pat) = (s.as_bytes(), needle.as_bytes());
-    let mut out = String::with_capacity(s.len());
-    let mut i = 0;
-    while i < s.len() {
-        let end = i + pat.len();
-        if end <= s.len() && s.is_char_boundary(end) && hay[i..end].eq_ignore_ascii_case(pat) {
-            out.push_str(with);
-            i = end;
-        } else {
-            let c = s[i..].chars().next().unwrap();
-            out.push(c);
-            i += c.len_utf8();
-        }
-    }
-    out
+/// An error message, which may also quote network addresses and servers.
+pub fn redact_str(s: &str, names: &Redactor, include_private: bool) -> String {
+    if include_private { s.to_string() } else { names.detail(s) }
 }
 
 #[cfg(test)]
@@ -208,17 +87,8 @@ mod tests {
     use super::*;
     use serde_json::json;
 
-    fn ctx() -> RedactContext {
-        RedactContext { usernames: vec!["alex".into(), "jdoe".into()], hostname: "DESKTOP-ABC".into() }
-    }
-
-    #[test]
-    fn profile_leaf_keeps_only_personal_profiles() {
-        assert_eq!(profile_leaf(r"C:\Users\jdoe"), Some("jdoe".into()));
-        assert_eq!(profile_leaf(r"C:\Users\jdoe.CONTOSO\"), Some("jdoe.CONTOSO".into()));
-        assert_eq!(profile_leaf(r"C:\WINDOWS\system32\config\systemprofile"), None);
-        assert_eq!(profile_leaf(r"C:\Users\Public"), None);
-        assert_eq!(profile_leaf(""), None);
+    fn names() -> Redactor {
+        Redactor::new(["alex", "jdoe", "sam"], "DESKTOP-ABC").with_domain("CONTOSO").with_full_name("Alex Rossi")
     }
 
     #[test]
@@ -231,7 +101,7 @@ mod tests {
             "UserSID": "S-1-5-21-1-2-3-1001",
             "BusType": 17
         });
-        redact(&mut v, &ctx(), false);
+        redact(&mut v, &names(), false);
         assert_eq!(v, json!({
             "FriendlyName": "Samsung SSD 9100 PRO 1TB",
             "FruId": "<private>",
@@ -243,19 +113,9 @@ mod tests {
     }
 
     #[test]
-    fn account_sids_in_strings_replaced() {
-        let c = ctx();
-        assert_eq!(
-            redact_str(r"HKU\S-1-5-21-111111111-2222222222-333333333-1001\Software\Run", &c, false),
-            r"HKU\<sid>\Software\Run"
-        );
-        assert_eq!(redact_str("S-1-5-18", &c, false), "S-1-5-18");
-    }
-
-    #[test]
     fn processor_ids_and_asset_tags_hidden() {
         let mut v = json!([{"Name": "AMD Ryzen 7 5800X", "ProcessorId": "0000000000000000", "AssetTag": "ACME-0001"}]);
-        redact(&mut v, &ctx(), false);
+        redact(&mut v, &names(), false);
         assert_eq!(v, json!([{"Name": "AMD Ryzen 7 5800X", "ProcessorId": "<private>", "AssetTag": "<private>"}]));
     }
 
@@ -263,109 +123,95 @@ mod tests {
     fn the_computer_description_is_hidden_but_other_descriptions_stay() {
         // Win32_OperatingSystem.Description is the description the owner typed for the PC.
         let mut os = json!([{"Caption": "Microsoft Windows 11 Pro", "Description": "Office PC 3"}]);
-        redact_source("os", &mut os, &ctx(), false);
+        redact_source("os", &mut os, &names(), false);
         assert_eq!(os, json!([{"Caption": "Microsoft Windows 11 Pro", "Description": "<private>"}]));
         let mut gpu = json!([{"Description": "AMD Radeon Graphics"}]);
-        redact_source("video_controllers", &mut gpu, &ctx(), false);
+        redact_source("video_controllers", &mut gpu, &names(), false);
         assert_eq!(gpu, json!([{"Description": "AMD Radeon Graphics"}]));
         let mut kept = json!([{"Description": "Office PC 3"}]);
-        redact_source("os", &mut kept, &ctx(), true);
+        redact_source("os", &mut kept, &names(), true);
         assert_eq!(kept, json!([{"Description": "Office PC 3"}]));
     }
 
     #[test]
-    fn entra_id_account_sids_replaced() {
-        assert_eq!(
-            redact_str(r"HKU\S-1-12-1-1111111111-2222222222-3333333333-4444444444\Software\Run", &ctx(), false),
-            r"HKU\<sid>\Software\Run"
-        );
-        assert_eq!(redact_str("S-1-5-32-544", &ctx(), false), "S-1-5-32-544");
-        // Windows writes SIDs in either case.
-        assert_eq!(redact_str("s-1-12-1-1111111111-2222222222-3333333333-4444444444 and s-1-5-21-1-2-3-1001", &ctx(), false), "<sid> and <sid>");
+    fn account_sids_in_strings_replaced_in_any_case() {
+        let n = names();
+        assert_eq!(redact_str(r"HKU\S-1-5-21-111111111-2222222222-333333333-1001\Software\Run", &n, false), r"HKU\<sid>\Software\Run");
+        assert_eq!(redact_str(r"HKU\S-1-12-1-1111111111-2222222222-3333333333-4444444444\Software\Run", &n, false), r"HKU\<sid>\Software\Run");
+        assert_eq!(redact_str("s-1-12-1-1111111111-2222222222-3333333333-4444444444 and s-1-5-21-1-2-3-1001", &n, false), "<sid> and <sid>");
+        assert_eq!(redact_str("S-1-5-18 and S-1-5-32-544", &n, false), "S-1-5-18 and S-1-5-32-544");
     }
 
     #[test]
     fn usbstor_instance_hidden() {
         assert_eq!(
-            redact_str(r"USBSTOR\DISK&VEN_SANDISK&PROD_ULTRA&REV_1.00\4C530001230101115&0", &ctx(), false),
+            redact_str(r"USBSTOR\DISK&VEN_SANDISK&PROD_ULTRA&REV_1.00\4C530001230101115&0", &names(), false),
             r"USBSTOR\DISK&VEN_SANDISK&PROD_ULTRA&REV_1.00\<private>"
         );
     }
 
     #[test]
-    fn every_profile_name_replaced() {
-        assert_eq!(redact_str(r"DESKTOP-ABC\jdoe", &ctx(), false), r"<pc-name>\<user>");
+    fn names_profile_folders_and_the_domain_are_hidden() {
+        let n = names();
+        assert_eq!(redact_str(r"DESKTOP-ABC\jdoe", &n, false), r"<pc-name>\<user>");
+        assert_eq!(redact_str(r"C:\Users\mystery\AppData\x.exe", &n, false), r"C:\Users\<user>\AppData\x.exe");
+        assert_eq!(redact_str(r"C:\Users\Public\Desktop", &n, false), r"C:\Users\Public\Desktop");
+        // Win32_StartupCommand.User and a hotfix's InstalledBy name the account with its domain.
+        let mut v = json!([{"User": r"CONTOSO\jdoe", "InstalledBy": r"CONTOSO\alex", "Command": "rossi.exe for Alex Rossi"}]);
+        redact(&mut v, &n, false);
+        assert_eq!(v, json!([{"User": r"<domain>\<user>", "InstalledBy": r"<domain>\<user>", "Command": "<user>.exe for <user>"}]));
     }
 
     #[test]
-    fn unknown_profile_folder_replaced() {
-        let c = ctx();
-        assert_eq!(redact_str(r"C:\Users\mystery\AppData\x.exe", &c, false), r"C:\Users\<user>\AppData\x.exe");
-        assert_eq!(redact_str(r"C:\Users\Public\Desktop", &c, false), r"C:\Users\Public\Desktop");
+    fn names_are_hidden_as_whole_words_only() {
+        // An account called "sam" mustn't turn "Samsung" into "<user>sung".
+        let mut v = json!({"FriendlyName": "Samsung SSD 860 EVO", "Note": "sam's backup"});
+        redact(&mut v, &names(), false);
+        assert_eq!(v, json!({"FriendlyName": "Samsung SSD 860 EVO", "Note": "<user>'s backup"}));
     }
 
     #[test]
-    fn private_keys_hidden_by_default() {
+    fn email_addresses_are_hidden() {
+        assert_eq!(redact_str("sign-in failed for mario.rossi@example.com", &names(), false), "sign-in failed for <email>");
+    }
+
+    #[test]
+    fn data_keeps_version_numbers_that_look_like_addresses() {
+        let mut v = json!({"Version": "2.0.0.0"});
+        redact(&mut v, &names(), false);
+        assert_eq!(v, json!({"Version": "2.0.0.0"}));
+    }
+
+    #[test]
+    fn private_keys_hidden_by_default_and_kept_when_included() {
         let mut v = json!([{"Name": "AMD Ryzen 7 5800X", "SerialNumber": "S123"}]);
-        redact(&mut v, &ctx(), false);
+        redact(&mut v, &names(), false);
         assert_eq!(v, json!([{"Name": "AMD Ryzen 7 5800X", "SerialNumber": "<private>"}]));
-    }
-
-    #[test]
-    fn private_keys_kept_when_included() {
-        let mut v = json!([{"Name": "AMD Ryzen 7 5800X", "SerialNumber": "S123"}]);
-        redact(&mut v, &ctx(), true);
-        assert_eq!(v, json!([{"Name": "AMD Ryzen 7 5800X", "SerialNumber": "S123"}]));
+        let mut v = json!([{"Name": "AMD Ryzen 7 5800X", "SerialNumber": "S123", "Note": "jdoe"}]);
+        redact(&mut v, &names(), true);
+        assert_eq!(v, json!([{"Name": "AMD Ryzen 7 5800X", "SerialNumber": "S123", "Note": "jdoe"}]));
     }
 
     #[test]
     fn key_matching_is_case_insensitive() {
         let mut v = json!({"serialnumber": "S1"});
-        redact(&mut v, &ctx(), false);
+        redact(&mut v, &names(), false);
         assert_eq!(v, json!({"serialnumber": "<private>"}));
     }
 
     #[test]
     fn product_keys_always_removed() {
         let mut v = json!({"OA3xOriginalProductKey": "X", "PartialProductKey": "ABCDE", "Name": "Windows"});
-        redact(&mut v, &ctx(), true);
+        redact(&mut v, &names(), true);
         assert_eq!(v, json!({"Name": "Windows"}));
-    }
-
-    #[test]
-    fn username_in_paths_replaced() {
-        let mut v = json!({"command": r"C:\Users\Alex\AppData\Local\app.exe --tray"});
-        redact(&mut v, &ctx(), false);
-        assert_eq!(v, json!({"command": r"C:\Users\<user>\AppData\Local\app.exe --tray"}));
-    }
-
-    #[test]
-    fn hostname_in_nested_strings_replaced() {
-        let mut v = json!({"a": [{"Caption": "desktop-abc"}]});
-        redact(&mut v, &ctx(), false);
-        assert_eq!(v, json!({"a": [{"Caption": "<pc-name>"}]}));
-    }
-
-    #[test]
-    fn short_names_not_substituted() {
-        let c = RedactContext { usernames: vec!["al".into()], hostname: "PC".into() };
-        assert_eq!(redact_str("Realtek PCIe", &c, false), "Realtek PCIe");
     }
 
     #[test]
     fn a_pc_name_that_starts_with_the_username_is_hidden_whole() {
         // Seen on a laptop: replacing the username first left "<user>ARI12" behind.
-        let c = RedactContext { usernames: vec!["mario".into()], hostname: "MARIOARI12".into() };
-        assert_eq!(redact_str("MARIOARI12", &c, false), "<pc-name>");
-        let c = RedactContext { usernames: vec!["mario".into()], hostname: "MARIO-PC".into() };
-        assert_eq!(redact_str(r"MARIO-PC\mario", &c, false), r"<pc-name>\<user>");
-    }
-
-    #[test]
-    fn redact_str_cleans_error_text() {
-        assert_eq!(
-            redact_str(r"open C:\Users\alex\x failed", &ctx(), false),
-            r"open C:\Users\<user>\x failed"
-        );
+        let n = Redactor::new(["mario"], "MARIOARI12");
+        assert_eq!(redact_str("MARIOARI12", &n, false), "<pc-name>");
+        let n = Redactor::new(["mario"], "MARIO-PC");
+        assert_eq!(redact_str(r"MARIO-PC\mario", &n, false), r"<pc-name>\<user>");
     }
 }

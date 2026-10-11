@@ -39,3 +39,21 @@ export function unexpectedPaths(paths) {
     return /\.md$/i.test(p) && !ALLOWED_MARKDOWN.test(p);
   });
 }
+
+/** Domains test data may use in addresses: the reserved example ones, Microsoft's made-up Contoso,
+ * the project's own, and GitHub's no-reply one. */
+const FAKE_MAIL_DOMAINS = /^(.+\.)?(example(\.(com|org|net|co\.uk))?|contoso(-group)?\.com|fettle\.page|users\.noreply\.github\.com)$/i;
+
+/** Email addresses in `text` whose domain isn't an example, test or project one. */
+export function realLookingEmails(text) {
+  return [...text.matchAll(/[\w.%+'-]+@([A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)*\.[A-Za-z]{2,})/g)].filter((m) => !FAKE_MAIL_DOMAINS.test(m[1])).map((m) => m[0]);
+}
+
+/** Serial-number values in `text` that could be real: test data may only use a placeholder, a
+ * value of up to four characters, one repeated character, or one marked as made up (FAKE, TEST,
+ * XYZ, ABCD, 1234). */
+export function realLookingSerials(text) {
+  const fields = /"((?:\w*serial\w*)|FruId|UUID|IdentifyingNumber)"\s*:\s*"([^"]*)"/gi;
+  const fake = (v) => /^<[\w-]+>$/.test(v) || v.length <= 4 || /^(.)\1*$/.test(v) || /FAKE|F1AKE|TEST|T1EST|TES\d|XYZ|ABCD|1234/i.test(v);
+  return [...text.matchAll(fields)].map((m) => m[2].trim()).filter((v) => !fake(v));
+}

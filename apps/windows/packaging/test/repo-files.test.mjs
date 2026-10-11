@@ -5,7 +5,7 @@ import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import { describe, it } from "node:test";
 import { readFileSync } from "node:fs";
-import { realLookingAutoLaunchCodes, realLookingProcessorIds, realLookingSids, unexpectedPaths } from "../repo-files.mjs";
+import { realLookingAutoLaunchCodes, realLookingEmails, realLookingProcessorIds, realLookingSerials, realLookingSids, unexpectedPaths } from "../repo-files.mjs";
 
 // Test data must use obviously fake identifiers: a real account SID once slipped into a test.
 describe("account SIDs in tracked files", () => {
@@ -38,6 +38,35 @@ describe("Entra ID account SIDs in tracked files", () => {
     assert.equal(realLookingSids(`HKU\\${random}\\Run`).length, 1);
     // Windows writes SIDs in either case.
     assert.equal(realLookingSids(random.toLowerCase()).length, 1);
+  });
+});
+
+// Test data uses example addresses; third-party licence texts quote their authors' real ones.
+describe("email addresses in tracked files", () => {
+  it("allows example and project addresses only", () => {
+    assert.deepEqual(realLookingEmails("mario.rossi@example.com, info@studio.example, a@b.example.co.uk, hello@fettle.page, 1+x@users.noreply.github.com, dev@contoso.com, pkg@1.0.0"), []);
+    // Built at run time, so this file doesn't hold a real-looking address itself.
+    const real = ["mario.rossi", "gmail.com"].join("@");
+    assert.deepEqual(realLookingEmails(`write to ${real}`), [real]);
+  });
+
+  it("holds for every file tracked in this repo outside the licence texts", () => {
+    const bad = trackedTexts().filter(([p]) => !p.startsWith("apps/windows/packaging/notices/")).filter(([, text]) => realLookingEmails(text).length);
+    assert.deepEqual(bad.map(([p]) => p), []);
+  });
+});
+
+// Serials in test data must look made up: a marker such as FAKE or TEST, a short value, or one
+// repeated character.
+describe("serial numbers in tracked files", () => {
+  it("allows only obviously fake ones", () => {
+    assert.deepEqual(realLookingSerials('"SerialNumber": "<private>", "SerialNumber": "TES12345", "FruId": "F1AKES2E345678R", "VolumeSerialNumber": "ABCD1234", "SerialNumber": "S123", "UUID": "00000000"'), []);
+    const real = JSON.stringify({ ["Serial" + "Number"]: ["S6B0NL0", "W123987K"].join("") });
+    assert.equal(realLookingSerials(real).length, 1);
+  });
+
+  it("holds for every file tracked in this repo", () => {
+    assert.deepEqual(trackedTexts().filter(([, text]) => realLookingSerials(text).length).map(([p]) => p), []);
   });
 });
 

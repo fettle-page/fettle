@@ -5,7 +5,7 @@ mod report;
 mod sources;
 mod wmi_util;
 
-use redact::{RedactContext, redact_source, redact_str};
+use redact::{redact_source, redact_str};
 use report::{Dump, run_source, sanitize_label, write_dump};
 use std::collections::BTreeMap;
 use std::path::PathBuf;
@@ -54,15 +54,15 @@ fn main() -> ExitCode {
         }
     };
 
-    let ctx = RedactContext::from_env();
+    let names = redact::this_pc();
     let start = Instant::now();
     let mut results = BTreeMap::new();
     for (name, collector) in sources::all() {
         let mut r = run_source(collector, args.timeout);
         if let Some(data) = r.data.as_mut() {
-            redact_source(&name, data, &ctx, args.include_private);
+            redact_source(&name, data, &names, args.include_private);
         }
-        r.error = r.error.map(|e| redact_str(&e, &ctx, args.include_private));
+        r.error = r.error.map(|e| redact_str(&e, &names, args.include_private));
         let status = if r.ok { "ok" } else { "FAIL" };
         let err: String = r.error.as_deref().unwrap_or("").chars().take(80).collect();
         eprintln!("{name:<24} {status:<4} {:>6} ms  {err}", r.ms);

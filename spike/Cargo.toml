@@ -5,6 +5,9 @@ edition = "2024"
 publish = false
 
 [dependencies]
+# The same privacy pass as the app, with every name the app hides.
+fettle-collect = { path = "../crates/fettle-collect" }
+fettle-facts = { path = "../crates/fettle-facts" }
 nvml-wrapper = "0.13.0"
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.151"

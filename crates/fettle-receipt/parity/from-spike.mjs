@@ -11,11 +11,18 @@ const failed = (detail) => ({ check: { status: "failed", detail } });
 const rows = (src) => (src?.ok && Array.isArray(src.data) ? src.data : null);
 const accessDenied = (src) => typeof src?.error === "string" && src.error.includes("0x80041003");
 
+/** Whether year-month-day names a real calendar day (no month 0 or 13, no 30 February). */
+function realDay(y, m, d) {
+  const date = new Date(Date.UTC(y, m - 1, d));
+  return m >= 1 && m <= 12 && d >= 1 && date.getUTCFullYear() === y && date.getUTCMonth() === m - 1 && date.getUTCDate() === d;
+}
+
 /** WMI CIM_DATETIME ("20261006131522.514770+120") → Date. */
 function wmiDate(s) {
   const m = /^(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})\.\d+([+-]\d+)$/.exec(s ?? "");
   if (!m) return null;
   const [, y, mo, d, h, mi, sec, off] = m;
+  if (!realDay(+y, +mo, +d) || +h > 23 || +mi > 59 || +sec > 60) return null;
   return new Date(Date.UTC(+y, +mo - 1, +d, +h, +mi, +sec) - Number(off) * 60000);
 }
 const isoDay = (date) => (date ? date.toISOString().slice(0, 10) : null);
@@ -23,10 +30,11 @@ const isoDay = (date) => (date ? date.toISOString().slice(0, 10) : null);
 /** A CPU or graphics name without trademark marks: "Intel(R) Core(TM) i7" reads as "Intel Core i7". */
 const productName = (s) => s?.replace(/\((R|TM)\)|®|™/gi, " ").split(/\s+/).filter(Boolean).join(" ") || undefined;
 
-/** Win32_QuickFixEngineering.InstalledOn ("9/29/2026") is a calendar day with no time zone. */
+/** Win32_QuickFixEngineering.InstalledOn ("9/29/2026") is a calendar day with no time zone, month
+ * first. A date that isn't a real day that way (a day-first "29/9/2026") is left out, not swapped. */
 function hotfixDay(s) {
   const m = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(s ?? "");
-  return m ? `${m[3]}-${m[1].padStart(2, "0")}-${m[2].padStart(2, "0")}` : null;
+  return m && realDay(+m[3], +m[1], +m[2]) ? `${m[3]}-${m[1].padStart(2, "0")}-${m[2].padStart(2, "0")}` : null;
 }
 
 /** The SMART attribute table: 12-byte entries from offset 2 (id, flags×2, value, worst, raw×6). */

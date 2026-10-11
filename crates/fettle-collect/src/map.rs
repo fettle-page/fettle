@@ -96,6 +96,11 @@ pub(crate) fn civil_from_days(z: i64) -> (i64, i64, i64) {
     (yoe + era * 400 + i64::from(m <= 2), m, d)
 }
 
+/// Whether year-month-day names a real calendar day (no month 0 or 13, no 30 February).
+fn real_day(y: i64, m: i64, d: i64) -> bool {
+    (1..=12).contains(&m) && (1..=31).contains(&d) && civil_from_days(days_from_civil(y, m, d)) == (y, m, d)
+}
+
 /// WMI CIM_DATETIME ("20261006131522.514770+120", offset in minutes) → Unix seconds.
 fn wmi_date(s: &str) -> Option<i64> {
     let (stamp, rest) = s.split_once('.')?;
@@ -106,8 +111,12 @@ fn wmi_date(s: &str) -> Option<i64> {
     }
     let n = |a: usize, b: usize| stamp[a..b].parse::<i64>().ok();
     let offset: i64 = offset.parse().ok()?;
-    let days = days_from_civil(n(0, 4)?, n(4, 6)?, n(6, 8)?);
-    Some(days * 86400 + n(8, 10)? * 3600 + n(10, 12)? * 60 + n(12, 14)? - offset * 60)
+    let (y, m, d, hh, mm, ss) = (n(0, 4)?, n(4, 6)?, n(6, 8)?, n(8, 10)?, n(10, 12)?, n(12, 14)?);
+    // A leap second (:60) is a real time; anything past it isn't.
+    if !real_day(y, m, d) || hh > 23 || mm > 59 || ss > 60 {
+        return None;
+    }
+    Some(days_from_civil(y, m, d) * 86400 + hh * 3600 + mm * 60 + ss - offset * 60)
 }
 
 /// The calendar day a CIM_DATETIME names ("20260923000000.000000+120" → 2026-09-23). Release and
@@ -117,12 +126,17 @@ fn wmi_day(s: &str) -> Option<String> {
     Some(format!("{}-{}-{}", &s[0..4], &s[4..6], &s[6..8]))
 }
 
-/// Win32_QuickFixEngineering.InstalledOn ("9/29/2026") is a calendar day with no time zone.
+/// Win32_QuickFixEngineering.InstalledOn ("9/29/2026") is a calendar day with no time zone, month
+/// first. A date that isn't a real day that way (a day-first "29/9/2026") is left out, not swapped.
 fn hotfix_day(s: &str) -> Option<String> {
     let mut parts = s.split('/');
     let (m, d, y) = (parts.next()?, parts.next()?, parts.next()?);
     let digits = |p: &str, len: std::ops::RangeInclusive<usize>| len.contains(&p.len()) && p.bytes().all(|b| b.is_ascii_digit());
-    (parts.next().is_none() && digits(m, 1..=2) && digits(d, 1..=2) && digits(y, 4..=4)).then(|| format!("{y}-{m:0>2}-{d:0>2}"))
+    if parts.next().is_some() || !digits(m, 1..=2) || !digits(d, 1..=2) || !digits(y, 4..=4) {
+        return None;
+    }
+    let n = |p: &str| p.parse::<i64>().ok();
+    real_day(n(y)?, n(m)?, n(d)?).then(|| format!("{y}-{m:0>2}-{d:0>2}"))
 }
 
 // ---------- system (new: the JS converter has no system section) ----------
@@ -502,6 +516,29 @@ mod tests {
         assert_eq!(hotfix_day("9/29/2026").as_deref(), Some("2026-09-29"));
         assert_eq!(hotfix_day("12/1/2025").as_deref(), Some("2025-12-01"));
         assert_eq!(hotfix_day("2026-09-29"), None);
+    }
+
+    #[test]
+    fn impossible_dates_are_refused() {
+        // Month 00 and day 00 (seen as placeholders in firmware), the 30th of February, a 25th hour.
+        assert_eq!(wmi_day("20260000000000.000000+000"), None);
+        assert_eq!(wmi_day("20261300000000.000000+000"), None);
+        assert_eq!(wmi_day("20260230000000.000000+000"), None);
+        assert_eq!(wmi_date("20261006250000.000000+000"), None);
+        assert_eq!(wmi_date("20261006126000.000000+000"), None);
+        assert_eq!(wmi_day("20240229000000.000000+000").as_deref(), Some("2024-02-29"));
+        // A day-first date ("29/9/2026") is refused, not read as month 29.
+        assert_eq!(hotfix_day("29/9/2026"), None);
+        assert_eq!(hotfix_day("2/30/2026"), None);
+        assert_eq!(hotfix_day("0/1/2026"), None);
+        assert_eq!(hotfix_day("2/29/2024").as_deref(), Some("2024-02-29"));
+    }
+
+    #[test]
+    fn an_impossible_update_date_is_never_the_latest() {
+        let r = raw(&[("windows_registry", rows(json!({ "CurrentBuild": "26200" }))), ("os", rows(json!([{ "LastBootUpTime": "20261006131522.514770+120" }]))), ("hotfixes", rows(json!([{ "InstalledOn": "9/1/2026" }, { "InstalledOn": "29/9/2026" }, { "InstalledOn": "12/45/2026" }])))]);
+        let w = windows(&Sources(&r), 0).data.unwrap();
+        assert_eq!(w.last_update_installed.as_deref(), Some("2026-09-01"));
     }
 
     #[test]

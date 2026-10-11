@@ -355,9 +355,17 @@ fn battery(s: &Sources) -> Section<Battery> {
     if s.rows("battery_cimv2").is_some_and(Vec::is_empty) {
         return status(CheckStatus::NotPresent, None);
     }
-    let design = s.first("battery_static").and_then(|r| u32_of(r, "DesignedCapacity"));
-    let full = s.first("battery_full_capacity").and_then(|r| u32_of(r, "FullChargedCapacity"));
-    let cycles = s.first("battery_cycle_count").and_then(|r| u32_of(r, "CycleCount"));
+    // Each value comes from its own query. With two batteries, the rows are matched on the
+    // battery's instance name, so one battery's charge isn't judged against the other's design.
+    let first = s.first("battery_static");
+    let name = first.and_then(|r| str_of(r, "InstanceName"));
+    let row = |source: &str| match name {
+        Some(n) => s.rows(source).and_then(|rows| rows.iter().find(|r| str_of(r, "InstanceName") == Some(n))),
+        None => s.first(source),
+    };
+    let design = first.and_then(|r| u32_of(r, "DesignedCapacity"));
+    let full = row("battery_full_capacity").and_then(|r| u32_of(r, "FullChargedCapacity"));
+    let cycles = row("battery_cycle_count").and_then(|r| u32_of(r, "CycleCount"));
     if design.is_none() && full.is_none() {
         return if s.access_denied("battery_static") { status(CheckStatus::NeedsAdmin, None) } else { status(CheckStatus::Failed, s.error("battery_static")) };
     }
@@ -516,6 +524,19 @@ mod tests {
         assert_eq!(hotfix_day("9/29/2026").as_deref(), Some("2026-09-29"));
         assert_eq!(hotfix_day("12/1/2025").as_deref(), Some("2025-12-01"));
         assert_eq!(hotfix_day("2026-09-29"), None);
+    }
+
+    #[test]
+    fn two_batteries_are_not_mixed_up() {
+        // Some laptops have an internal and an external battery; WMI may list them in any order.
+        let r = raw(&[
+            ("battery_cimv2", rows(json!([{ "Name": "Battery" }, { "Name": "Battery" }]))),
+            ("battery_static", rows(json!([{ "InstanceName": "ACPI\\PNP0C0A\\1_0", "DesignedCapacity": 23000 }, { "InstanceName": "ACPI\\PNP0C0A\\2_0", "DesignedCapacity": 72000 }]))),
+            ("battery_full_capacity", rows(json!([{ "InstanceName": "ACPI\\PNP0C0A\\2_0", "FullChargedCapacity": 70000 }, { "InstanceName": "ACPI\\PNP0C0A\\1_0", "FullChargedCapacity": 20000 }]))),
+            ("battery_cycle_count", rows(json!([{ "InstanceName": "ACPI\\PNP0C0A\\2_0", "CycleCount": 40 }, { "InstanceName": "ACPI\\PNP0C0A\\1_0", "CycleCount": 300 }]))),
+        ]);
+        let b = battery(&Sources(&r)).data.unwrap();
+        assert_eq!((b.design_capacity_mwh, b.full_charge_capacity_mwh, b.cycle_count), (Some(23000), Some(20000), Some(300)));
     }
 
     #[test]

@@ -141,9 +141,12 @@ function storage(s) {
 function battery(s) {
   const cim = rows(s.battery_cimv2);
   if (cim && cim.length === 0) return { check: { status: "not_present" } };
-  const design = rows(s.battery_static)?.[0]?.DesignedCapacity;
-  const full = rows(s.battery_full_capacity)?.[0]?.FullChargedCapacity;
-  const cycles = rows(s.battery_cycle_count)?.[0]?.CycleCount;
+  // With two batteries, the rows are matched on the battery's instance name.
+  const first = rows(s.battery_static)?.[0];
+  const row = (src) => (first?.InstanceName != null ? rows(src)?.find((r) => r.InstanceName === first.InstanceName) : rows(src)?.[0]);
+  const design = first?.DesignedCapacity;
+  const full = row(s.battery_full_capacity)?.FullChargedCapacity;
+  const cycles = row(s.battery_cycle_count)?.CycleCount;
   if (design == null && full == null) return accessDenied(s.battery_static) ? { check: { status: "needs_admin" } } : failed(s.battery_static?.error);
   return ok({ design_capacity_mwh: design, full_charge_capacity_mwh: full, cycle_count: cycles });
 }

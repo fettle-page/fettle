@@ -49,9 +49,11 @@ pub const WMI_SOURCES: &[(&str, &str, &str)] = &[
     // Which disk number each SMART row belongs to (its InstanceName is PNPDeviceID + "_0"), so two
     // drives of the same model never share one row. Read only for matching; never in the report.
     ("disk_drives", CIMV2, "SELECT Index, PNPDeviceID FROM Win32_DiskDrive"),
-    ("battery_static", WMI, "SELECT DesignedCapacity FROM BatteryStaticData"),
-    ("battery_full_capacity", WMI, "SELECT FullChargedCapacity FROM BatteryFullChargedCapacity"),
-    ("battery_cycle_count", WMI, "SELECT CycleCount FROM BatteryCycleCount"),
+    // InstanceName ("ACPI\PNP0C0A\1_0") pairs the three battery rows when there are two batteries.
+    // Read only for matching; never in the report.
+    ("battery_static", WMI, "SELECT InstanceName, DesignedCapacity FROM BatteryStaticData"),
+    ("battery_full_capacity", WMI, "SELECT InstanceName, FullChargedCapacity FROM BatteryFullChargedCapacity"),
+    ("battery_cycle_count", WMI, "SELECT InstanceName, CycleCount FROM BatteryCycleCount"),
     ("hotfixes", CIMV2, "SELECT InstalledOn FROM Win32_QuickFixEngineering"),
 ];
 

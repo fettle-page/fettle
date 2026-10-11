@@ -105,6 +105,8 @@ describe("workflows", () => {
     assert.match(ci, /npm test/);
     assert.match(ci, /cargo test --workspace/);
     assert.match(ci, /rustup toolchain install .* --target wasm32-unknown-unknown/);
+    assert.match(ci, /cargo clippy --workspace --all-targets --locked -- -D warnings/, "clippy warnings fail CI");
+    assert.match(ci, /rustup toolchain install .* --component clippy/, "the pinned toolchain brings clippy");
   });
 
   // The installer script and the packaging checks (runtime DLLs, start checks) run on every push, not

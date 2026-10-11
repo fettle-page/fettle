@@ -25,7 +25,7 @@ jobs:
           node-version: 24
           cache: npm
       # The exact Rust version (RUSTUP_TOOLCHAIN above); the website builds its receipts as WebAssembly.
-      - run: rustup toolchain install 1.99.0-x86_64-pc-windows-msvc --profile minimal --target wasm32-unknown-unknown
+      - run: rustup toolchain install 1.99.0-x86_64-pc-windows-msvc --profile minimal --target wasm32-unknown-unknown --component clippy
       # skia-bindings' build script downloads Skia's prebuilt libraries without checking them: fetch the
       # archive this build uses here, check it, and point the build at the checked copy. A new
       # skia-bindings version (or other features) needs a different archive: update the name and hash.
@@ -44,6 +44,8 @@ jobs:
       - run: npm test
       # Every test program runs, so one run shows every failure.
       - run: cargo test --workspace --locked --no-fail-fast
+      # Rust's own lints: any warning fails the run.
+      - run: cargo clippy --workspace --all-targets --locked -- -D warnings
 
       # The downloads, built as the release builds them (the installer script, the runtime DLLs and the
       # start checks), so a packaging problem shows on a push, not first on a release tag.

@@ -47,5 +47,8 @@ fn main() {
             println!("cargo:rustc-link-arg-bin=fettle=/DELAYLOAD:{dll}");
         }
         println!("cargo:rustc-link-arg-bin=fettle=delayimp.lib");
+        // The test build of this binary doesn't call into all three, which the linker would warn
+        // about; the packaging tests check that the real exe loads each of them this way.
+        println!("cargo:rustc-link-arg-bin=fettle=/IGNORE:4199");
     }
 }

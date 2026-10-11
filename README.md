@@ -126,7 +126,7 @@ Everything runs locally. The Worker uses local simulations of R2, rate limiting 
 ## Privacy
 
 - Reports leave out serial numbers, the PC's name, your username, name and email address, the work or school domain, network addresses and the names of servers on your network. Product keys are never read.
-- A share link uploads only the receipt you see, when you ask. Links expire after 7 days, 30 days or 1 year, can have a password (stored only as a hash), and can be deleted with a private link.
+- A share link uploads the report behind the receipt you see, with the private details taken out, and only when you ask. It's stored in Cloudflare's EU data centres. Links expire after 7 days, 30 days or 1 year, can have a password (stored only as a hash), and can be deleted with a private link.
 - The website uses no cookies, no analytics and no third-party requests. Fonts are self-hosted.
 
 ## Contact and security

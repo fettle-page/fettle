@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { faqs } from "../src/content/faq.ts";
+import { release } from "../src/release.ts";
 import { page } from "./dist-helpers.ts";
 
 function jsonLd(html: string): any {
@@ -23,9 +24,11 @@ describe("structured data", () => {
         license: "https://opensource.org/licenses/MIT",
         offers: { "@type": "Offer", price: "0", priceCurrency: "EUR" },
       });
-      // Nothing we can't back up: no ratings, no reviews, no download link before release.
+      // Nothing we can't back up: no ratings or reviews. The version is the published one, and the
+      // download link is this site's own download page in the page's language.
       expect(app.aggregateRating).toBeUndefined();
-      expect(app.downloadUrl).toBeUndefined();
+      expect(app.softwareVersion).toBe(release.published);
+      expect(app.downloadUrl).toBe(lang === "en" ? "https://fettle.page/download" : "https://fettle.page/it/download");
     }
   });
 

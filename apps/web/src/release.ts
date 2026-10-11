@@ -8,7 +8,8 @@
 //   4. Build and deploy the site.
 // For a later version, the same 2–4: until `published` changes, the site and its /app/latest.json
 // keep pointing at the last published version, whatever apps/windows/Cargo.toml says.
-// Once the downloads are signed, set `signed: true` (codeSigning.signed has SignPath's credit; change it if another service signs).
+// Once the downloads are signed, set `signed: true`. codeSigning.signed holds SignPath's attribution, written
+// for an application there (declined in October 2026, to retry later): if another service signs, use its wording.
 //
 // The download page runs checkRelease at build time, so a half-set switch fails the build.
 import type { Release as ChangelogEntry } from "./content/changelog.ts";

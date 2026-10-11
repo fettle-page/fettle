@@ -1,6 +1,8 @@
-// Structured data (JSON-LD). Only what the pages show and can back up: no ratings, no reviews, and
-// no download link until v1.0 is out. JSON-LD is a data block, so the strict CSP doesn't apply to it.
-import type { Locale } from "../i18n/paths.ts";
+// Structured data (JSON-LD). Only what the pages show and can back up: no ratings and no reviews. The
+// version and download link follow the published release (src/release.ts); before anything is published
+// they're left out. JSON-LD is a data block, so the strict CSP doesn't apply to it.
+import { localePath, type Locale } from "../i18n/paths.ts";
+import { release } from "../release.ts";
 import type { Faq } from "./faq.ts";
 
 const SITE = "https://fettle.page";
@@ -22,6 +24,7 @@ export function homeSchema(locale: Locale, url: string, description: string) {
         isAccessibleForFree: true,
         license: "https://opensource.org/licenses/MIT",
         offers: { "@type": "Offer", price: "0", priceCurrency: "EUR" },
+        ...(release.published && { softwareVersion: release.published, downloadUrl: `${SITE}${localePath(locale, "/download")}` }),
       },
     ],
   };

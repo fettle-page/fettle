@@ -26,6 +26,14 @@ export function rateKey(ip: string): string {
   return `${groups.slice(0, 4).map((g) => (parseInt(g, 16) || 0).toString(16)).join(":")}::/64`;
 }
 
+/**
+ * How the logs name a report: the first 12 hex characters of a SHA-256 of its ID. Enough to follow one
+ * link through the logs, but not the ID itself, which is all it takes to open a link without a password.
+ */
+export async function logRef(id: string): Promise<string> {
+  return (await hashToken(`log:${id}`)).slice(0, 12);
+}
+
 const clientKey = (request: Request) => rateKey(request.headers.get("cf-connecting-ip") ?? "unknown");
 
 const isJson = (request: Request) => (request.headers.get("content-type") ?? "").toLowerCase().startsWith("application/json");
@@ -79,7 +87,7 @@ export async function createReport(request: Request, env: Env): Promise<Response
     meta.pwHash = pw.hash;
   }
   await env.REPORTS.put(keyFor(id), stored, { httpMetadata: { contentType: "application/json" }, customMetadata: meta });
-  console.log(JSON.stringify({ event: "report_created", id, ttl, locked, bytes: new TextEncoder().encode(stored).byteLength }));
+  console.log(JSON.stringify({ event: "report_created", ref: await logRef(id), ttl, locked, bytes: new TextEncoder().encode(stored).byteLength }));
 
   const url = `${new URL(request.url).origin}/r/${id}`;
   return json({ id, url, deleteUrl: `${url}/delete#${deleteToken}`, deleteToken, expiresAt, locked }, 201);
@@ -169,7 +177,7 @@ export async function unlockReport(request: Request, id: string, env: Env): Prom
       const wait = await guard.begin(visitor);
       if (wait > 0) return rateLimited(wait);
       if (!(await passwordMatches(password as string, meta.pwSalt ?? "", meta.pwHash))) {
-        console.log(JSON.stringify({ event: "unlock_failed", id }));
+        console.log(JSON.stringify({ event: "unlock_failed", ref: await logRef(id) }));
         return apiError(403, "wrong_password");
       }
       await guard.succeeded(visitor);
@@ -186,7 +194,7 @@ export async function unlockReport(request: Request, id: string, env: Env): Prom
     // Stored before uploads checked the date, or data the receipt can't read: "isn't here", never a 500.
     return apiError(404, "not_found");
   }
-  console.log(JSON.stringify({ event: "report_unlocked", id, with: typeof pass === "string" ? "pass" : "password" }));
+  console.log(JSON.stringify({ event: "report_unlocked", ref: await logRef(id), with: typeof pass === "string" ? "pass" : "password" }));
   const opened = { model, expiresAt: loaded.expiresAt };
   return json(issued ? { ...opened, pass: issued.pass, passExpiresAt: new Date(issued.expiresAt).toISOString() } : opened);
 }
@@ -199,6 +207,6 @@ export async function deleteReport(request: Request, id: string, env: Env): Prom
   if (!meta) return apiError(404, "not_found");
   if (!(await tokenMatches(token, meta.deleteHash ?? ""))) return apiError(403, "forbidden");
   await env.REPORTS.delete(keyFor(id));
-  console.log(JSON.stringify({ event: "report_deleted", id }));
+  console.log(JSON.stringify({ event: "report_deleted", ref: await logRef(id) }));
   return new Response(null, { status: 204 });
 }

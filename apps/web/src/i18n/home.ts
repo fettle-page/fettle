@@ -64,7 +64,7 @@ const en = {
 
   privKicker: "Privacy",
   privH: "Private by default.",
-  privP1: "Serial numbers, the PC's name, your username and network addresses stay hidden. Product keys are never collected at all.",
+  privP1: "Serial numbers, the PC's name, your name, username and email address, and network addresses stay hidden. Product keys are never collected at all.",
   privP2: "The app sends nothing on its own, apart from an update check you can turn off. A share link uploads the report behind the receipt you see, with the private details taken out, and only when you ask.",
   privLink: "Read the privacy page",
   slipHead: "Hidden by default",
@@ -155,7 +155,7 @@ const it: Record<HomeKey, string> = {
 
   privKicker: "Privacy",
   privH: "Privato di serie.",
-  privP1: "Numeri di serie, nome del PC, nome utente e indirizzi di rete restano nascosti. I codici Product Key non vengono mai raccolti.",
+  privP1: "Numeri di serie, nome del PC, il tuo nome, nome utente, indirizzo email e indirizzi di rete restano nascosti. I codici Product Key non vengono mai raccolti.",
   privP2: "L'app non invia nulla da sola, a parte il controllo degli aggiornamenti, che puoi disattivare. Un link condiviso carica il report dietro lo scontrino che vedi, con i dati personali tolti, e solo quando lo chiedi tu.",
   privLink: "Leggi la pagina sulla privacy",
   slipHead: "Nascosto di serie",

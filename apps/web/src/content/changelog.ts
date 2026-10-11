@@ -37,6 +37,7 @@ export const releases: Release[] = [
         "A disk or memory figure too large to be real (some USB adapters send one) is now left out, instead of stopping the report from being shared.",
         "A PC with more than 256 startup apps can now share its report, with the first 256 listed.",
         "Reports now also hide the account's full name, email addresses, company domain and one- or two-letter account names, and network server names in error messages, wherever they turn up.",
+        "The privacy page, FAQ and home page now list everything Fettle keeps out of receipts, files and links, including your name, email address, the PC's work or school domain and server names.",
       ],
       it: [
         "Su Windows 10, Fettle non dice più che un PC è iscritto agli Extended Security Updates solo perché ha installato un aggiornamento in ritardo. Ora lo ricava dalla build di Windows e, quando non può saperlo, ti chiede di controllare in Windows Update.",
@@ -66,6 +67,7 @@ export const releases: Release[] = [
         "Un valore di disco o memoria troppo grande per essere vero (lo inviano alcuni adattatori USB) ora viene omesso, invece di impedire la condivisione del report.",
         "Un PC con più di 256 app all'avvio ora può condividere il report, che elenca le prime 256.",
         "I report ora nascondono anche il nome completo dell'account, gli indirizzi email, il dominio aziendale, i nomi utente di una o due lettere e, nei messaggi di errore, i nomi dei server di rete, ovunque compaiano.",
+        "La pagina sulla privacy, le FAQ e la home ora elencano tutto ciò che Fettle tiene fuori da scontrini, file e link, compresi il tuo nome, l'indirizzo email, il dominio aziendale o scolastico del PC e i nomi dei server.",
       ],
     },
   },

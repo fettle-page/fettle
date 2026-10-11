@@ -32,7 +32,7 @@ describe("the app's extra features on the site", () => {
       expect(answer, locale).toContain(button);
       expect(answer, locale).toContain("JSON");
     }
-    expect(faqs("en").find((f) => f.id === "forum")!.a.join(" ")).toContain("serial numbers, the PC's name, your username and network addresses");
+    expect(faqs("en").find((f) => f.id === "forum")!.a.join(" ")).toContain("serial numbers, the PC's name, your name, username and email address, and network addresses");
   });
 
   it("the share answer says the app keeps a list of your links", () => {

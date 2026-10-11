@@ -40,7 +40,7 @@ const en: Pages = {
         h: "The app",
         p: [
           "Fettle checks your PC on your PC. It sends nothing anywhere by itself. The one automatic request is the update check: by default once a day (you can choose every hour or every week), it asks this website for the latest version number, sending nothing about your PC. You can turn it off in the settings.",
-          "Serial numbers, the PC's name, your Windows username and network addresses never appear on receipts, in saved files or in share links. If you like, the app can show the PC's name and serial numbers on your own screen. Product keys are never read at all.",
+          "Serial numbers, the PC's name, your Windows username, your name and email address, the work or school domain the PC belongs to, network addresses and the names of servers on your network never appear on receipts, in saved files or in share links. If you like, the app can show the PC's name and serial numbers on your own screen. Product keys are never read at all.",
         ],
       },
       {
@@ -186,7 +186,7 @@ const it: Pages = {
         h: "L'app",
         p: [
           "Fettle controlla il tuo PC sul tuo PC. Non invia nulla da solo. L'unica richiesta automatica è il controllo degli aggiornamenti: di norma una volta al giorno (puoi scegliere ogni ora o ogni settimana), chiede a questo sito il numero dell'ultima versione, senza inviare alcuna informazione sul tuo PC. Puoi disattivarlo nelle impostazioni.",
-          "Numeri di serie, nome del PC, nome utente di Windows e indirizzi di rete non compaiono mai negli scontrini, nei file salvati o nei link condivisi. Se vuoi, l'app può mostrare il nome del PC e i numeri di serie sul tuo schermo. I codici Product Key non vengono mai letti.",
+          "Numeri di serie, nome del PC, nome utente di Windows, il tuo nome e il tuo indirizzo email, il dominio aziendale o scolastico del PC, indirizzi di rete e nomi dei server della tua rete non compaiono mai negli scontrini, nei file salvati o nei link condivisi. Se vuoi, l'app può mostrare il nome del PC e i numeri di serie sul tuo schermo. I codici Product Key non vengono mai letti.",
         ],
       },
       {

@@ -39,7 +39,7 @@ describe("Italian wording", () => {
   });
 
   it("joins a negative list with né", () => {
-    expect(faq("it", "forum")).toContain("nome utente né indirizzi di rete");
+    expect(faq("it", "forum")).toContain("email né indirizzi di rete");
   });
 });
 
@@ -75,5 +75,22 @@ describe("password-protected links", () => {
   it("are never called encrypted", () => {
     expect(everything("en")).not.toMatch(/encrypt/i);
     expect(everything("it")).not.toMatch(/cifrat|crittograf/i);
+  });
+});
+
+describe("what stays out of every receipt, file and link", () => {
+  // The privacy pass hides full names, email addresses, the Windows domain and server names too.
+  it("is listed in full on the privacy page", () => {
+    const en = privacy("en");
+    for (const item of ["your name and email address", "domain", "names of servers on your network"]) expect(en).toContain(item);
+    const it_ = privacy("it");
+    for (const item of ["il tuo nome e il tuo indirizzo email", "dominio", "nomi dei server della tua rete"]) expect(it_).toContain(item);
+  });
+
+  it("includes your name and email wherever the site sums it up", () => {
+    for (const text of [faq("en", "share"), faq("en", "forum"), home("en").privP1]) expect(text).toMatch(/your name/);
+    for (const text of [faq("en", "share"), faq("en", "forum"), home("en").privP1]) expect(text).toMatch(/email/);
+    for (const text of [faq("it", "share"), faq("it", "forum"), home("it").privP1]) expect(text).toMatch(/il tuo nome/);
+    for (const text of [faq("it", "share"), faq("it", "forum"), home("it").privP1]) expect(text).toMatch(/email/);
   });
 });

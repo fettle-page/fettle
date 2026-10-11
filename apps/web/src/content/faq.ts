@@ -52,7 +52,7 @@ const en: Faq[] = [
     id: "share",
     q: "What's in a share link, and who can see it?",
     a: [
-      "The report behind the receipt you see in the app, and nothing else. Serial numbers, the PC's name, your username and network addresses are never in it. Anyone with the link can open it, so share it where you mean to.",
+      "The report behind the receipt you see in the app, and nothing else. Serial numbers, the PC's name, your name, username and email address, and network addresses are never in it. Anyone with the link can open it, so share it where you mean to.",
       "Links expire after 7 days, 30 days or 1 year, your choice. You can add a password, and you get a private link to delete it whenever you like. The app also keeps your links under My shared links, so you can delete any of them later.",
     ],
   },
@@ -60,7 +60,7 @@ const en: Faq[] = [
     id: "forum",
     q: "Can I post my receipt on a forum or Discord?",
     a: [
-      "Yes. \"Copy for Discord or Reddit\" puts the receipt on your clipboard as text, ready to paste. Like everything Fettle makes, it leaves out serial numbers, the PC's name, your username and network addresses.",
+      "Yes. \"Copy for Discord or Reddit\" puts the receipt on your clipboard as text, ready to paste. Like everything Fettle makes, it leaves out serial numbers, the PC's name, your name, username and email address, and network addresses.",
       "If someone who knows PCs asks for the details, you can also save the full report as JSON and send them the file.",
     ],
   },
@@ -134,7 +134,7 @@ const it: Faq[] = [
     id: "share",
     q: "Cosa c'è in un link condiviso, e chi può vederlo?",
     a: [
-      "Il report dietro lo scontrino che vedi nell'app, e nient'altro. Numeri di serie, nome del PC, nome utente e indirizzi di rete non ci sono mai. Chiunque abbia il link può aprirlo, quindi condividilo dove intendi tu.",
+      "Il report dietro lo scontrino che vedi nell'app, e nient'altro. Numeri di serie, nome del PC, il tuo nome, nome utente, indirizzo email e indirizzi di rete non ci sono mai. Chiunque abbia il link può aprirlo, quindi condividilo dove intendi tu.",
       "I link scadono dopo 7 giorni, 30 giorni o 1 anno, a tua scelta. Puoi aggiungere una password, e ricevi un link privato per eliminarlo quando vuoi. L'app conserva anche i tuoi link in I miei link condivisi, così puoi eliminarli in qualsiasi momento.",
     ],
   },
@@ -142,7 +142,7 @@ const it: Faq[] = [
     id: "forum",
     q: "Posso pubblicare lo scontrino su un forum o su Discord?",
     a: [
-      "Sì. \"Copia per Discord o Reddit\" copia lo scontrino come testo negli appunti, pronto da incollare. Come tutto ciò che crea Fettle, non include numeri di serie, nome del PC, nome utente né indirizzi di rete.",
+      "Sì. \"Copia per Discord o Reddit\" copia lo scontrino come testo negli appunti, pronto da incollare. Come tutto ciò che crea Fettle, non include numeri di serie, nome del PC, il tuo nome, nome utente, indirizzo email né indirizzi di rete.",
       "Se qualcuno esperto di PC ti chiede i dettagli, puoi anche salvare il report completo in JSON e mandargli il file.",
     ],
   },

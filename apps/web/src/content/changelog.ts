@@ -6,6 +6,22 @@ export type Release = { version: string; date: string | null; notes: Record<Loca
 
 export const releases: Release[] = [
   {
+    version: "1.0.2",
+    date: null,
+    notes: {
+      en: [
+        "Wear on SATA SSDs is read the way each maker defines it. Before, a drive built on a SandForce controller (such as a Kingston SV300) could wrongly show as 100% worn.",
+        "Power-on hours are right on drives that pack other counters into that value, and impossible values are no longer shown.",
+        "After a Deep check, a PC without a TPM chip says so, instead of saying it couldn't tell.",
+      ],
+      it: [
+        "L'usura degli SSD SATA viene letta come la definisce ciascun produttore. Prima un disco con controller SandForce (come un Kingston SV300) poteva risultare usurato al 100% per errore.",
+        "Le ore di accensione sono corrette anche sui dischi che inseriscono altri contatori in quel valore, e i valori impossibili non vengono più mostrati.",
+        "Dopo un Controllo approfondito, un PC senza chip TPM lo dice, invece di dire che non è riuscito a verificarlo.",
+      ],
+    },
+  },
+  {
     version: "1.0.1",
     date: "2026-10-10",
     notes: {

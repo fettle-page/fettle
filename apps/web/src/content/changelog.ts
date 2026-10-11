@@ -7,7 +7,7 @@ export type Release = { version: string; date: string | null; notes: Record<Loca
 export const releases: Release[] = [
   {
     version: "1.0.2",
-    date: null,
+    date: "2026-10-11",
     notes: {
       en: [
         "Wear on SATA SSDs is read the way each maker defines it. Before, a drive built on a SandForce controller (such as a Kingston SV300) could wrongly show as 100% worn.",

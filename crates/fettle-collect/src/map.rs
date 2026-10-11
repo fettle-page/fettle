@@ -197,22 +197,38 @@ fn smart_attributes(bytes: &[u8]) -> Vec<(u8, u8, u64)> {
     attrs
 }
 
-fn smart_summary(attrs: &[(u8, u8, u64)]) -> SmartSummary {
+/// Life used, read the way the drive's maker defines it. The same attribute means different things
+/// per maker (177 is Samsung's wear levelling but a SandForce drive's "wear range delta"), so a drive
+/// Fettle doesn't recognise gets no figure rather than a wrong one.
+fn life_used(attrs: &[(u8, u8, u64)], model: Option<&str>) -> Option<u8> {
+    let find = |id: u8| attrs.iter().find(|a| a.0 == id);
+    let left = |id: u8| find(id).map(|a| 100u8.saturating_sub(a.1));
+    let m = model.unwrap_or("").to_uppercase();
+    if m.contains("SAMSUNG") {
+        left(177)
+    } else if m.starts_with("CT") || m.contains("CRUCIAL") || m.contains("MICRON") || m.contains("MTFD") {
+        // Raw value = % of rated life used.
+        find(202).map(|a| a.2.min(255) as u8)
+    } else if m.starts_with("INTEL") {
+        // Media wearout indicator: normalized 100 when new.
+        left(233)
+    } else {
+        // "SSD life left" (SandForce, Phison and the drives built on them: Kingston, Corsair, ADATA…).
+        left(231)
+    }
+}
+
+fn smart_summary(attrs: &[(u8, u8, u64)], model: Option<&str>) -> SmartSummary {
     let find = |id: u8| attrs.iter().find(|a| a.0 == id);
     let raw = |id: u8| find(id).map(|a| a.2);
-    // Vendor wear attributes: Crucial 202 = % life used; Samsung 177 = normalized life left.
-    let life_used = match (find(202), find(177)) {
-        (Some(a), _) => Some(a.2.min(255) as u8),
-        (None, Some(a)) => Some(100u8.saturating_sub(a.1)),
-        _ => None,
-    };
     SmartSummary {
         reallocated_sectors: raw(5),
         pending_sectors: raw(197),
         offline_uncorrectable: raw(198),
-        power_on_hours: raw(9),
+        // The low 4 bytes: some controllers (SandForce) pack other counters into the upper ones.
+        power_on_hours: raw(9).map(|h| h & 0xFFFF_FFFF),
         temperature_c: raw(194).map(|r| (r % 256) as i32), // low byte = current °C
-        life_used_pct: life_used,
+        life_used_pct: life_used(attrs, model),
     }
 }
 
@@ -307,7 +323,7 @@ fn storage(s: &Sources) -> Section<Storage> {
                 size_bytes: u64_of(d, "Size"),
                 nvme: nvme_health(s, &device_id),
                 // Wear attributes mean "% life used" only on SSDs (202 counts errors on some hard drives).
-                smart: smart.map(|b| smart_summary(&smart_attributes(&b))).map(|m| SmartSummary { life_used_pct: m.life_used_pct.filter(|_| media == Media::Ssd), ..m }),
+                smart: smart.map(|b| smart_summary(&smart_attributes(&b), model.as_deref())).map(|m| SmartSummary { life_used_pct: m.life_used_pct.filter(|_| media == Media::Ssd), ..m }),
                 model,
             }
         })
@@ -392,7 +408,11 @@ fn windows(s: &Sources, now: i64) -> Section<Windows> {
         uptime_seconds: boot.map(|b| (now - b).max(0) as u64),
         last_update_installed: last_update,
         secure_boot,
-        tpm: s.first("tpm").map(|t| Tpm { present: Some(true), spec_version: text_of(t, "SpecVersion") }),
+        // Elevated, Windows answers with no rows when the PC has no TPM; a failed query proves nothing.
+        tpm: s.rows("tpm").map(|rows| match rows.first() {
+            Some(t) => Tpm { present: Some(true), spec_version: text_of(t, "SpecVersion") },
+            None => Tpm { present: Some(false), spec_version: None },
+        }),
         esu: None,
     })
 }
@@ -691,8 +711,8 @@ mod tests {
     fn wear_is_read_only_for_ssds() {
         let mut bytes = vec![0u8; 362];
         bytes[2..14].copy_from_slice(&[202, 0, 0, 100, 100, 150, 0, 0, 0, 0, 0, 0]);
-        let disk = |media: u64| json!({ "DeviceId": "0", "FriendlyName": "Some Drive", "BusType": 11, "MediaType": media, "Size": 1 });
-        let smart = rows(json!([{ "InstanceName": r"SCSI\Disk&Ven_X&Prod_Some_Drive\4&1&0&000000_0", "VendorSpecific": bytes }]));
+        let disk = |media: u64| json!({ "DeviceId": "0", "FriendlyName": "CT500MX500SSD1", "BusType": 11, "MediaType": media, "Size": 1 });
+        let smart = rows(json!([{ "InstanceName": r"SCSI\Disk&Ven_&Prod_CT500MX500SSD1\4&1&0&000000_0", "VendorSpecific": bytes }]));
         let wear = |media: u64| {
             let r = raw(&[("physical_disks", rows(json!([disk(media)]))), ("smart_predict_data", smart.clone())]);
             storage(&Sources(&r)).data.unwrap().disks[0].smart.as_ref().unwrap().life_used_pct
@@ -710,6 +730,56 @@ mod tests {
         let kinds: Vec<_> = memory(&Sources(&r)).data.unwrap().modules.iter().map(|m| m.kind).collect();
         use MemoryKind::*;
         assert_eq!(kinds, [Ddr3, Lpddr3, Lpddr4, Lpddr5, Ddr4, Ddr5, Other].map(Some));
+    }
+
+    /// A SMART table from (id, normalized value, raw) entries.
+    fn table(entries: &[(u8, u8, u64)]) -> Vec<u8> {
+        let mut b = vec![0u8; 362];
+        for (i, (id, value, raw)) in entries.iter().enumerate() {
+            let at = 2 + i * 12;
+            b[at] = *id;
+            b[at + 3] = *value;
+            b[at + 5..at + 11].copy_from_slice(&raw.to_le_bytes()[..6]);
+        }
+        b
+    }
+    fn wear_of(model: &str, entries: &[(u8, u8, u64)]) -> Option<u8> {
+        smart_summary(&smart_attributes(&table(entries)), Some(model)).life_used_pct
+    }
+
+    // Wear attributes mean different things per maker: 177 is Samsung's wear levelling count but a
+    // SandForce drive's "wear range delta" (seen as a false "100% worn" on a Kingston SV300).
+    #[test]
+    fn wear_is_read_the_way_each_maker_defines_it() {
+        let sandforce = [(177, 0, 0), (231, 92, 0)];
+        assert_eq!(wear_of("KINGSTON SV300S37A480G", &sandforce), Some(8), "SandForce: 231 = life left");
+        assert_eq!(wear_of("Samsung SSD 860 EVO 1TB", &[(177, 98, 31)]), Some(2), "Samsung: 177 normalized = life left");
+        assert_eq!(wear_of("CT1000MX500SSD1", &[(202, 96, 4)]), Some(4), "Crucial: 202 raw = % used");
+        assert_eq!(wear_of("Micron_1100_MTFDDAK512TBN", &[(202, 90, 10)]), Some(10), "Micron: 202 raw = % used");
+        assert_eq!(wear_of("INTEL SSDSC2BW240A4", &[(233, 97, 0)]), Some(3), "Intel: 233 normalized = life left");
+        // A maker's attribute on another maker's drive means nothing.
+        assert_eq!(wear_of("KINGSTON SV300S37A480G", &[(177, 0, 0)]), None);
+        assert_eq!(wear_of("Some SSD", &[(202, 100, 150)]), None);
+    }
+
+    // Some controllers (SandForce) pack other counters into the upper bytes of the power-on hours.
+    #[test]
+    fn power_on_hours_ignore_what_controllers_pack_into_the_upper_bytes() {
+        let hours = |raw: u64| smart_summary(&smart_attributes(&table(&[(9, 100, raw)])), None).power_on_hours;
+        assert_eq!(hours(0x48A4_0000_9E53), Some(40_531), "the Kingston SV300's value");
+        assert_eq!(hours(32_617), Some(32_617));
+    }
+
+    // Elevated, Windows answers the TPM query with no rows when the PC has no TPM.
+    #[test]
+    fn an_empty_tpm_answer_means_no_tpm() {
+        let tpm = |source: Value| {
+            let base = [("os", rows(json!([{ "Caption": "Microsoft Windows 10 Pro" }]))), ("windows_registry", rows(json!({ "EditionID": "Professional" }))), ("tpm", source)];
+            windows(&Sources(&raw(&base)), 0).data.unwrap().tpm
+        };
+        assert_eq!(tpm(rows(json!([]))), Some(Tpm { present: Some(false), spec_version: None }));
+        assert_eq!(tpm(rows(json!([{ "SpecVersion": "2.0, 0, 1.59" }]))).and_then(|t| t.present), Some(true));
+        assert_eq!(tpm(err("access denied")), None, "a failed query proves nothing");
     }
 
     #[test]

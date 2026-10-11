@@ -41,17 +41,26 @@ function smartAttributes(bytes) {
   return attrs;
 }
 
-function smartSummary(attrs) {
+/** Life used, the way the drive's maker defines it (map.rs life_used); an unknown maker gets none. */
+function lifeUsed(attrs, model) {
+  const left = (id) => (attrs.has(id) ? Math.max(0, 100 - attrs.get(id).value) : undefined);
+  const m = (model ?? "").toUpperCase();
+  if (m.includes("SAMSUNG")) return left(177);
+  if (m.startsWith("CT") || m.includes("CRUCIAL") || m.includes("MICRON") || m.includes("MTFD")) return attrs.has(202) ? Math.min(attrs.get(202).raw, 255) : undefined;
+  if (m.startsWith("INTEL")) return left(233);
+  return left(231);
+}
+
+function smartSummary(attrs, model) {
   const raw = (id) => attrs.get(id)?.raw;
-  // Vendor wear attributes: Crucial 202 = % life used; Samsung 177 = normalized life left.
-  const lifeUsed = attrs.has(202) ? raw(202) : attrs.has(177) ? 100 - attrs.get(177).value : undefined;
   return {
     reallocated_sectors: raw(5),
     pending_sectors: raw(197),
     offline_uncorrectable: raw(198),
-    power_on_hours: raw(9),
+    // The low 4 bytes: some controllers (SandForce) pack other counters into the upper ones.
+    power_on_hours: attrs.has(9) ? raw(9) % 2 ** 32 : undefined,
     temperature_c: attrs.has(194) ? raw(194) % 256 : undefined, // low byte = current °C
-    life_used_pct: lifeUsed,
+    life_used_pct: lifeUsed(attrs, model),
   };
 }
 
@@ -114,7 +123,7 @@ function storage(s) {
             }
           : undefined,
         // Wear attributes mean "% life used" only on SSDs (202 counts errors on some hard drives).
-        smart: smartRow ? { ...smartSummary(smartAttributes(smartRow.VendorSpecific)), ...(media === "ssd" ? {} : { life_used_pct: undefined }) } : undefined,
+        smart: smartRow ? { ...smartSummary(smartAttributes(smartRow.VendorSpecific), model), ...(media === "ssd" ? {} : { life_used_pct: undefined }) } : undefined,
       };
     }),
     volumes: (rows(s.logical_disks) ?? []).map((v) => ({ letter: v.DeviceID, size_bytes: v.Size, free_bytes: v.FreeSpace })),
@@ -171,7 +180,8 @@ function windows(s, collectedAt) {
     uptime_seconds: boot ? Math.max(0, Math.round((collectedAt - boot) / 1000)) : undefined,
     last_update_installed: updates.at(-1),
     secure_boot: s.secure_boot?.ok ? s.secure_boot.data.uefi_secure_boot_enabled === 1 : undefined,
-    tpm: tpm ? { present: true, spec_version: tpm.SpecVersion } : undefined,
+    // Elevated, Windows answers with no rows when the PC has no TPM; a failed query proves nothing.
+    tpm: rows(s.tpm) ? (tpm ? { present: true, spec_version: tpm.SpecVersion } : { present: false }) : undefined,
   });
 }
 

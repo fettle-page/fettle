@@ -112,3 +112,25 @@ describe("build.mjs", () => {
     for (const f of ["fettle.exe", "LICENSE.txt", "THIRD-PARTY-NOTICES.txt", "Fettle data"]) assert.ok(tarCall.includes(`"${f}"`), `${f} not in the zip`);
   });
 });
+
+// Skia's prebuilt renderer needs the Visual C++ runtime, which a clean Windows doesn't have.
+describe("the Visual C++ runtime in both downloads", () => {
+  it("builds the release with the manifest that loads the runtime from beside fettle.exe", () => {
+    assert.match(build, /FETTLE_APP_LOCAL_RUNTIME: "1"/);
+  });
+
+  it("ships the DLLs fettle.exe needs, found from its import table, in the zip and the installer", () => {
+    assert.match(build, /runtimeFor\(/);
+    const tarCall = /execFileSync\(tar, \[([^\]]*)\]/.exec(build)?.[1] ?? "";
+    assert.match(tarCall, /\.\.\.runtimeNames/);
+    assert.match(build, /\/DRuntimeDir=/);
+    assert.match(iss, /^#ifndef RuntimeDir\s*\n\s*#error/m);
+    assert.match(iss, /^Source: "\{#RuntimeDir\}\\\*\.dll"; DestDir: "\{app\}"; Flags: ignoreversion$/m);
+  });
+
+  it("stops unless the packaged exe starts on what it ships, and only that", () => {
+    assert.match(build, /missing\(/);
+    assert.match(build, /checkStarts\(/);
+    assert.match(build, /loadFlags\(/);
+  });
+});

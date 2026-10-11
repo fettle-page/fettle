@@ -124,6 +124,8 @@ describe("renderNotices", () => {
     assert.match(out, /Bricolage Grotesque/);
     assert.match(out, /IBM Plex Mono/);
     assert.match(out, /based in part on the work of the Independent JPEG Group/);
+    assert.match(out, /Microsoft Visual C\+\+ runtime/);
+    assert.match(out, /vcruntime140\.dll/);
     assert.ok(out.includes("\r\n"));
     assert.ok(!/[^\r]\n/.test(out), "every line ends in CRLF");
   });

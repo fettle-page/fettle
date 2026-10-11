@@ -63,6 +63,18 @@ export function newestSkiaKey(profile) {
     .sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs);
   return keys.length ? readFileSync(keys[0], "utf8") : null;
 }
+// Not open source: shipped beside fettle.exe because Skia's prebuilt renderer needs it (see runtime.mjs).
+const RUNTIME = [
+  "vcruntime140.dll, vcruntime140_1.dll and msvcp140.dll, beside fettle.exe, are part of the",
+  "Microsoft Visual C++ Redistributable. They are copyright Microsoft Corporation, and Fettle",
+  "ships them under the Microsoft Software License Terms for Visual Studio, which allow them to",
+  "be distributed with an application. They aren't covered by Fettle's MIT licence.",
+  "",
+  "vcruntime140.dll, vcruntime140_1.dll e msvcp140.dll, accanto a fettle.exe, fanno parte del",
+  "Microsoft Visual C++ Redistributable. Sono di Microsoft Corporation e Fettle li distribuisce",
+  "secondo le condizioni di licenza di Microsoft Visual Studio, che ne permettono la",
+  "distribuzione insieme a un'applicazione. La licenza MIT di Fettle non li riguarda.",
+];
 const FONTS = [
   ["Bricolage Grotesque", "OFL-bricolage-grotesque.txt"],
   ["IBM Plex Mono", "OFL-ibm-plex-mono.txt"],
@@ -170,7 +182,8 @@ export function renderNotices(crates, { readDir, isDir, readFile, bundled, fonts
   for (const b of bundled) out.push("", `--- ${b.title} ---`, "", clean(b.text));
   out.push("", "", "2. Fonts", rule);
   for (const f of fonts) out.push("", `--- ${f.title} ---`, "", clean(f.text));
-  out.push("", "", "3. Rust crates", rule);
+  out.push("", "", "3. Microsoft Visual C++ runtime", rule, "", ...RUNTIME);
+  out.push("", "", "4. Rust crates", rule);
   for (const g of groups.values()) out.push("", ...usedBy(g.crates), "-".repeat(78), "", g.text);
   return out.join("\n").replace(/\n/g, "\r\n") + "\r\n";
 }

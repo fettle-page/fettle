@@ -12,6 +12,9 @@
 #ifndef ExeDir
   #error Pass /DExeDir=<folder with fettle.exe> (build.mjs does)
 #endif
+#ifndef RuntimeDir
+  #error Pass /DRuntimeDir=<folder with the Visual C++ runtime DLLs fettle.exe needs> (build.mjs does)
+#endif
 #ifndef NoticesDir
   #error Pass /DNoticesDir=<folder with LICENSE.txt and THIRD-PARTY-NOTICES.txt> (build.mjs does)
 #endif
@@ -70,6 +73,8 @@ Name: "updatecheck"; Description: "{cm:UpdateCheck}"; GroupDescription: "{cm:Upd
 
 [Files]
 Source: "{#ExeDir}\fettle.exe"; DestDir: "{app}"; Flags: ignoreversion
+; The Visual C++ runtime fettle.exe loads from its own folder (see packaging/runtime.mjs).
+Source: "{#RuntimeDir}\*.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#NoticesDir}\LICENSE.txt"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#NoticesDir}\THIRD-PARTY-NOTICES.txt"; DestDir: "{app}"; Flags: ignoreversion
 

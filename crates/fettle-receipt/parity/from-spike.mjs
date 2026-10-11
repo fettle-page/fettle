@@ -241,7 +241,7 @@ function graphics(s) {
       return {
         name: productName(a.description),
         vram_bytes: a.dedicated_video_memory,
-        driver_version: wmi?.DriverVersion,
+        driver_version: text(wmi?.DriverVersion),
         driver_date: wmiDay(wmi?.DriverDate),
         software: a.software,
       };

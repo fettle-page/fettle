@@ -37,6 +37,12 @@ describe("SharePage · report", () => {
     expect(screen.getByText("Scontrino condiviso")).toBeTruthy();
   });
 
+  it("sends Italian visitors to the Italian home page", () => {
+    const { container } = render(<SharePage payload={{ kind: "report", id: ID, model: tiredModel("it"), expiresAt }} locale="it" />);
+    expect(screen.getByRole("link", { name: "Controlla il tuo PC con Fettle" }).getAttribute("href")).toBe("/it");
+    expect(container.querySelector("a.home")!.getAttribute("href")).toBe("/it");
+  });
+
   it("gives an Italian date the article its day needs", () => {
     for (const [day, text] of [
       ["2026-11-08", "Questo link scade l'8 novembre 2026."],

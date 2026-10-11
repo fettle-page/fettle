@@ -1,4 +1,5 @@
 import type { Locale, ReceiptModel } from "@fettle/brain";
+import { localePath } from "../i18n/paths.ts";
 import { ReceiptView, stamp, Wordmark } from "@fettle/receipt-ui";
 import { Component, useEffect, useMemo, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { dateParams, longDate, shareText, type ShareKey } from "./copy.ts";
@@ -12,10 +13,11 @@ const browserFetch: Fetcher = (input, init) => fetch(input, init);
 
 export function SharePage({ payload, locale, fetcher = browserFetch }: Props) {
   const t = (key: ShareKey, params?: Record<string, string>) => shareText(key, locale, params);
+  const home = localePath(locale, "/");
   return (
     <div className="mat">
       <header className="bar">
-        <a className="home" href="/">
+        <a className="home" href={home}>
           <Wordmark className="brand" />
         </a>
         <span className="tape quiet">{t("label")}</span>
@@ -33,7 +35,7 @@ export function SharePage({ payload, locale, fetcher = browserFetch }: Props) {
       </main>
       <footer className="foot">
         <p>{t("footer")}</p>
-        <a className="tape light" href="/">{t("cta")}</a>
+        <a className="tape light" href={home}>{t("cta")}</a>
       </footer>
     </div>
   );

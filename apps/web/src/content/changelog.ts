@@ -26,6 +26,7 @@ export const releases: Release[] = [
         "The home and download pages no longer wait for GitHub to show the download count.",
         "The download page and the FAQ now also explain the browser's own \"isn't commonly downloaded\" warning, and the Italian pages use the SmartScreen dialog's real title.",
         "The privacy page now says shared reports are kept only in EU data centres, and the site says plainly that a share link carries the report behind the receipt.",
+        "Share pages in Italian now link back to the Italian home page.",
       ],
       it: [
         "Su Windows 10, Fettle non dice più che un PC è iscritto agli Extended Security Updates solo perché ha installato un aggiornamento in ritardo. Ora lo ricava dalla build di Windows e, quando non può saperlo, ti chiede di controllare in Windows Update.",
@@ -44,6 +45,7 @@ export const releases: Release[] = [
         "La home e la pagina di download non aspettano più GitHub per mostrare il numero di download.",
         "La pagina di download e le FAQ ora spiegano anche l'avviso del browser «non viene scaricato comunemente», e le pagine in italiano usano il vero titolo della finestra di SmartScreen.",
         "La pagina sulla privacy ora dice che i report condivisi sono conservati solo in data center nell'UE, e il sito dice chiaramente che un link condiviso contiene il report dietro lo scontrino.",
+        "Le pagine condivise in italiano ora rimandano alla home in italiano.",
       ],
     },
   },

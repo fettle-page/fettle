@@ -47,6 +47,15 @@ pub fn collect_with(opts: &Options, on_done: impl Fn(&str, &SourceResult)) -> Re
     build_report(&raw, collected_at, elevated, &names::redactor(), &opts.app_version)
 }
 
+/// The privacy pass again, with the names of the account running this: a Deep check's elevated scan
+/// was cleaned with the administrator's names, which may not be the user's. Running it twice
+/// changes nothing already hidden.
+#[cfg(windows)]
+pub fn redact_for_this_user(report: &mut Report) {
+    names::redactor().report(report);
+    fettle_facts::fit::fit_limits(report);
+}
+
 /// The finished report: the envelope, the mapped facts, then the privacy pass over all of it.
 pub fn build_report(raw: &Raw, collected_at: SystemTime, elevated: bool, redactor: &Redactor, app_version: &str) -> Report {
     let mut report = Report {

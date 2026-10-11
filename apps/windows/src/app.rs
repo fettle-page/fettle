@@ -375,7 +375,12 @@ impl Fettle {
                         // The user's own scan, for what belongs to them (their startup apps).
                         let start = Instant::now();
                         let user = scanner.scan(&|_| {});
-                        Ok((crate::elevate::merge_deep(user, elevated), elevated_secs + start.elapsed().as_secs_f64()))
+                        #[allow(unused_mut)]
+                        let mut deep = crate::elevate::merge_deep(user, elevated);
+                        // The elevated part was cleaned with the administrator's names: clean it with the user's too.
+                        #[cfg(windows)]
+                        fettle_collect::redact_for_this_user(&mut deep);
+                        Ok((deep, elevated_secs + start.elapsed().as_secs_f64()))
                     }))
                     .unwrap_or(Err(crate::state::DeepError::Failed));
                     match result {

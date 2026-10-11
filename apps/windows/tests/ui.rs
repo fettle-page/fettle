@@ -1246,3 +1246,24 @@ fn the_deep_checks_time_leaves_out_the_time_spent_on_windows_prompt() {
     let took = status.iter().find_map(|s| s.strip_prefix("Deep check · ")).and_then(|s| s.trim_end_matches(" s").parse::<f64>().ok()).expect("a Deep check time");
     assert!(took < 0.35, "{took} s includes the prompt");
 }
+
+#[test]
+fn a_deep_checks_report_is_cleaned_again_with_the_users_own_names() {
+    // The elevated part ran as another account, so its privacy pass knew that account's names, not
+    // the user's: an address of the user's could still be in it.
+    let mut admin = dump_report();
+    admin.elevated = true;
+    if let Some(disk) = admin.facts.storage.as_mut().and_then(|s| s.data.as_mut()).and_then(|d| d.disks.first_mut()) {
+        disk.model = Some("Backup of mario.rossi@example.com".into());
+    }
+    let a = admin.clone();
+    let dir = temp_dir();
+    let h = harness_with(Locale::En, dir.clone(), move |deps| deps.deep_scan = Arc::new(move |_owner| Ok((a.clone(), 0.4))));
+    press(&h.app, "Check this PC");
+    h.background.run_all(&h.app);
+    press(&h.app, "Run a Deep check");
+    h.background.run_all(&h.app);
+    let saved = std::fs::read_to_string(dir.join("last-report.json")).unwrap();
+    assert!(saved.contains("Backup of <email>"), "the Deep check's report, cleaned");
+    assert!(!saved.contains("mario.rossi@example.com"));
+}

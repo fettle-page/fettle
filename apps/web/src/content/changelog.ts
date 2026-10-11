@@ -51,6 +51,7 @@ export const releases: Release[] = [
         "A single sector waiting to be read on an SSD is now marked WATCH instead of ACT: some SSDs (Crucial MX500) report one now and then and clear it themselves. More than one, or any on a hard drive, is still ACT.",
         "A startup app without a readable name is listed in the receipt's language, also on receipts shared by older versions.",
         "Reports also hide IPv6 addresses, the PC's full network name and domain, and the company name OneDrive for work shows. Names with accents are hidden in any letter case, and an account called “User” or “Admin” no longer blanks out those ordinary words.",
+        "When the Deep check runs under another administrator's account, its report is now cleaned with your own names and addresses too, not only the administrator's.",
       ],
       it: [
         "Su Windows 10, Fettle non dice più che un PC è iscritto agli Extended Security Updates solo perché ha installato un aggiornamento in ritardo. Ora lo ricava dalla build di Windows e, quando non può saperlo, ti chiede di controllare in Windows Update.",
@@ -94,6 +95,7 @@ export const releases: Release[] = [
         "Un solo settore in attesa di lettura su un SSD ora viene segnato OCCHIO invece di AGISCI: alcuni SSD (Crucial MX500) ne segnalano uno ogni tanto e lo risolvono da soli. Più di uno, o anche uno solo su un disco rigido, resta AGISCI.",
         "Un'app all'avvio senza un nome leggibile ora compare nella lingua dello scontrino, anche negli scontrini condivisi da versioni precedenti.",
         "I report nascondono anche gli indirizzi IPv6, il nome di rete completo del PC con il suo dominio e il nome dell'azienda che mostra OneDrive per il lavoro. I nomi con accenti vengono nascosti in qualsiasi combinazione di maiuscole e minuscole, e un account chiamato «User» o «Admin» non cancella più quelle parole comuni.",
+        "Quando il Controllo approfondito usa l'account di un altro amministratore, il report ora viene ripulito anche dai tuoi nomi e indirizzi, non solo da quelli dell'amministratore.",
       ],
     },
   },

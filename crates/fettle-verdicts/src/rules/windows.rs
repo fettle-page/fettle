@@ -62,7 +62,15 @@ fn support_line(w: &Windows, build: u32, now: i64) -> Line {
         return line("windows-support", Level::ActSoon, key, &[product()], Action::Default);
     }
 
-    match esu_state(w, build) {
+    // Still on the last build without ESU long after it: no security fixes since, enrolled or not.
+    let stale = build == 19045 && w.ubr.is_some_and(|u| u <= LAST_WIN10_UBR_WITHOUT_ESU) && now > win10_updates_missed_after();
+    let state = esu_state(w, build);
+    if stale {
+        // Enrolled already: the updates only need installing.
+        let action = if state == Some(EsuState::Enrolled) { "windows.esu_stale_enrolled.action" } else { "windows.esu_stale.action" };
+        return line("windows-support", Level::ActSoon, "windows.esu_stale", &[product()], Action::Key(action));
+    }
+    match state {
         Some(EsuState::Enrolled) => {
             // ESU's own end gets the same warning window. Commercial ESU's paid-for years aren't
             // known, but its last possible day is, so near it the date is exact.
@@ -74,10 +82,6 @@ fn support_line(w: &Windows, build: u32, now: i64) -> Line {
             }
         }
         Some(EsuState::NotEnrolled) => line("windows-support", Level::ActSoon, "windows.unsupported_esu", &[product()], Action::Default),
-        // Still on the last build without ESU long after it: no security fixes since, whatever the enrolment.
-        _ if build == 19045 && w.ubr.is_some_and(|u| u <= LAST_WIN10_UBR_WITHOUT_ESU) && now > win10_updates_missed_after() => {
-            line("windows-support", Level::ActSoon, "windows.esu_stale", &[product()], Action::Default)
-        }
         _ => line("windows-support", Level::KeepAnEye, "windows.esu_unknown", &[product()], Action::Default),
     }
 }

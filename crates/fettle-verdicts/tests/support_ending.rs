@@ -138,3 +138,14 @@ fn windows_own_answer_about_esu_wins_over_the_build() {
     let r = judge(json!({ "windows": w }), "2026-03-01T10:00:00Z", false);
     assert_eq!(find(&r, "windows-support").headline.key, "windows.unsupported_esu");
 }
+
+#[test]
+fn an_enrolled_pc_stuck_on_the_november_2025_build_still_acts_soon() {
+    let mut w = win10_home(Some(6466), None);
+    w["data"]["esu"] = json!("enrolled");
+    let r = judge(json!({ "windows": w }), "2026-10-01T10:00:00Z", false);
+    let l = find(&r, "windows-support");
+    assert_eq!((l.level, l.headline.key.as_str()), (Level::ActSoon, "windows.esu_stale"));
+    // Already enrolled: the updates just need installing.
+    assert_eq!(l.action.as_ref().map(|a| a.key.as_str()), Some("windows.esu_stale_enrolled.action"));
+}

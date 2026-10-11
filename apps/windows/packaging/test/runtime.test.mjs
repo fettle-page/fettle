@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { existsSync, mkdirSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, rmSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { describe, it } from "node:test";
 import { loadFlags } from "../pe.mjs";
@@ -46,7 +46,8 @@ describe("this repo's fettle.exe", () => {
   for (const profile of ["debug", "release"]) {
     const exe = join(root, "target", profile, "fettle.exe");
     it(`(${profile}) loads its own DLLs only from System32`, { skip: !existsSync(exe) && `no ${profile} build` }, () => {
-      assert.equal(loadFlags(readFileSync(exe)), 0x800);
+      const stale = statSync(exe).mtimeMs < statSync(join(root, "apps", "windows", "build.rs")).mtimeMs;
+      assert.equal(loadFlags(readFileSync(exe)), 0x800, stale ? `target/${profile}/fettle.exe is older than build.rs: rebuild it (cargo build${profile === "release" ? " --release" : ""} -p fettle-windows)` : undefined);
     });
   }
 });

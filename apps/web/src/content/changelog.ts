@@ -16,6 +16,7 @@ export const releases: Release[] = [
         "A PC that reports an impossible date for its firmware, a driver or an update no longer makes a report that can't be shared: Fettle leaves that date out. A date written day first is no longer taken for the latest update.",
         "On a laptop with two batteries, battery health no longer mixes one battery's figures with the other's.",
         "Samsung SATA SSDs (such as the 860 EVO) now show their temperature, and get a warning when they run hot.",
+        "When the Deep check can't use Fettle's folder (a portable copy on a network share, say), it now says so straight away, instead of asking for permission and then waiting two minutes.",
       ],
       it: [
         "Su Windows 10, Fettle non dice più che un PC è iscritto agli Extended Security Updates solo perché ha installato un aggiornamento in ritardo. Ora lo ricava dalla build di Windows e, quando non può saperlo, ti chiede di controllare in Windows Update.",
@@ -24,6 +25,7 @@ export const releases: Release[] = [
         "Un PC che riporta una data impossibile per il firmware, un driver o un aggiornamento non produce più un report impossibile da condividere: Fettle omette quella data. Una data scritta con il giorno davanti non viene più presa per l'ultimo aggiornamento.",
         "Su un portatile con due batterie, lo stato della batteria non mescola più i dati di una con quelli dell'altra.",
         "Gli SSD SATA Samsung (come l'860 EVO) ora mostrano la loro temperatura e ricevono un avviso quando scaldano troppo.",
+        "Quando il Controllo approfondito non può usare la cartella di Fettle (per esempio una copia portatile su una cartella di rete), ora lo dice subito, invece di chiedere il permesso e poi attendere due minuti.",
       ],
     },
   },

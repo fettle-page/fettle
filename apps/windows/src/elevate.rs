@@ -17,23 +17,43 @@ use std::path::{Path, PathBuf};
 /// The argument the elevated helper starts with, followed by the report file it writes.
 pub const SCAN_ARG: &str = "--deep-scan";
 
-/// The report file this copy was started to write as the Deep check's helper. Only a new
-/// `fettle-deep-*.json` at an absolute local path counts (never a network share or a `\\?\` or
-/// `\\.\` device path): the helper runs as administrator, so it never writes anywhere else.
-pub fn helper_target(args: impl IntoIterator<Item = String>) -> Option<PathBuf> {
+/// What `--deep-scan` asks of this copy of fettle.exe.
+#[derive(Debug, PartialEq, Eq)]
+pub enum Helper {
+    /// Not asked: this is the app.
+    NotAsked,
+    /// Run as the Deep check's helper and write this report file.
+    Write(PathBuf),
+    /// Asked with a file it won't write: stop there, and never open the app (it would run as
+    /// administrator).
+    Refuse,
+}
+
+/// What the command line asks of this copy. The helper runs as administrator, so it only writes a new
+/// `fettle-deep-*.json` at an absolute local path (never a network share or a `\\?\` or `\\.\` device path).
+pub fn helper_target(args: impl IntoIterator<Item = String>) -> Helper {
     let mut args = args.into_iter().skip(1);
     while let Some(a) = args.next() {
         if a == SCAN_ARG {
-            let given = args.next()?;
-            if given.starts_with(r"\\") {
-                return None;
-            }
-            let path = PathBuf::from(given);
-            let name = path.file_name()?.to_str()?;
-            return (path.is_absolute() && name.starts_with("fettle-deep-") && name.ends_with(".json")).then_some(path);
+            return match args.next().map(PathBuf::from) {
+                Some(path) if acceptable(&path) => Helper::Write(path),
+                _ => Helper::Refuse,
+            };
         }
     }
-    None
+    Helper::NotAsked
+}
+
+fn acceptable(path: &Path) -> bool {
+    let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
+    !path.as_os_str().to_string_lossy().starts_with(r"\\") && path.is_absolute() && name.starts_with("fettle-deep-") && name.ends_with(".json")
+}
+
+/// The report file the helper is asked to write into `dir`, checked the way the helper will check it,
+/// so a folder it would refuse fails here, before Windows asks for permission.
+pub fn deep_report_path(dir: &Path, pid: u32, nonce: u128) -> Result<PathBuf, DeepError> {
+    let path = dir.join(format!("fettle-deep-{pid}-{nonce}.json"));
+    if acceptable(&path) && !through_a_link(dir).unwrap_or(true) { Ok(path) } else { Err(DeepError::Failed) }
 }
 
 /// Writes `report` to a file that must not exist yet (never overwrites one).
@@ -42,29 +62,25 @@ pub fn write_new(path: &Path, report: &Report) -> std::io::Result<()> {
     std::fs::OpenOptions::new().write(true).create_new(true).open(path)?.write_all(&json)
 }
 
-/// Writes the helper's report: only a new file, and only straight into a real folder (a junction or
-/// link could point anywhere the administrator can write).
+/// Writes the helper's report: only a new file, and only into real folders all the way up (a junction
+/// or link anywhere on the path could point anywhere the administrator can write).
 pub fn write_report(path: &Path, report: &Report) -> std::io::Result<()> {
     let folder = path.parent().ok_or_else(|| std::io::Error::other("no folder"))?;
-    let meta = std::fs::symlink_metadata(folder)?;
-    if meta.file_type().is_symlink() || is_reparse_point(&meta) {
-        return Err(std::io::Error::other("the folder is a junction or a link"));
+    if through_a_link(folder)? {
+        return Err(std::io::Error::other("the path goes through a junction or a link"));
     }
     write_new(path, report)
 }
 
-fn is_reparse_point(meta: &std::fs::Metadata) -> bool {
-    #[cfg(windows)]
-    {
-        use std::os::windows::fs::MetadataExt;
-        const FILE_ATTRIBUTE_REPARSE_POINT: u32 = 0x400;
-        meta.file_attributes() & FILE_ATTRIBUTE_REPARSE_POINT != 0
+/// Whether `folder` or any folder above it is a junction or a symbolic link. Other reparse points,
+/// such as OneDrive's files-on-demand folders, are real folders and don't count.
+fn through_a_link(folder: &Path) -> std::io::Result<bool> {
+    for f in folder.ancestors().filter(|f| !f.as_os_str().is_empty()) {
+        if std::fs::symlink_metadata(f)?.file_type().is_symlink() {
+            return Ok(true);
+        }
     }
-    #[cfg(not(windows))]
-    {
-        let _ = meta;
-        false
-    }
+    Ok(false)
 }
 
 /// What the helper hands the app: its scan without startup apps, which would be the administrator's
@@ -116,9 +132,13 @@ pub fn error_from(hresult: i32) -> DeepError {
 #[cfg(windows)]
 pub fn deep_scan(owner: isize) -> Result<(Report, f64), DeepError> {
     let dir = crate::store::FileStore::default_dir();
+    // A relative folder is refused below anyway; don't create one in whatever folder this started in.
+    if !dir.is_absolute() {
+        return Err(DeepError::Failed);
+    }
     std::fs::create_dir_all(&dir).map_err(|_| DeepError::Failed)?;
     let nonce = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH).map(|d| d.as_nanos()).unwrap_or(0);
-    let path = dir.join(format!("fettle-deep-{}-{nonce}.json", std::process::id()));
+    let path = deep_report_path(&dir, std::process::id(), nonce)?;
     let result = run_elevated(owner, &path).and_then(|secs| {
         let text = std::fs::read(&path).map_err(|_| DeepError::Failed)?;
         Ok((serde_json::from_slice::<Report>(&text).map_err(|_| DeepError::Failed)?, secs))
@@ -179,15 +199,15 @@ mod tests {
     fn the_helper_only_writes_a_new_deep_report_file() {
         let dir = std::env::temp_dir();
         let good = dir.join("fettle-deep-123-456.json");
-        assert_eq!(helper_target(args(&["fettle.exe", "--deep-scan", good.to_str().unwrap()])), Some(good.clone()));
+        assert_eq!(helper_target(args(&["fettle.exe", "--deep-scan", good.to_str().unwrap()])), Helper::Write(good.clone()));
         // Any other file name is refused: the helper runs as administrator.
-        for bad in [r"C:\Windows\System32\drivers\etc\hosts", r"C:\Users\x\fettle-deep-1.txt", r"C:\Users\x\settings.json"] {
-            assert_eq!(helper_target(args(&["fettle.exe", "--deep-scan", bad])), None, "{bad}");
+        for bad in [r"C:\Windows\System32\drivers\etc\hosts", r"C:\Users\x\fettle-deep-1.txt", r"C:\Users\x\settings.json", "fettle-deep-1-1.json", r"Fettle data\fettle-deep-1-1.json"] {
+            assert_eq!(helper_target(args(&["fettle.exe", "--deep-scan", bad])), Helper::Refuse, "{bad}");
         }
-        assert_eq!(helper_target(args(&["fettle.exe", "--deep-scan"])), None);
-        assert_eq!(helper_target(args(&["fettle.exe"])), None);
+        assert_eq!(helper_target(args(&["fettle.exe", "--deep-scan"])), Helper::Refuse);
+        assert_eq!(helper_target(args(&["fettle.exe"])), Helper::NotAsked);
         // The program's own path never counts.
-        assert_eq!(helper_target(args(&["--deep-scan", good.to_str().unwrap()])), None);
+        assert_eq!(helper_target(args(&["--deep-scan", good.to_str().unwrap()])), Helper::NotAsked);
     }
 
     #[test]
@@ -216,8 +236,20 @@ mod tests {
     #[test]
     fn the_helper_never_writes_to_a_network_path() {
         for bad in [r"\\host\share\fettle-deep-1.json", r"\\?\UNC\host\share\fettle-deep-1.json", r"\\?\C:\Users\x\fettle-deep-1.json", r"\\.\pipe\fettle-deep-1.json"] {
-            assert_eq!(helper_target(args(&["fettle.exe", "--deep-scan", bad])), None, "{bad}");
+            assert_eq!(helper_target(args(&["fettle.exe", "--deep-scan", bad])), Helper::Refuse, "{bad}");
         }
+    }
+
+    #[test]
+    fn a_folder_the_helper_would_refuse_is_caught_before_windows_asks() {
+        // Portable data on a network share, or a relative folder when LOCALAPPDATA isn't set: the app
+        // says the Deep check failed without a prompt, rather than starting a helper that can't write.
+        assert_eq!(deep_report_path(Path::new(r"\\nas\tools\Fettle data"), 7, 9), Err(DeepError::Failed));
+        assert_eq!(deep_report_path(Path::new("Fettle data"), 7, 9), Err(DeepError::Failed));
+        let dir = scratch("target");
+        let path = deep_report_path(&dir, 7, 9).expect("a local folder");
+        assert_eq!(path, dir.join("fettle-deep-7-9.json"));
+        assert_eq!(helper_target(args(&["fettle.exe", "--deep-scan", path.to_str().unwrap()])), Helper::Write(path.clone()));
     }
 
     #[test]
@@ -234,6 +266,11 @@ mod tests {
         assert!(write_report(&link.join("fettle-deep-1-1.json"), &a_report()).is_err(), "a junction may point anywhere");
         assert!(!real.join("fettle-deep-1-1.json").exists());
         assert!(write_report(&real.join("fettle-deep-1-1.json"), &a_report()).is_ok());
+        // Further up counts too: a junction above the report's own folder.
+        std::fs::create_dir_all(real.join("Fettle data")).unwrap();
+        assert!(write_report(&link.join("Fettle data").join("fettle-deep-1-2.json"), &a_report()).is_err(), "a junction further up");
+        assert!(!real.join("Fettle data").join("fettle-deep-1-2.json").exists());
+        assert_eq!(deep_report_path(&link.join("Fettle data"), 1, 2), Err(DeepError::Failed), "caught before Windows asks");
         // The junction goes with the test: tools that clean folders (git's worktree removal) stop at one.
         std::fs::remove_dir(&link).unwrap();
         let _ = std::fs::remove_dir_all(&dir);

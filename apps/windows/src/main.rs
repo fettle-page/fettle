@@ -22,9 +22,12 @@ fn next_renderer(current: &str) -> Option<&'static str> {
 }
 
 fn main() -> Result<(), slint::PlatformError> {
-    // The Deep check's helper (elevated, no window): scan, write the report, done.
-    if let Some(path) = fettle_windows::elevate::helper_target(std::env::args()) {
-        std::process::exit(fettle_windows::elevate::run_helper(&path));
+    // The Deep check's helper (elevated, no window): scan, write the report, done. Asked to write
+    // somewhere it won't, it stops too: never the whole app as administrator.
+    match fettle_windows::elevate::helper_target(std::env::args()) {
+        fettle_windows::elevate::Helper::Write(path) => std::process::exit(fettle_windows::elevate::run_helper(&path)),
+        fettle_windows::elevate::Helper::Refuse => std::process::exit(1),
+        fettle_windows::elevate::Helper::NotAsked => {}
     }
     let result = run();
     // A process can choose its renderer only once: if the window can't open (no usable graphics

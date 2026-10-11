@@ -32,6 +32,7 @@
   "d.spare": "Riserva",
   "d.reallocated": "Settori sostituiti",
   "d.pending": "Settori illeggibili",
+  "d.uncorrectable": "Settori irrecuperabili",
   "d.free": "Libero",
   "d.free_of": "{free} su {size}",
   "d.drive": "Unità {letter}",

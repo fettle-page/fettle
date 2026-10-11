@@ -29,6 +29,8 @@
   "storage.pending_sectors": "{model} has {count} sectors it's struggling to read.",
   "storage.pending_sectors_one": "{model} has 1 sector it's struggling to read.",
   "storage.pending_sectors.action": "Back up anything important now. A drive in this state can get worse quickly.",
+  "storage.uncorrectable_sectors": "{model} found {count} sectors it can't read or repair.",
+  "storage.uncorrectable_sectors_one": "{model} found 1 sector it can't read or repair.",
   "storage.reallocated_sectors": "{model} has replaced {count} worn-out sectors.",
   "storage.reallocated_sectors_one": "{model} has replaced 1 worn-out sector.",
   "storage.reallocated_sectors.action": "Keep your backups current and run Fettle again in a month to see if the number grows.",

@@ -95,6 +95,7 @@ fn storage(d: &Storage, locale: Locale) -> Vec<DetailGroup> {
                         ("d.spare", pct(n.and_then(|n| n.available_spare_pct))),
                         ("d.reallocated", s.and_then(|s| s.reallocated_sectors).map(|r| int(r as f64, locale))),
                         ("d.pending", s.and_then(|s| s.pending_sectors).map(|p| int(p as f64, locale))),
+                        ("d.uncorrectable", s.and_then(|s| s.offline_uncorrectable).map(|u| int(u as f64, locale))),
                     ],
                 ),
             }

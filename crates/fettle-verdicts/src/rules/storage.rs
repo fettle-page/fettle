@@ -86,6 +86,10 @@ fn disk_lines(disk: &Disk, id: &str, elevated: bool) -> Vec<Line> {
         if let Some(pending) = m.pending_sectors.filter(|p| *p > 0) {
             issues.push(line(format!("{id}-pending"), Level::ActSoon, &plural("storage.pending_sectors", pending), &[("model", model.clone()), ("count", int(pending))], Action::Key("storage.pending_sectors.action")));
         }
+        // Sectors the drive's own scan couldn't read or repair (SMART 198): as serious as pending ones.
+        if let Some(bad) = m.offline_uncorrectable.filter(|u| *u > 0) {
+            issues.push(line(format!("{id}-uncorrectable"), Level::ActSoon, &plural("storage.uncorrectable_sectors", bad), &[("model", model.clone()), ("count", int(bad))], Action::Key("storage.pending_sectors.action")));
+        }
         if let Some(realloc) = m.reallocated_sectors.filter(|r| *r > 0) {
             issues.push(line(format!("{id}-realloc"), Level::KeepAnEye, &plural("storage.reallocated_sectors", realloc), &[("model", model.clone()), ("count", int(realloc))], Action::Key("storage.reallocated_sectors.action")));
         }

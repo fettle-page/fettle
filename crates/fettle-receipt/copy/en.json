@@ -32,6 +32,7 @@
   "d.spare": "Spare",
   "d.reallocated": "Replaced sectors",
   "d.pending": "Unreadable sectors",
+  "d.uncorrectable": "Unrecoverable sectors",
   "d.free": "Free",
   "d.free_of": "{free} of {size}",
   "d.drive": "Drive {letter}",

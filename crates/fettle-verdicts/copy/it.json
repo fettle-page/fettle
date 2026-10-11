@@ -29,6 +29,8 @@
   "storage.pending_sectors": "{model} ha {count} settori che fatica a leggere.",
   "storage.pending_sectors_one": "{model} ha 1 settore che fatica a leggere.",
   "storage.pending_sectors.action": "Fai subito un backup dei file importanti: un disco in questo stato può peggiorare in fretta.",
+  "storage.uncorrectable_sectors": "{model} ha trovato {count} settori che non riesce né a leggere né a riparare.",
+  "storage.uncorrectable_sectors_one": "{model} ha trovato 1 settore che non riesce né a leggere né a riparare.",
   "storage.reallocated_sectors": "{model} ha sostituito {count} settori usurati.",
   "storage.reallocated_sectors_one": "{model} ha sostituito 1 settore usurato.",
   "storage.reallocated_sectors.action": "Tieni aggiornati i backup e ripeti il controllo con Fettle tra un mese per vedere se il numero cresce.",

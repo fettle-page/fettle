@@ -132,6 +132,7 @@ end;
 function AccountDataFolders: TArrayOfString;
 var
   Sids: TArrayOfString;
+  Seen: TStringList;
   I, Count: Integer;
   Profile, Folder: String;
 begin
@@ -139,19 +140,26 @@ begin
   SetArrayLength(Result, 0);
   if not RegGetSubkeyNames(HKLM, 'SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList', Sids) then
     Exit;
-  for I := 0 to GetArrayLength(Sids) - 1 do
-    if ((Pos('S-1-5-21-', Sids[I]) = 1) or (Pos('S-1-12-1-', Sids[I]) = 1)) and
-       RegQueryStringValue(HKLM, 'SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + Sids[I], 'ProfileImagePath', Profile) then
-    begin
-      StringChangeEx(Profile, '%SystemDrive%', GetEnv('SystemDrive'), True);
-      Folder := AddBackslash(Profile) + 'AppData\Local\Fettle';
-      if DirExists(Folder) then
+  Seen := TStringList.Create;
+  try
+    for I := 0 to GetArrayLength(Sids) - 1 do
+      // A repaired profile leaves a second entry, ending in .bak, for the same folder.
+      if ((Pos('S-1-5-21-', Sids[I]) = 1) or (Pos('S-1-12-1-', Sids[I]) = 1)) and (Copy(Sids[I], Length(Sids[I]) - 3, 4) <> '.bak') and
+         RegQueryStringValue(HKLM, 'SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList\' + Sids[I], 'ProfileImagePath', Profile) then
       begin
-        Count := Count + 1;
-        SetArrayLength(Result, Count);
-        Result[Count - 1] := Folder;
+        StringChangeEx(Profile, '%SystemDrive%', GetEnv('SystemDrive'), True);
+        Folder := AddBackslash(Profile) + 'AppData\Local\Fettle';
+        if DirExists(Folder) and (Seen.IndexOf(Lowercase(Folder)) < 0) then
+        begin
+          Seen.Add(Lowercase(Folder));
+          Count := Count + 1;
+          SetArrayLength(Result, Count);
+          Result[Count - 1] := Folder;
+        end;
       end;
-    end;
+  finally
+    Seen.Free;
+  end;
 end;
 
 // Uninstalling asks whether to remove Fettle's data too (it lives in each user's own AppData, so the

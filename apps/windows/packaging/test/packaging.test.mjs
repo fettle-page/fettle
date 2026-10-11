@@ -97,6 +97,11 @@ describe("fettle.iss: uninstalling for all users", () => {
     assert.match(iss, /'AppData\\Local\\Fettle'/);
   });
 
+  it("counts each folder once (a repaired profile leaves a second entry, ending in .bak, for the same one)", () => {
+    assert.match(iss, /Copy\(Sids\[I\], Length\(Sids\[I\]\) - 3, 4\) <> '\.bak'/);
+    assert.match(iss, /Seen\.IndexOf\(Lowercase\(Folder\)\) < 0/);
+  });
+
   it("asks once for all of them, in both languages, and says which folders it couldn't remove", () => {
     for (const lang of ["en", "it"]) {
       assert.match(iss, new RegExp(`^${lang}\\.RemoveDataAll=.*%1`, "m"));

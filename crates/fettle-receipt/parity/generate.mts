@@ -97,7 +97,7 @@ export function generateReports(seed: number, count: number): Report[] {
             pending_sectors: opt(pick([0, 0, 1, 3])),
             offline_uncorrectable: opt(pick([0, 2])),
             power_on_hours: opt(pick([12, 9999, 45678])),
-            temperature_c: opt(pick([28, 70, 71])),
+            temperature_c: opt(pick([28, 55, 56, 70, 71])),
             life_used_pct: opt(pick([0, 5, 99, 100, 120]), 0.5),
           }
         : undefined;

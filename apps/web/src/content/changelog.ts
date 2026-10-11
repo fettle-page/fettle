@@ -30,6 +30,7 @@ export const releases: Release[] = [
         "A missing page under /it/ now shows the Italian 404 with the Italian menu and footer, and the 404 no longer marks Home as the page you're on.",
         "Addresses ending in / or .html now redirect permanently to the clean address, so search engines keep one copy of each page.",
         "FAQ questions are now headings, so screen readers can jump from one question to the next.",
+        "Hard drives now get the running-hot warning above 55 °C, since most are rated to about 60 °C. SSDs still warn above 70 °C.",
       ],
       it: [
         "Su Windows 10, Fettle non dice più che un PC è iscritto agli Extended Security Updates solo perché ha installato un aggiornamento in ritardo. Ora lo ricava dalla build di Windows e, quando non può saperlo, ti chiede di controllare in Windows Update.",
@@ -52,6 +53,7 @@ export const releases: Release[] = [
         "Una pagina mancante sotto /it/ ora mostra il 404 in italiano con menu e piè di pagina in italiano, e il 404 non segna più la Home come pagina corrente.",
         "Gli indirizzi che finiscono con / o .html ora reindirizzano in modo permanente all'indirizzo pulito, così i motori di ricerca tengono una sola copia di ogni pagina.",
         "Le domande delle FAQ ora sono titoli, così chi usa uno screen reader può passare da una domanda all'altra.",
+        "I dischi rigidi ora ricevono l'avviso di temperatura alta sopra i 55 °C, perché quasi tutti sono progettati per arrivare a circa 60 °C. Per gli SSD la soglia resta 70 °C.",
       ],
     },
   },

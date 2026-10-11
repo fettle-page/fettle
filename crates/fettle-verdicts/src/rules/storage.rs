@@ -1,5 +1,5 @@
 use super::common::{Action, couldnt_check, int, line, plural, section_problem};
-use crate::thresholds::{DISK_TEMP_KEEP_AN_EYE_C, FREE_SPACE_KEEP_AN_EYE, SMALL_VOLUME_BYTES, SSD_WEAR_ACT_SOON, SSD_WEAR_KEEP_AN_EYE};
+use crate::thresholds::{DISK_TEMP_KEEP_AN_EYE_C, FREE_SPACE_KEEP_AN_EYE, HDD_TEMP_KEEP_AN_EYE_C, SMALL_VOLUME_BYTES, SSD_WEAR_ACT_SOON, SSD_WEAR_KEEP_AN_EYE};
 use crate::{Level, Line, Param, SectionId, SectionVerdict};
 use fettle_facts::{Bus, Disk, Media, NvmeHealth, Section, SmartSummary, Storage};
 
@@ -110,7 +110,8 @@ fn disk_lines(disk: &Disk, id: &str, elevated: bool) -> Vec<Line> {
     }
 
     let temp = disk.nvme.as_ref().and_then(|n| n.temperature_c).or_else(|| disk.smart.as_ref().and_then(|m| m.temperature_c));
-    if let Some(t) = temp.filter(|t| *t > DISK_TEMP_KEEP_AN_EYE_C) {
+    let limit = if disk.media == Some(Media::Hdd) { HDD_TEMP_KEEP_AN_EYE_C } else { DISK_TEMP_KEEP_AN_EYE_C };
+    if let Some(t) = temp.filter(|t| *t > limit) {
         issues.push(line(format!("{id}-temp"), Level::KeepAnEye, "storage.disk_hot", &[("model", model.clone()), ("temp", Param::Int(t.into()))], Action::Default));
     }
 

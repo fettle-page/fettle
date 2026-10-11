@@ -40,3 +40,16 @@ fn no_uncorrectable_sectors_is_healthy() {
     let r = judge(disk("hdd", json!({ "reallocated_sectors": 0, "pending_sectors": 0, "offline_uncorrectable": 0 })));
     assert_eq!(find(&r, "disk-0").headline.key, "storage.disk_fine");
 }
+
+// Hard drives are rated to about 60 °C, SSDs to 70 °C or more.
+#[test]
+fn a_hard_drive_runs_hot_sooner_than_an_ssd() {
+    let hot = |media: &str, t: i32| lines(&judge(disk(media, json!({ "reallocated_sectors": 0, "temperature_c": t })))).iter().any(|l| l.headline.key == "storage.disk_hot");
+    assert!(!hot("hdd", 55));
+    assert!(hot("hdd", 56));
+    assert!(!hot("ssd", 65));
+    assert!(!hot("ssd", 70));
+    assert!(hot("ssd", 71));
+    // Without a known type, the SSD limit: no false alarm.
+    assert!(!hot("unknown", 65));
+}

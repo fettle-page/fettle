@@ -3,6 +3,8 @@
 pub const SSD_WEAR_KEEP_AN_EYE: u8 = 80;
 pub const SSD_WEAR_ACT_SOON: u8 = 100;
 pub const DISK_TEMP_KEEP_AN_EYE_C: i32 = 70;
+/// Hard drives are rated to about 60 °C (WD Blue, Seagate Barracuda), so they warn sooner.
+pub const HDD_TEMP_KEEP_AN_EYE_C: i32 = 55;
 pub const FREE_SPACE_KEEP_AN_EYE: f64 = 0.1;
 /// Volumes smaller than this (2 GiB) get no free-space warning: a recovery or system partition that
 /// has a drive letter is meant to be nearly full. The system drive is checked whatever its size.

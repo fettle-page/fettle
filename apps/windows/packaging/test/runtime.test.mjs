@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { existsSync, mkdirSync, readFileSync, rmSync, statSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { describe, it } from "node:test";
-import { loadFlags } from "../pe.mjs";
-import { crtDirIn, manifestFiles, newestCrt, readExitCodes } from "../runtime.mjs";
+import { delayImports, loadFlags } from "../pe.mjs";
+import { crtDirIn, exitCodes, knownDllsIn, manifestFiles, newestCrt, readExitCodes } from "../runtime.mjs";
 
 const root = resolve(import.meta.dirname, "../../../..");
 
@@ -45,6 +45,23 @@ describe("readExitCodes", () => {
   });
 });
 
+describe("exitCodes", () => {
+  it("takes a long list of runs (too long to pass in the environment) and keeps Windows' error boxes off", () => {
+    const dir = scratch("many-runs");
+    const runs = Array.from({ length: 400 }, (_, i) => [join(dir, `missing-${i}`, "fettle.exe"), `--deep-scan "${join(dir, `missing-${i}`, "fettle-deep-0-0.json")}"`]);
+    const codes = exitCodes(runs, dir);
+    assert.equal(codes.length, 400);
+    assert.ok(codes.every((c) => c === "not started"), codes.slice(0, 3).join(" "));
+  });
+});
+
+describe("knownDllsIn", () => {
+  it("reads Windows' list of DLLs that always load from System32", () => {
+    const out = "\r\nHKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\KnownDLLs\r\n    *kernel32    REG_SZ    kernel32.dll\r\n    COMDLG32    REG_SZ    COMDLG32.dll\r\n    PSAPI    REG_SZ    PSAPI.DLL\r\n\r\n";
+    assert.deepEqual([...knownDllsIn(out)].sort(), ["comdlg32.dll", "kernel32.dll", "psapi.dll"]);
+  });
+});
+
 describe("manifestFiles", () => {
   it("lists the DLLs a program's manifest says load from its own folder", () => {
     const exe = Buffer.concat([
@@ -65,6 +82,12 @@ describe("this repo's fettle.exe", () => {
     it(`(${profile}) loads its own DLLs only from System32`, { skip: !existsSync(exe) && `no ${profile} build` }, () => {
       const stale = statSync(exe).mtimeMs < statSync(join(root, "apps", "windows", "build.rs")).mtimeMs;
       assert.equal(loadFlags(readFileSync(exe)), 0x800, stale ? `target/${profile}/fettle.exe is older than build.rs: rebuild it (cargo build${profile === "release" ? " --release" : ""} -p fettle-windows)` : undefined);
+    });
+    // Their own dependencies would be looked for beside fettle.exe first: loaded when first used,
+    // after main has limited every load to System32, they come from System32 too.
+    it(`(${profile}) loads secur32, netapi32 and opengl32 only when first used`, { skip: !existsSync(exe) && `no ${profile} build` }, () => {
+      const delayed = delayImports(readFileSync(exe)).map((d) => d.toLowerCase());
+      for (const d of ["secur32.dll", "netapi32.dll", "opengl32.dll"]) assert.ok(delayed.includes(d), `${d} isn't delay-loaded: ${delayed.join(", ")}`);
     });
   }
 });

@@ -45,6 +45,19 @@ export function imports(bytes) {
   return names;
 }
 
+/** The DLLs a PE file loads only when first used (its delay-load imports). */
+export function delayImports(bytes) {
+  const { u32, offset, directory } = parse(bytes);
+  const names = [];
+  if (directory(13)) {
+    for (let d = offset(directory(13)); u32(d + 4) !== 0; d += 32) {
+      const start = offset(u32(d + 4));
+      names.push(bytes.toString("latin1", start, bytes.indexOf(0, start)));
+    }
+  }
+  return names;
+}
+
 /**
  * Where a 64-bit program's own DLLs may load from (its load configuration's DependentLoadFlags, set
  * with the linker's /DEPENDENTLOADFLAG), or null when it has no load configuration.
@@ -82,6 +95,25 @@ export function runtimeFor(exe, crtDir) {
     queue.push(...imports(readFileSync(join(crtDir, file))).filter(redistributable));
   }
   return [...found.values()];
+}
+
+/**
+ * Every DLL a program's imports lead to through `system32`, lower case: its own imports, theirs, and
+ * so on. Known DLLs (`known`, which Windows always maps from System32 with their own dependencies)
+ * and the runtime shipped beside the program are listed but not followed.
+ */
+export function importChain(exe, system32, known = new Set()) {
+  const seen = new Set();
+  const queue = imports(readFileSync(exe)).map((d) => d.toLowerCase());
+  while (queue.length) {
+    const dll = queue.shift();
+    if (seen.has(dll) || apiSet(dll)) continue;
+    seen.add(dll);
+    const file = join(system32, dll);
+    if (known.has(dll) || redistributable(dll) || !existsSync(file)) continue;
+    queue.push(...imports(readFileSync(file)).map((d) => d.toLowerCase()));
+  }
+  return [...seen].sort();
 }
 
 /**

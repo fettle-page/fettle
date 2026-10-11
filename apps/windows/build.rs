@@ -38,5 +38,14 @@ fn main() {
         // DLL left beside it (in Downloads, say) can't load into it, even as the Deep check's
         // administrator helper. The runtime named in the manifest above is the one exception.
         println!("cargo:rustc-link-arg-bin=fettle=/DEPENDENTLOADFLAG:0x800");
+        // That flag covers only the DLLs fettle.exe imports, not what they import in turn: sspicli.dll
+        // (from secur32), netutils.dll and samcli.dll (from netapi32) and glu32.dll (from opengl32)
+        // would still be looked for beside it first. These three load when first used instead, after
+        // main has limited every load to System32 (SetDefaultDllDirectories), their own included.
+        // packaging/runtime.mjs plants every DLL in the chain beside a packaged copy to check.
+        for dll in ["secur32.dll", "netapi32.dll", "opengl32.dll"] {
+            println!("cargo:rustc-link-arg-bin=fettle=/DELAYLOAD:{dll}");
+        }
+        println!("cargo:rustc-link-arg-bin=fettle=delayimp.lib");
     }
 }

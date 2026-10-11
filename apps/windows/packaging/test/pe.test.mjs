@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { describe, it } from "node:test";
-import { apiSet, imports, loadFlags, missing, redistributable, runtimeFor } from "../pe.mjs";
+import { apiSet, delayImports, importChain, imports, loadFlags, missing, redistributable, runtimeFor } from "../pe.mjs";
 
 const root = resolve(import.meta.dirname, "../../../..");
 const system32 = join(process.env.SystemRoot ?? "C:\\Windows", "System32");
@@ -75,6 +75,13 @@ describe("imports", () => {
   });
 });
 
+describe("delayImports", () => {
+  it("lists only the DLLs a program loads when first used", () => {
+    assert.deepEqual(delayImports(fakePe({ dlls: ["KERNEL32.dll"], delayed: ["secur32.dll", "opengl32.dll"] })), ["secur32.dll", "opengl32.dll"]);
+    assert.deepEqual(delayImports(fakePe({ dlls: ["KERNEL32.dll"] })), []);
+  });
+});
+
 describe("loadFlags", () => {
   it("reads where a program's own DLLs may load from", () => {
     assert.equal(loadFlags(fakePe({ flags: 0x800 })), 0x800);
@@ -114,6 +121,21 @@ describe("missing", () => {
     writeFileSync(join(dir, "msvcp140.dll"), fakePe({ dlls: ["VCRUNTIME140.dll", "VCRUNTIME140_1.dll"] }));
     writeFileSync(join(dir, "vcruntime140.dll"), fakePe({ dlls: ["KERNEL32.dll"] }));
     assert.deepEqual(missing(["fettle.exe", "msvcp140.dll", "vcruntime140.dll"].map((f) => join(dir, f)), system32), ["msvcp140.dll → VCRUNTIME140_1.dll"]);
+  });
+});
+
+describe("importChain", () => {
+  it("follows Windows' DLLs down from the program, but not into known DLLs or the runtime", () => {
+    const sys = scratch("chain-system32");
+    writeFileSync(join(sys, "secur32.dll"), fakePe({ dlls: ["sspicli.dll", "KERNEL32.dll", "api-ms-win-core-heap-l1-1-0.dll"] }));
+    writeFileSync(join(sys, "sspicli.dll"), fakePe({ dlls: ["cryptbase.dll"] }));
+    writeFileSync(join(sys, "cryptbase.dll"), fakePe());
+    writeFileSync(join(sys, "kernel32.dll"), fakePe({ dlls: ["kernelbase.dll"] }));
+    writeFileSync(join(sys, "opengl32.dll"), fakePe({ delayed: ["glu32.dll"] }));
+    writeFileSync(join(sys, "glu32.dll"), fakePe());
+    const exe = join(scratch("chain-exe"), "fettle.exe");
+    writeFileSync(exe, fakePe({ dlls: ["SECUR32.dll", "KERNEL32.dll", "VCRUNTIME140.dll"], delayed: ["opengl32.dll"] }));
+    assert.deepEqual(importChain(exe, sys, new Set(["kernel32.dll"])), ["cryptbase.dll", "glu32.dll", "kernel32.dll", "opengl32.dll", "secur32.dll", "sspicli.dll", "vcruntime140.dll"]);
   });
 });
 

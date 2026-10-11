@@ -3,8 +3,9 @@
 // (Microsoft allows this "app-local" copy). The packaged exe names them in its manifest, so Windows
 // loads exactly those from its own folder and every other DLL from System32 only.
 import { execFileSync } from "node:child_process";
-import { copyFileSync, existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { copyFileSync, existsSync, linkSync, mkdirSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { basename, join } from "node:path";
+import { importChain } from "./pe.mjs";
 
 /** The newest x64 Microsoft.VC14x.CRT folder of a Visual Studio installation, with its version, or null. */
 export function crtDirIn(installation) {
@@ -38,6 +39,16 @@ export function newestCrt(crts) {
   return sorted[0]?.dir ?? null;
 }
 
+/** Windows' known DLLs from `reg query` output, lower case: they always load from System32. */
+export function knownDllsIn(regOutput) {
+  return new Set([...regOutput.matchAll(/\sREG_SZ\s+(\S+\.dll)\s*$/gim)].map((m) => m[1].toLowerCase()));
+}
+
+/** This PC's known DLLs. */
+export function knownDlls() {
+  return knownDllsIn(execFileSync("reg.exe", ["query", "HKLM\\SYSTEM\\CurrentControlSet\\Control\\Session Manager\\KnownDLLs"], { encoding: "utf8" }));
+}
+
 /** The DLLs a program's manifest declares as its own files, lower case. */
 export function manifestFiles(bytes) {
   const text = bytes.toString("latin1");
@@ -48,12 +59,17 @@ export function manifestFiles(bytes) {
  * Exit codes of programs started with Windows' "missing DLL" error boxes turned off (a broken copy
  * would otherwise stop on a message nobody is there to close). `runs` is [exe, args] pairs.
  */
-function exitCodes(runs) {
+export function exitCodes(runs, scratch) {
+  // The runs go in a file: a long list would push the environment past what Windows allows.
+  mkdirSync(scratch, { recursive: true });
+  const list = join(scratch, "runs.json");
+  writeFileSync(list, JSON.stringify(runs));
   const script = [
+    "$ErrorActionPreference = 'Stop'",
     "Add-Type -Namespace W -Name E -MemberDefinition '[DllImport(\"kernel32.dll\")] public static extern uint SetErrorMode(uint mode);'",
     "[void][W.E]::SetErrorMode(0x8003)",
     "$i = 0",
-    "foreach ($run in ($env:FETTLE_RUNS | ConvertFrom-Json)) {",
+    "foreach ($run in (Get-Content -Raw -LiteralPath $env:FETTLE_RUNS | ConvertFrom-Json)) {",
     "  try {",
     "    $psi = New-Object System.Diagnostics.ProcessStartInfo $run[0]",
     "    $psi.Arguments = $run[1]",
@@ -64,7 +80,8 @@ function exitCodes(runs) {
     "  $i++",
     "}",
   ].join("\n");
-  const out = execFileSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script], { encoding: "utf8", env: { ...process.env, FETTLE_RUNS: JSON.stringify(runs) } });
+  const out = execFileSync("powershell.exe", ["-NoProfile", "-NonInteractive", "-Command", script], { encoding: "utf8", env: { ...process.env, FETTLE_RUNS: list } });
+  rmSync(list, { force: true });
   return readExitCodes(out, runs.length);
 }
 
@@ -79,28 +96,58 @@ export function readExitCodes(out, count) {
 }
 
 /**
- * Starts the packaged fettle.exe in `dir` three ways, each with a Deep check file it refuses, so it
- * stops (exit code 1) once Windows has loaded everything, before any window or scan:
+ * Starts the packaged fettle.exe in `dir` with a Deep check file it refuses, so it stops (exit code 1)
+ * once Windows has loaded everything, before any window or scan:
  *  - as packaged: it starts, so every DLL it needs is there;
  *  - beside a broken copy of the runtime: it doesn't start, so the copy beside it is the one it uses;
- *  - beside a planted Windows DLL: it starts, so DLLs beside it other than the runtime never load.
+ *  - beside a planted copy of every DLL its imports lead to (other than Windows' known DLLs, which
+ *    never load from elsewhere): it starts, and a real helper scan runs and writes its report too,
+ *    so no DLL left beside fettle.exe (in Downloads, say) loads into it, before or during a scan.
  */
-export function checkStarts(dir, runtime, scratch) {
+export function checkStarts(dir, runtime, scratch, system32 = join(process.env.SystemRoot ?? "C:\\Windows", "System32")) {
   const refused = "--deep-scan fettle-deep-0-0.json";
-  const copy = (name) => {
+  const copy = (name, plant = []) => {
     const to = join(scratch, name);
     rmSync(to, { recursive: true, force: true });
     mkdirSync(to, { recursive: true });
-    for (const f of ["fettle.exe", ...runtime]) copyFileSync(join(dir, f), join(to, f));
-    return to;
+    try {
+      linkSync(join(dir, "fettle.exe"), join(to, "fettle.exe"));
+    } catch {
+      copyFileSync(join(dir, "fettle.exe"), join(to, "fettle.exe"));
+    }
+    for (const f of runtime) copyFileSync(join(dir, f), join(to, f));
+    for (const f of plant) writeFileSync(join(to, f), "not a DLL");
+    return join(to, "fettle.exe");
   };
+  const known = knownDlls();
+  const plantable = importChain(join(dir, "fettle.exe"), system32, known).filter((d) => !known.has(d) && !runtime.includes(d));
   const broken = copy("broken-runtime");
-  writeFileSync(join(broken, runtime[0]), "not a DLL");
-  const planted = copy("planted-dll");
-  writeFileSync(join(planted, "dwmapi.dll"), "not a DLL");
-  const [asIs, withBroken, withPlanted] = exitCodes([join(dir, "fettle.exe"), join(broken, "fettle.exe"), join(planted, "fettle.exe")].map((exe) => [exe, refused]));
-  rmSync(scratch, { recursive: true, force: true });
-  if (asIs !== "1") throw new Error(`The packaged fettle.exe didn't start (exit code ${asIs}): a DLL it needs is missing`);
-  if (withBroken === "1") throw new Error(`fettle.exe started with a broken ${basename(runtime[0])} beside it, so it doesn't use the runtime it ships with`);
-  if (withPlanted !== "1") throw new Error(`fettle.exe loaded a dwmapi.dll left beside it (exit code ${withPlanted})`);
+  writeFileSync(join(scratch, "broken-runtime", runtime[0]), "not a DLL");
+  const planted = copy("planted", plantable);
+  const report = join(scratch, "planted", "fettle-deep-0-0.json");
+  const [asIs, withBroken, withPlanted, scanned] = exitCodes(
+    [
+      [join(dir, "fettle.exe"), refused],
+      [broken, refused],
+      [planted, refused],
+      [planted, `--deep-scan "${report}"`],
+    ],
+    scratch,
+  );
+  try {
+    if (asIs !== "1") throw new Error(`The packaged fettle.exe didn't start (exit code ${asIs}): a DLL it needs is missing`);
+    if (withBroken === "1") throw new Error(`fettle.exe started with a broken ${basename(runtime[0])} beside it, so it doesn't use the runtime it ships with`);
+    if (withPlanted !== "1" || scanned !== "0" || !existsSync(report)) {
+      // Which ones: each planted alone.
+      const runs = plantable.flatMap((d) => {
+        const exe = copy(`one-${d}`, [d]);
+        return [[exe, refused], [exe, `--deep-scan "${join(scratch, `one-${d}`, "fettle-deep-0-0.json")}"`]];
+      });
+      const codes = exitCodes(runs, scratch);
+      const loaded = plantable.filter((_, i) => codes[2 * i] !== "1" || codes[2 * i + 1] !== "0");
+      throw new Error(`fettle.exe loaded DLLs left beside it (exit codes ${withPlanted}, ${scanned}): ${loaded.join(", ") || "none alone, only together"}`);
+    }
+  } finally {
+    rmSync(scratch, { recursive: true, force: true });
+  }
 }

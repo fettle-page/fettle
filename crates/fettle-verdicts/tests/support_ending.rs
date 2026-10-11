@@ -87,7 +87,7 @@ fn win10_home(ubr: Option<u32>, last_update: Option<&str>) -> Value {
 #[test]
 fn a_late_installed_october_2025_update_does_not_mean_esu() {
     // The October 2025 update (19045.6456) installed three days after it came out, never enrolled.
-    let r = judge(json!({ "windows": win10_home(Some(6456), Some("2025-10-17")) }), "2026-03-01T10:00:00Z", false);
+    let r = judge(json!({ "windows": win10_home(Some(6456), Some("2025-10-17")) }), "2025-12-01T10:00:00Z", false);
     let l = find(&r, "windows-support");
     assert_eq!((l.level, l.headline.key.as_str()), (Level::KeepAnEye, "windows.esu_unknown"));
 }
@@ -95,8 +95,26 @@ fn a_late_installed_october_2025_update_does_not_mean_esu() {
 #[test]
 fn the_update_for_pcs_without_esu_does_not_mean_esu() {
     // KB5071959 was offered only to PCs not enrolled, to fix the enrolment wizard.
-    let r = judge(json!({ "windows": win10_home(Some(6466), Some("2026-09-25")) }), "2026-10-01T10:00:00Z", false);
+    let r = judge(json!({ "windows": win10_home(Some(6466), Some("2025-11-20")) }), "2025-12-20T10:00:00Z", false);
     assert_eq!(find(&r, "windows-support").headline.key, "windows.esu_unknown");
+}
+
+// A PC still on the last build without ESU, two Patch Tuesdays (December, January) after it, has
+// missed security updates whether it's enrolled or not.
+#[test]
+fn no_security_update_since_november_2025_means_act_soon() {
+    let stale = judge(json!({ "windows": win10_home(Some(6466), Some("2026-09-25")) }), "2026-10-01T10:00:00Z", false);
+    let l = find(&stale, "windows-support");
+    assert_eq!((l.level, l.headline.key.as_str()), (Level::ActSoon, "windows.esu_stale"));
+    assert_eq!(l.action.as_ref().map(|a| a.key.as_str()), Some("windows.esu_stale.action"));
+    let older = judge(json!({ "windows": win10_home(Some(6456), None) }), "2026-03-01T10:00:00Z", false);
+    assert_eq!(find(&older, "windows-support").headline.key, "windows.esu_stale");
+    // Up to the January 2026 Patch Tuesday a late install is still likely.
+    let early = judge(json!({ "windows": win10_home(Some(6466), None) }), "2026-01-13T10:00:00Z", false);
+    assert_eq!(find(&early, "windows-support").headline.key, "windows.esu_unknown");
+    // Without the build revision, nothing to go on.
+    let unknown = judge(json!({ "windows": win10_home(None, None) }), "2026-10-01T10:00:00Z", false);
+    assert_eq!(find(&unknown, "windows-support").headline.key, "windows.esu_unknown");
 }
 
 #[test]

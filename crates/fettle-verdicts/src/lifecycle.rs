@@ -149,6 +149,12 @@ fn win10_ltsc(build: u32, edition: EditionClass) -> Option<i64> {
 /// https://support.microsoft.com/en-us/topic/windows-10-update-history-8127c2c6-6edf-4fdf-8b9f-0f7be1ef3562
 pub const LAST_WIN10_UBR_WITHOUT_ESU: u32 = 6466;
 
+/// The end of the January 2026 Patch Tuesday, the second after that build: a PC still on it (or
+/// older) after this has missed security updates, enrolled in ESU or not.
+pub fn win10_updates_missed_after() -> i64 {
+    d("2026-01-14")
+}
+
 // Consumer ESU for Windows 10 22H2 runs until 12 Oct 2027 (extended by Microsoft in June 2026).
 fn consumer_esu_end() -> i64 {
     d("2027-10-13")

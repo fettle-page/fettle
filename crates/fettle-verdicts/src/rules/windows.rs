@@ -1,5 +1,5 @@
 use super::common::{Action, couldnt_check, line, section_problem};
-use crate::lifecycle::{Esu, LAST_WIN10_UBR_WITHOUT_ESU, last_day, support_end};
+use crate::lifecycle::{Esu, LAST_WIN10_UBR_WITHOUT_ESU, last_day, support_end, win10_updates_missed_after};
 use crate::thresholds::{SUPPORT_END_KEEP_AN_EYE_DAYS, UPTIME_NUDGE_DAYS};
 use crate::{Level, Line, MessageRef, Param, SectionId, SectionVerdict};
 use fettle_facts::{EsuState, Section, Windows};
@@ -74,6 +74,10 @@ fn support_line(w: &Windows, build: u32, now: i64) -> Line {
             }
         }
         Some(EsuState::NotEnrolled) => line("windows-support", Level::ActSoon, "windows.unsupported_esu", &[product()], Action::Default),
+        // Still on the last build without ESU long after it: no security fixes since, whatever the enrolment.
+        _ if build == 19045 && w.ubr.is_some_and(|u| u <= LAST_WIN10_UBR_WITHOUT_ESU) && now > win10_updates_missed_after() => {
+            line("windows-support", Level::ActSoon, "windows.esu_stale", &[product()], Action::Default)
+        }
         _ => line("windows-support", Level::KeepAnEye, "windows.esu_unknown", &[product()], Action::Default),
     }
 }

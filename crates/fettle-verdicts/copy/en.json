@@ -71,6 +71,8 @@
   "windows.esu_ending.action": "Upgrade to Windows 11 before then to keep getting security fixes.",
   "windows.esu_unknown": "{product} only gets security updates if it's enrolled in Extended Security Updates.",
   "windows.esu_unknown.action": "Open Windows Update to check whether this PC is enrolled.",
+  "windows.esu_stale": "{product} hasn't had a security update since November 2025.",
+  "windows.esu_stale.action": "Enrol in Extended Security Updates from Windows Update and install what it offers, or upgrade to Windows 11.",
   "windows.unknown_version": "Fettle doesn't know the support dates for this version of {product} yet.",
   "windows.restart_nudge": "Your PC hasn't restarted in {days} days. A restart lets updates finish installing.",
   "windows.cpu_ready": "This processor is on Microsoft's list for Windows 11.",

@@ -71,6 +71,8 @@
   "windows.esu_ending.action": "Prima di allora passa a Windows 11 per continuare a ricevere le correzioni di sicurezza.",
   "windows.esu_unknown": "{product} riceve aggiornamenti di sicurezza solo se è iscritto agli Extended Security Updates.",
   "windows.esu_unknown.action": "Apri Windows Update per verificare se questo PC è iscritto.",
+  "windows.esu_stale": "{product} non riceve aggiornamenti di sicurezza da novembre 2025.",
+  "windows.esu_stale.action": "Iscriviti agli Extended Security Updates da Windows Update e installa ciò che propone, oppure passa a Windows 11.",
   "windows.unknown_version": "Fettle non conosce ancora le date di supporto di questa versione di {product}.",
   "windows.restart_nudge": "Il PC non viene riavviato da {days} giorni. Un riavvio permette di completare gli aggiornamenti.",
   "windows.cpu_ready": "Questo processore è nell'elenco di Microsoft per Windows 11.",

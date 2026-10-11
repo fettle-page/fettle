@@ -27,22 +27,30 @@ pub trait Store {
     /// The links still alive at `now_ms`; expired ones are forgotten.
     fn load_links(&self, now_ms: i64) -> Vec<SavedLink>;
     fn save_links(&self, links: &[SavedLink]);
+    /// Runs `f` while no other Fettle window can change the saved links (best effort).
+    fn with_links_locked(&self, f: &mut dyn FnMut()) {
+        f()
+    }
     /// Adds a link to the ones saved now. Another window may have saved its own since this one
     /// read the list, so the list is read again first: writing this window's copy whole would drop them.
     fn add_link(&self, link: &SavedLink, now_ms: i64) {
-        let mut links = self.load_links(now_ms);
-        if !links.iter().any(|l| l.id == link.id) {
-            links.push(link.clone());
-        }
-        self.save_links(&links);
+        self.with_links_locked(&mut || {
+            let mut links = self.load_links(now_ms);
+            if !links.iter().any(|l| l.id == link.id) {
+                links.push(link.clone());
+            }
+            self.save_links(&links);
+        });
     }
     /// Forgets these links (deleted, or gone from the website), keeping every other window's.
     fn forget_links(&self, ids: &[String], now_ms: i64) {
-        let links = self.load_links(now_ms);
-        let kept: Vec<SavedLink> = links.iter().filter(|l| !ids.contains(&l.id)).cloned().collect();
-        if kept.len() != links.len() {
-            self.save_links(&kept);
-        }
+        self.with_links_locked(&mut || {
+            let links = self.load_links(now_ms);
+            let kept: Vec<SavedLink> = links.iter().filter(|l| !ids.contains(&l.id)).cloned().collect();
+            if kept.len() != links.len() {
+                self.save_links(&kept);
+            }
+        });
     }
     /// The last update check (a missing or bad file is "never asked").
     fn load_update(&self) -> crate::update::UpdateRecord;
@@ -90,6 +98,7 @@ const SETTINGS: &str = "settings.json";
 const LAST: &str = "last-report.json";
 const LINKS: &str = "links.json";
 const UPDATE: &str = "update.json";
+const LINKS_LOCK: &str = "links.lock";
 
 impl FileStore {
     fn read(&self, name: &str) -> Option<serde_json::Value> {
@@ -106,6 +115,28 @@ impl FileStore {
         if std::fs::write(&tmp, text).is_err() || std::fs::rename(&tmp, self.dir.join(name)).is_err() {
             let _ = std::fs::remove_file(&tmp);
         }
+    }
+
+    /// Holds `name` open with no sharing (and gone when closed), waiting up to two seconds for it.
+    fn lock(&self, name: &str) -> Option<std::fs::File> {
+        let _ = std::fs::create_dir_all(&self.dir);
+        for _ in 0..40 {
+            let mut options = std::fs::OpenOptions::new();
+            options.read(true).write(true).create(true);
+            #[cfg(windows)]
+            {
+                use std::os::windows::fs::OpenOptionsExt;
+                const DELETE: u32 = 0x0001_0000;
+                const GENERIC_READ_WRITE: u32 = 0x8000_0000 | 0x4000_0000;
+                const FILE_FLAG_DELETE_ON_CLOSE: u32 = 0x0400_0000;
+                options.share_mode(0).access_mode(GENERIC_READ_WRITE | DELETE).custom_flags(FILE_FLAG_DELETE_ON_CLOSE);
+            }
+            if let Ok(file) = options.open(self.dir.join(name)) {
+                return Some(file);
+            }
+            std::thread::sleep(std::time::Duration::from_millis(50));
+        }
+        None
     }
 
     fn remove(&self, name: &str) {
@@ -190,6 +221,14 @@ impl Store for FileStore {
 
     fn save_links(&self, links: &[SavedLink]) {
         self.write(LINKS, &links);
+    }
+
+    /// The lock is links.lock, open with no sharing, so another window's open fails until this one
+    /// lets go; Windows deletes it when it's closed, even if Fettle stops halfway. A window that can't
+    /// get it within two seconds goes ahead anyway rather than lose the change.
+    fn with_links_locked(&self, f: &mut dyn FnMut()) {
+        let _lock = self.lock(LINKS_LOCK);
+        f()
     }
 }
 
@@ -372,6 +411,28 @@ pub(crate) mod tests {
         assert_eq!(ids(&a), ["b"]);
         a.forget_links(&["gone".to_string()], 0);
         assert_eq!(ids(&b), ["b"]);
+    }
+
+    #[test]
+    fn two_windows_saving_at_the_same_moment_keep_both_links() {
+        // Window A reads the list and takes a moment to save; window B shares a link meanwhile.
+        let dir = temp_dir();
+        let link = |id: &str| SavedLink { id: id.into(), url: format!("https://fettle.page/r/{id}"), delete_token: format!("token-{id}"), expires_at: "2026-11-01T00:00:00Z".into() };
+        let a = FileStore::new(dir.clone());
+        let slow = std::thread::spawn(move || {
+            a.with_links_locked(&mut || {
+                let mut links = a.load_links(0);
+                std::thread::sleep(std::time::Duration::from_millis(300));
+                links.push(link("a"));
+                a.save_links(&links);
+            })
+        });
+        std::thread::sleep(std::time::Duration::from_millis(50));
+        FileStore::new(dir.clone()).add_link(&link("b"), 0);
+        slow.join().unwrap();
+        let ids: Vec<String> = FileStore::new(dir.clone()).load_links(0).into_iter().map(|l| l.id).collect();
+        assert_eq!(ids, ["a", "b"]);
+        assert!(!dir.join("links.lock").exists(), "the lock goes when it's let go");
     }
 
     #[test]

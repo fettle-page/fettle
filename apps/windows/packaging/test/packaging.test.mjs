@@ -101,7 +101,7 @@ describe("fettle.iss: uninstalling for all users", () => {
   // turned (with a junction swapped in at the right moment) into deleting files anywhere.
   it("deletes only Fettle's own files there, one level deep, and never through a junction", () => {
     const remove = /function RemoveFettleData\(Folder: String\): Boolean;([\s\S]*?)\nend;/.exec(iss)?.[1] ?? "";
-    for (const name of ["settings.json", "last-report.json", "links.json", "update.json"]) assert.ok(remove.includes(`'\\${name}'`), name);
+    for (const name of ["settings.json", "last-report.json", "links.json", "links.lock", "update.json"]) assert.ok(remove.includes(`'\\${name}'`), name);
     assert.match(remove, /DeleteMatching\(Folder, 'fettle-deep-\*\.json'\)/);
     assert.match(remove, /DeleteMatching\(Folder, '\*\.tmp'\)/);
     assert.match(remove, /if ThroughALink\(Folder\) then/);

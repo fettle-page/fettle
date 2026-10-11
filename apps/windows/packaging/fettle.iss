@@ -211,6 +211,7 @@ begin
   DeleteFile(Folder + '\settings.json');
   DeleteFile(Folder + '\last-report.json');
   DeleteFile(Folder + '\links.json');
+  DeleteFile(Folder + '\links.lock');
   DeleteFile(Folder + '\update.json');
   DeleteMatching(Folder, 'fettle-deep-*.json');
   DeleteMatching(Folder, '*.tmp');

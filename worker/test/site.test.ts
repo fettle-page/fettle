@@ -43,6 +43,23 @@ describe("addresses with a trailing slash or .html", () => {
     }
   });
 
+  // Never an open redirect: "//host/" and its look-alikes must stay on this site.
+  it("never send a visitor to another site", async () => {
+    // Backslashes as the browser would send them: "/\evil" and "\\evil" (doubled here for JavaScript).
+    const tricks = ["//evil.example/", "/\\evil.example/", "\\\\evil.example/", "//evil.example/x.html", "///evil.example/", "/%2F%2Fevil.example/", "/%5Cevil.example/", "/%5C%5Cevil.example/x.html", "/.//evil.example/"];
+    for (const trick of tricks) {
+      const res = await call(trick, { redirect: "manual" });
+      const location = res.headers.get("location");
+      if (location !== null) expect(new URL(location, "http://example.com/").origin, trick).toBe("http://example.com");
+    }
+  });
+
+  it("clean a doubled slash to a path on this site", async () => {
+    const res = await call("//download/", { redirect: "manual" });
+    expect(res.status).toBe(301);
+    expect(res.headers.get("location")).toBe("http://example.com/download");
+  });
+
   it("run the Worker first, so it can answer before the static files do", () => {
     const config = JSON.parse(raw.replace(/^\s*\/\/.*$/gm, ""));
     expect(config.assets.run_worker_first).toEqual(expect.arrayContaining(["/*/", "/*.html"]));

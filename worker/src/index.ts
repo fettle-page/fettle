@@ -9,11 +9,24 @@ export { UnlockGuard } from "./guard.ts";
 /**
  * The clean address for "/x/", "/x.html" and "/x/index.html" ("/x"), or null when the address is
  * already clean. The static files would redirect these too, but only with a 307.
+ * Leading slashes and backslashes collapse to one, so "//evil.example/" can never become a
+ * protocol-relative address on another site.
  */
 export function cleanPath(pathname: string): string | null {
   if (pathname === "/" || !(pathname.endsWith("/") || pathname.endsWith(".html"))) return null;
-  const clean = pathname.replace(/\/+$/, "").replace(/\.html$/, "").replace(/(^|\/)index$/, "");
+  const clean = pathname
+    .replace(/^[/\\]+/, "/")
+    .replace(/\/+$/, "")
+    .replace(/\.html$/, "")
+    .replace(/(^|\/)index$/, "");
   return clean === "" ? "/" : clean;
+}
+
+/** A 301 to `path` on this site; null if the result would somehow leave it. */
+function redirectWithin(url: URL, path: string): Response | null {
+  // Joined as text onto our own origin, never resolved against the request, so it can't change host.
+  const target = new URL(url.origin + path + url.search);
+  return target.origin === url.origin ? Response.redirect(target.href, 301) : null;
 }
 
 const notAllowed = (allow: string) => apiError(405, "method_not_allowed", { headers: { allow } });
@@ -38,7 +51,8 @@ export default {
     const { pathname } = url;
     if (pathname === "/api" || pathname.startsWith("/api/")) return api(request, env, pathname);
     const clean = cleanPath(pathname);
-    if (clean !== null && !pathname.startsWith("/r/")) return Response.redirect(new URL(clean + url.search, url).href, 301);
+    const redirect = clean !== null && !pathname.startsWith("/r/") ? redirectWithin(url, clean) : null;
+    if (redirect) return redirect;
     if (pathname === "/r" || pathname.startsWith("/r/")) return sharePage(request, env);
     if (DOWNLOAD_PAGES.has(pathname)) return withDownloadCount(request, env, ctx);
     return env.ASSETS.fetch(request);

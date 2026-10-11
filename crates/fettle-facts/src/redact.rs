@@ -39,7 +39,11 @@ const COMMON_WORDS: &[&str] = &[
 ];
 
 /// What Windows puts in USERDOMAIN when the account isn't in a company domain.
-const NOT_DOMAINS: &[&str] = &["WORKGROUP", "AzureAD", "MicrosoftAccount", "NT AUTHORITY", "BUILTIN", "NT SERVICE", "Window Manager", "Font Driver Host"];
+/// Also what home routers hand out as a DNS suffix, and Entra ID's default tenant name.
+const NOT_DOMAINS: &[&str] = &[
+    "WORKGROUP", "AzureAD", "MicrosoftAccount", "NT AUTHORITY", "BUILTIN", "NT SERVICE", "Window Manager", "Font Driver Host",
+    "lan", "local", "localdomain", "home.arpa", "fritz.box", "station", "Default Directory",
+];
 
 /// Profile folders that belong to no one in particular.
 const SHARED_PROFILES: &[&str] = &["Public", "Default", "Default User", "All Users", "<user>"];
@@ -92,7 +96,7 @@ impl Redactor {
     /// name or a fixed word there, which aren't a domain.
     pub fn with_domain(mut self, domain: impl Into<String>) -> Redactor {
         let domain = domain.into().trim().to_string();
-        let usual = NOT_DOMAINS.iter().any(|d| d.eq_ignore_ascii_case(&domain)) || self.hostnames.iter().any(|h| h.eq_ignore_ascii_case(&domain));
+        let usual = NOT_DOMAINS.iter().any(|d| d.eq_ignore_ascii_case(&domain)) || is_common_word(&domain) || self.hostnames.iter().any(|h| h.eq_ignore_ascii_case(&domain));
         if domain.chars().count() >= MIN_NAME_LEN && !usual {
             add_name(&mut self.domains, domain);
         }
@@ -141,7 +145,8 @@ impl Redactor {
 
     /// Free text such as error details, which may also quote network addresses and servers.
     pub fn detail(&self, s: &str) -> String {
-        replace_unc_servers(&replace_ipv4(&replace_ipv6(&replace_macs(&self.text(s)))))
+        // IPv4 before IPv6, so an IPv4-mapped address (::ffff:192.168.1.10) goes whole.
+        replace_unc_servers(&replace_ipv6(&replace_ipv4(&replace_macs(&self.text(s)))))
     }
 
     /// Rewrites every text field in the report, and gives startup items their readable names.
@@ -325,7 +330,8 @@ fn inside_placeholder(s: &str, i: usize) -> bool {
 }
 
 /// The byte length of `needle` at byte `i` of `s`, ignoring letter case in any alphabet ("JOSÉ" is
-/// "josé"), or None when it isn't there.
+/// "josé"), or None when it isn't there. Letter by letter: the few letters whose other case is two
+/// letters (Turkish "İ", German "ß" as "SS") only match in the case they were written in.
 fn match_ignoring_case(s: &str, i: usize, needle: &str) -> Option<usize> {
     let mut hay = s[i..].char_indices();
     for n in needle.chars() {
@@ -715,6 +721,20 @@ mod tests {
         assert_eq!(r.detail("can't reach PC01.corp.contoso-group.com"), "can't reach <pc-name>");
         assert_eq!(r.detail("dc1.corp.contoso-group.com refused"), "dc1.<domain> refused");
         assert_eq!(r.text("OneDrive - Contoso Ltd"), "OneDrive - <domain>");
+    }
+
+    #[test]
+    fn an_ipv4_mapped_ipv6_address_is_hidden_whole() {
+        assert_eq!(r().detail("from ::ffff:192.168.1.10 refused"), "from ::ffff:<ip> refused");
+    }
+
+    #[test]
+    fn ordinary_words_are_not_taken_for_a_domain() {
+        // A router's DNS suffix ("lan", "home") or a tenant called "Microsoft" or "Default Directory".
+        let r = Redactor::new(["jdoe"], "DESKTOP-ABC").with_domain("lan").with_domain("home").with_domain("Microsoft").with_domain("Default Directory");
+        assert_eq!(r.detail("LAN adapter disconnected"), "LAN adapter disconnected");
+        assert_eq!(r.text("Microsoft Edge"), "Microsoft Edge");
+        assert_eq!(r.text("Default Directory sync"), "Default Directory sync");
     }
 
     /// Every text field in the report is either cleaned by `Redactor::report` or can't hold a

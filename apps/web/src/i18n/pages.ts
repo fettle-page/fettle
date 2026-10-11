@@ -46,8 +46,8 @@ const en: Pages = {
       {
         h: "Share links",
         p: [
-          "Only when you choose to share, Fettle uploads the receipt you see: the redacted report and nothing else. It's stored with Cloudflare for the time you pick (7 days, 30 days or 1 year) and then deleted. A private delete link lets you remove it sooner.",
-          "If you add a password, our server keeps only a scrambled hash of it, never the password itself. After a right password it also keeps a scrambled hash of a 24-hour pass, so the same browser can reopen the receipt; the pass expires on its own. Anyone with the link, and the password if you set one, can open the receipt.",
+          "Only when you choose to share, Fettle uploads the report behind the receipt you see, with the private details taken out, and nothing else. It's stored with Cloudflare, in its EU data centres only, for the time you pick (7 days, 30 days or 1 year) and then deleted. A private delete link lets you remove it sooner.",
+          "If you add a password, our server keeps only a scrambled hash of it, never the password itself. After a right password it also keeps a scrambled hash of a pass, so the same browser can reopen the receipt; the pass expires 24 hours after it was last used. Anyone with the link, and the password if you set one, can open the receipt.",
         ],
       },
       {
@@ -97,11 +97,12 @@ const en: Pages = {
     needsH: "What you'll need",
     needs: ["Windows 10 or 11, 64-bit", "About 35 MB of disk space", "No administrator rights (the Deep check asks only if you want it)"],
     formatsH: "Two ways to run it",
-    formats: ["Installer, about 12 MB, with an update check you can turn off. To remove it: Windows Settings > Apps, then Fettle > Uninstall.", "Portable zip, about 14 MB: nothing to install, and it keeps its settings in its own folder. To remove it, delete its folder."],
+    formats: ["Installer, about 12 MB, with an update check you can turn off. To remove it: Windows Settings > Apps, then Fettle > Uninstall.", "Portable zip, about 14 MB: nothing to install, it keeps its settings in its own folder, and it has the same update check you can turn off. To remove it, delete its folder."],
     warningH: "About the Windows warning",
     warning: [
       "New apps without a code-signing certificate get a SmartScreen warning the first time they run, and Fettle's downloads aren't signed yet, so you may see \"Windows protected your PC\".",
       "Choose \"More info\", then \"Run anyway\". The source code is public and every release is built in the open, so you can check what you're running.",
+      "Your browser may warn first that the file \"isn't commonly downloaded\": in its downloads list, open the file's menu (…), choose \"Keep\", then \"Show more\" and \"Keep anyway\".",
     ],
     signingLink: "Code signing policy",
   },
@@ -184,15 +185,15 @@ const it: Pages = {
       {
         h: "L'app",
         p: [
-          "Fettle controlla il tuo PC sul tuo PC. Non invia nulla da solo. L'unica richiesta automatica è il controllo degli aggiornamenti: di norma una volta al giorno (puoi scegliere ogni ora o ogni settimana), chiede a questo sito il numero dell'ultima versione, senza inviare nulla sul tuo PC. Puoi disattivarlo nelle impostazioni.",
+          "Fettle controlla il tuo PC sul tuo PC. Non invia nulla da solo. L'unica richiesta automatica è il controllo degli aggiornamenti: di norma una volta al giorno (puoi scegliere ogni ora o ogni settimana), chiede a questo sito il numero dell'ultima versione, senza inviare alcuna informazione sul tuo PC. Puoi disattivarlo nelle impostazioni.",
           "Numeri di serie, nome del PC, nome utente di Windows e indirizzi di rete non compaiono mai negli scontrini, nei file salvati o nei link condivisi. Se vuoi, l'app può mostrare il nome del PC e i numeri di serie sul tuo schermo. I codici Product Key non vengono mai letti.",
         ],
       },
       {
         h: "Link condivisi",
         p: [
-          "Solo quando scegli di condividere, Fettle carica lo scontrino che vedi: il report con i dati personali nascosti e nient'altro. Viene conservato su Cloudflare per il tempo che scegli (7 giorni, 30 giorni o 1 anno) e poi eliminato. Un link privato di eliminazione ti permette di toglierlo prima.",
-          "Se aggiungi una password, il nostro server conserva solo un'impronta (hash), mai la password. Dopo una password corretta conserva anche l'impronta di un permesso di 24 ore, così lo stesso browser può riaprire lo scontrino; il permesso scade da solo. Chiunque abbia il link, e la password se l'hai impostata, può aprire lo scontrino.",
+          "Solo quando scegli di condividere, Fettle carica il report dietro lo scontrino che vedi, con i dati personali tolti, e nient'altro. Viene conservato su Cloudflare, solo nei suoi data center nell'UE, per il tempo che scegli (7 giorni, 30 giorni o 1 anno) e poi eliminato. Un link privato di eliminazione ti permette di toglierlo prima.",
+          "Se aggiungi una password, il nostro server conserva solo un'impronta (hash), mai la password. Dopo una password corretta conserva anche l'impronta di un permesso, così lo stesso browser può riaprire lo scontrino; il permesso scade 24 ore dall'ultimo utilizzo. Chiunque abbia il link, e la password se l'hai impostata, può aprire lo scontrino.",
         ],
       },
       {
@@ -242,11 +243,12 @@ const it: Pages = {
     needsH: "Cosa serve",
     needs: ["Windows 10 o 11, 64 bit", "Circa 35 MB di spazio su disco", "Nessun diritto di amministratore (il Controllo approfondito lo chiede solo se vuoi)"],
     formatsH: "Due modi per avviarlo",
-    formats: ["Installer, circa 12 MB, con un controllo degli aggiornamenti che puoi disattivare. Per rimuoverlo: Impostazioni di Windows > App, poi Fettle > Disinstalla.", "Zip portatile, circa 14 MB: niente da installare, e tiene le impostazioni nella sua cartella. Per rimuoverlo, elimina la sua cartella."],
+    formats: ["Installer, circa 12 MB, con un controllo degli aggiornamenti che puoi disattivare. Per rimuoverlo: Impostazioni di Windows > App, poi Fettle > Disinstalla.", "Zip portatile, circa 14 MB: niente da installare, tiene le impostazioni nella sua cartella e ha lo stesso controllo degli aggiornamenti che puoi disattivare. Per rimuoverlo, elimina la sua cartella."],
     warningH: "Sull'avviso di Windows",
     warning: [
-      "Le app nuove senza certificato di firma del codice ricevono un avviso di SmartScreen al primo avvio, e i download di Fettle non sono ancora firmati, quindi potresti vedere \"PC protetto da Windows\".",
+      "Le app nuove senza certificato di firma del codice ricevono un avviso di SmartScreen al primo avvio, e i download di Fettle non sono ancora firmati, quindi potresti vedere \"Windows ha protetto il PC\".",
       "Scegli \"Ulteriori informazioni\", poi \"Esegui comunque\". Il codice sorgente è pubblico e ogni versione viene compilata alla luce del sole, così puoi verificare cosa stai avviando.",
+      "Il browser potrebbe avvisarti prima che il file \"non viene scaricato comunemente\": nell'elenco dei download apri il menu del file (…), scegli \"Mantieni\", poi \"Mostra altro\" e \"Mantieni comunque\".",
     ],
     signingLink: "Policy di firma del codice",
   },
@@ -288,7 +290,7 @@ const it: Pages = {
       {
         h: "Privacy",
         p: [
-          "Fettle non invia nulla da solo, tranne il controllo degli aggiornamenti: chiede a questo sito il numero dell'ultima versione, senza inviare nulla sul tuo PC, e puoi disattivarlo nelle Impostazioni. Lo scontrino viene caricato online solo quando chiedi un link di condivisione.",
+          "Fettle non invia nulla da solo, tranne il controllo degli aggiornamenti: chiede a questo sito il numero dell'ultima versione, senza inviare alcuna informazione sul tuo PC, e puoi disattivarlo nelle Impostazioni. Lo scontrino viene caricato online solo quando chiedi un link di condivisione.",
         ],
       },
     ],

@@ -29,7 +29,7 @@ describe("the app's update check", () => {
     const en = pages("en").privacy.sections[0]!.p[0]!;
     const it_ = pages("it").privacy.sections[0]!.p[0]!;
     expect(en).toContain("by default once a day (you can choose every hour or every week), it asks this website for the latest version number, sending nothing about your PC");
-    expect(it_).toContain("di norma una volta al giorno (puoi scegliere ogni ora o ogni settimana), chiede a questo sito il numero dell'ultima versione, senza inviare nulla sul tuo PC");
+    expect(it_).toContain("di norma una volta al giorno (puoi scegliere ogni ora o ogni settimana), chiede a questo sito il numero dell'ultima versione, senza inviare alcuna informazione sul tuo PC");
     for (const s of [en, it_]) expect(s).not.toContain("GitHub");
   });
 });

@@ -35,7 +35,8 @@ const en: Faq[] = [
     q: "Why does Windows warn me about the publisher?",
     a: [
       "New apps without a code-signing certificate get a SmartScreen warning, and Fettle's downloads aren't signed yet: free signing for open-source projects goes to projects that are already widely known, and Fettle is new.",
-      "Until then the warning can appear. The source code is public and every release is built in the open, so you can check what you're running.",
+      "Until then the warning can appear: choose \"More info\", then \"Run anyway\". The source code is public and every release is built in the open, so you can check what you're running.",
+      "Your browser may warn first that the file \"isn't commonly downloaded\": in its downloads list, open the file's menu (…), choose \"Keep\", then \"Show more\" and \"Keep anyway\".",
     ],
   },
   {
@@ -51,7 +52,7 @@ const en: Faq[] = [
     id: "share",
     q: "What's in a share link, and who can see it?",
     a: [
-      "Only the receipt you see in the app. Serial numbers, the PC's name, your username and network addresses are never in it. Anyone with the link can open it, so share it where you mean to.",
+      "The report behind the receipt you see in the app, and nothing else. Serial numbers, the PC's name, your username and network addresses are never in it. Anyone with the link can open it, so share it where you mean to.",
       "Links expire after 7 days, 30 days or 1 year, your choice. You can add a password, and you get a private link to delete it whenever you like. The app also keeps your links under My shared links, so you can delete any of them later.",
     ],
   },
@@ -116,7 +117,8 @@ const it: Faq[] = [
     q: "Perché Windows mi avvisa sull'editore?",
     a: [
       "Le app nuove senza un certificato di firma del codice ricevono un avviso di SmartScreen, e i download di Fettle non sono ancora firmati: la firma gratuita per i progetti open source va a progetti già molto conosciuti, e Fettle è nuovo.",
-      "Fino ad allora l'avviso può comparire. Il codice sorgente è pubblico e ogni versione viene compilata alla luce del sole, così puoi verificare cosa stai avviando.",
+      "Fino ad allora l'avviso può comparire: scegli \"Ulteriori informazioni\", poi \"Esegui comunque\". Il codice sorgente è pubblico e ogni versione viene compilata alla luce del sole, così puoi verificare cosa stai avviando.",
+      "Il browser potrebbe avvisarti prima che il file \"non viene scaricato comunemente\": nell'elenco dei download apri il menu del file (…), scegli \"Mantieni\", poi \"Mostra altro\" e \"Mantieni comunque\".",
     ],
   },
   {
@@ -132,7 +134,7 @@ const it: Faq[] = [
     id: "share",
     q: "Cosa c'è in un link condiviso, e chi può vederlo?",
     a: [
-      "Solo lo scontrino che vedi nell'app. Numeri di serie, nome del PC, nome utente e indirizzi di rete non ci sono mai. Chiunque abbia il link può aprirlo, quindi condividilo dove intendi tu.",
+      "Il report dietro lo scontrino che vedi nell'app, e nient'altro. Numeri di serie, nome del PC, nome utente e indirizzi di rete non ci sono mai. Chiunque abbia il link può aprirlo, quindi condividilo dove intendi tu.",
       "I link scadono dopo 7 giorni, 30 giorni o 1 anno, a tua scelta. Puoi aggiungere una password, e ricevi un link privato per eliminarlo quando vuoi. L'app conserva anche i tuoi link in I miei link condivisi, così puoi eliminarli in qualsiasi momento.",
     ],
   },
@@ -140,7 +142,7 @@ const it: Faq[] = [
     id: "forum",
     q: "Posso pubblicare lo scontrino su un forum o su Discord?",
     a: [
-      "Sì. \"Copia per Discord o Reddit\" copia lo scontrino come testo negli appunti, pronto da incollare. Come tutto ciò che crea Fettle, non include numeri di serie, nome del PC, nome utente e indirizzi di rete.",
+      "Sì. \"Copia per Discord o Reddit\" copia lo scontrino come testo negli appunti, pronto da incollare. Come tutto ciò che crea Fettle, non include numeri di serie, nome del PC, nome utente né indirizzi di rete.",
       "Se qualcuno esperto di PC ti chiede i dettagli, puoi anche salvare il report completo in JSON e mandargli il file.",
     ],
   },

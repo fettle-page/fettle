@@ -78,7 +78,9 @@ fn storage(d: &Storage, locale: Locale) -> Vec<DetailGroup> {
             let smart_wear = s.and_then(|s| s.life_used_pct).filter(|_| disk.media == Some(Media::Ssd));
             let wear = n.and_then(|n| n.percentage_used).or(smart_wear);
             let t = n.and_then(|n| n.temperature_c).or_else(|| s.and_then(|s| s.temperature_c));
-            let hours = n.and_then(|n| n.power_on_hours).or_else(|| s.and_then(|s| s.power_on_hours));
+            let hours = n.and_then(|n| n.power_on_hours).or_else(|| s.and_then(|s| s.power_on_hours))
+                // Over 100 years: other counters packed into the value (seen on SandForce SSDs), not hours.
+                .filter(|h| *h <= 876_000);
             DetailGroup {
                 title: disk.model.clone().filter(|m| !m.is_empty()),
                 rows: rows_of(
@@ -324,6 +326,19 @@ mod tests {
         assert_eq!(names, ["Apple", "apple", "Banana", "IntelX", "Intel® Graphics", "Zoom", "éclair", "Łódź"]);
         // UTF-16, not code points: an emoji's high surrogate sorts before U+FF21 (fullwidth A).
         assert_eq!(name_order("\u{1F680}", "\u{FF21}"), Ordering::Less);
+    }
+
+    // Reports saved by 1.0.1 from a SandForce SSD carry hours with other counters packed in
+    // (79,869,211,876,947): a value no drive can have isn't shown.
+    #[test]
+    fn impossible_power_on_hours_are_not_shown() {
+        use fettle_facts::{Disk, SmartSummary};
+        let rows = |hours: u64| {
+            let disk = Disk { smart: Some(SmartSummary { power_on_hours: Some(hours), ..Default::default() }), ..Default::default() };
+            storage(&Storage { disks: vec![disk], ..Default::default() }, Locale::En).into_iter().flat_map(|g| g.rows).collect::<Vec<_>>()
+        };
+        assert!(rows(40_531).iter().any(|r| r.value == "40,531"));
+        assert!(!rows(79_869_211_876_947).iter().any(|r| r.value.contains("79,869")));
     }
 
     #[test]

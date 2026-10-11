@@ -100,18 +100,21 @@ fn readiness_lines(w: &Windows, elevated: bool, cpu_name: Option<&str>) -> Vec<L
         super::cpu::Win11Cpu::Unknown => "windows.cpu_unknown",
     };
     let mut lines = vec![line("windows-cpu", Level::Info, key, &[], Action::Default)];
+    // A TPM that is off or not ready in the firmware answers with no version: that says nothing
+    // about which version it is.
+    let version = w.tpm.as_ref().and_then(|t| t.spec_version.as_deref()).map(str::trim).filter(|v| !v.is_empty());
     match &w.tpm {
-        None => {
+        Some(tpm) if tpm.present == Some(false) => lines.push(line("windows-tpm", Level::Info, "windows.no_tpm", &[], Action::Default)),
+        Some(_) if version.is_some() => {
+            let v2 = version.is_some_and(|v| v.starts_with("2.0"));
+            lines.push(line("windows-tpm", Level::Info, if v2 { "windows.tpm_ready" } else { "windows.tpm_old" }, &[], Action::Default));
+        }
+        _ => {
             let mut l = line("windows-tpm", if elevated { Level::Info } else { Level::CouldntCheck }, "windows.tpm_unknown", &[], Action::Default);
             if !elevated {
                 l.action = Some(MessageRef::key("check.needs_admin.action"));
             }
             lines.push(l);
-        }
-        Some(tpm) if tpm.present == Some(false) => lines.push(line("windows-tpm", Level::Info, "windows.no_tpm", &[], Action::Default)),
-        Some(tpm) => {
-            let v2 = tpm.spec_version.as_deref().unwrap_or("").trim().starts_with("2.0");
-            lines.push(line("windows-tpm", Level::Info, if v2 { "windows.tpm_ready" } else { "windows.tpm_old" }, &[], Action::Default));
         }
     }
     if let Some(on) = w.secure_boot {

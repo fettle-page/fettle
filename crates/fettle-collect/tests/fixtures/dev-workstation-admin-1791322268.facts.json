@@ -161,7 +161,8 @@
           "smart": {
             "life_used_pct": 2,
             "power_on_hours": 35415,
-            "reallocated_sectors": 0
+            "reallocated_sectors": 0,
+            "temperature_c": 28
           }
         },
         {

@@ -241,7 +241,8 @@ fn smart_summary(attrs: &[(u8, u8, u64)], model: Option<&str>) -> SmartSummary {
         offline_uncorrectable: raw(198),
         // The low 4 bytes: some controllers (SandForce) pack other counters into the upper ones.
         power_on_hours: raw(9).map(|h| h & 0xFFFF_FFFF),
-        temperature_c: raw(194).map(|r| (r % 256) as i32), // low byte = current °C
+        // Low byte = current °C. Some drives (Samsung SATA SSDs) report it only as 190, airflow temperature.
+        temperature_c: raw(194).or_else(|| raw(190)).map(|r| (r % 256) as i32),
         life_used_pct: life_used(attrs, model),
     }
 }
@@ -826,6 +827,16 @@ mod tests {
         let hours = |raw: u64| smart_summary(&smart_attributes(&table(&[(9, 100, raw)])), None).power_on_hours;
         assert_eq!(hours(0x48A4_0000_9E53), Some(40_531), "the Kingston SV300's value");
         assert_eq!(hours(32_617), Some(32_617));
+    }
+
+    // Samsung SATA SSDs (an 860 EVO here) report their temperature only as attribute 190.
+    #[test]
+    fn temperature_falls_back_to_attribute_190() {
+        let temp = |entries: &[(u8, u8, u64)]| smart_summary(&smart_attributes(&table(entries)), Some("Samsung SSD 860 EVO 1TB")).temperature_c;
+        assert_eq!(temp(&[(190, 72, 28)]), Some(28));
+        assert_eq!(temp(&[(194, 65, 0x3C_0014_0024)]), Some(36));
+        assert_eq!(temp(&[(190, 72, 28), (194, 65, 0x24)]), Some(36), "194 wins when both are there");
+        assert_eq!(temp(&[(9, 100, 5)]), None);
     }
 
     // Elevated, Windows answers the TPM query with no rows when the PC has no TPM.

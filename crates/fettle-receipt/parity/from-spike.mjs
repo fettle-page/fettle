@@ -67,7 +67,8 @@ function smartSummary(attrs, model) {
     offline_uncorrectable: raw(198),
     // The low 4 bytes: some controllers (SandForce) pack other counters into the upper ones.
     power_on_hours: attrs.has(9) ? raw(9) % 2 ** 32 : undefined,
-    temperature_c: attrs.has(194) ? raw(194) % 256 : undefined, // low byte = current °C
+    // Low byte = current °C. Some drives (Samsung SATA SSDs) report it only as 190, airflow temperature.
+    temperature_c: attrs.has(194) ? raw(194) % 256 : attrs.has(190) ? raw(190) % 256 : undefined,
     life_used_pct: lifeUsed(attrs, model),
   };
 }

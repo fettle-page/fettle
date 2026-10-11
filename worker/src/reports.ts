@@ -11,11 +11,8 @@ import { hashToken, newDeleteToken, tokenMatches } from "./tokens.ts";
 const DAY_MS = 86_400_000;
 const isTtl = (v: unknown): v is Ttl => typeof v === "string" && Object.hasOwn(TTL_DAYS, v);
 
-/**
- * The rate-limit key for a client address. IPv6 addresses are grouped by their /64, because one
- * home or server usually owns the whole block and could otherwise rotate through it.
- */
-export function rateKey(ip: string): string {
+/** An address as is (IPv4), or its IPv6 block of `groups` 16-bit groups, e.g. "2001:db8:1::/48". */
+function blockKey(ip: string, groups: 3 | 4): string {
   if (!ip.includes(":")) return ip;
   // An IPv4 address written as IPv6 (::ffff:203.0.113.7) is still one IPv4 client.
   const mapped = /^::ffff:(\d+\.\d+\.\d+\.\d+)$/i.exec(ip);
@@ -23,8 +20,25 @@ export function rateKey(ip: string): string {
   const [head = "", tail] = ip.toLowerCase().split("::");
   const left = head ? head.split(":") : [];
   const right = tail ? tail.split(":") : [];
-  const groups = tail === undefined ? left : [...left, ...Array(Math.max(0, 8 - left.length - right.length)).fill("0"), ...right];
-  return `${groups.slice(0, 4).map((g) => (parseInt(g, 16) || 0).toString(16)).join(":")}::/64`;
+  const all = tail === undefined ? left : [...left, ...Array(Math.max(0, 8 - left.length - right.length)).fill("0"), ...right];
+  return `${all.slice(0, groups).map((g) => (parseInt(g, 16) || 0).toString(16)).join(":")}::/${groups * 16}`;
+}
+
+/**
+ * The per-minute rate-limit key for a client address. IPv6 addresses are grouped by their /64,
+ * because one home or server usually owns the whole block and could otherwise rotate through it.
+ */
+export function rateKey(ip: string): string {
+  return blockKey(ip, 4);
+}
+
+/**
+ * The key for the daily caps (wrong passwords per visitor, uploads per address): IPv6 by its /48,
+ * because a free tunnel broker hands one person a /48, which holds 65,536 /64s. The cost: people who
+ * share a /48 (some mobile networks) share these daily allowances too.
+ */
+export function dayKey(ip: string): string {
+  return blockKey(ip, 3);
 }
 
 /**
@@ -35,7 +49,11 @@ export async function logRef(id: string): Promise<string> {
   return (await hashToken(`log:${id}`)).slice(0, 12);
 }
 
-export const clientKey = (request: Request) => rateKey(request.headers.get("cf-connecting-ip") ?? "unknown");
+const address = (request: Request) => request.headers.get("cf-connecting-ip") ?? "unknown";
+/** The per-minute key: an IPv4 address, or an IPv6 /64. */
+export const clientKey = (request: Request) => rateKey(address(request));
+/** The daily key: an IPv4 address, or an IPv6 /48. */
+const dailyKey = (request: Request) => dayKey(address(request));
 
 const isJson = (request: Request) => (request.headers.get("content-type") ?? "").toLowerCase().startsWith("application/json");
 
@@ -74,7 +92,7 @@ export async function createReport(request: Request, env: Env): Promise<Response
   // The schema only checks the timestamp's shape; the verdicts need a real date (no month 13).
   if (Number.isNaN(Date.parse(parsed.report.collected_at))) return apiError(400, "invalid_report", { detail: "collected_at is not a real date" });
   // Only uploads that would be stored count against the address's day.
-  const wait = await env.UPLOAD_BUDGET.getByName(await budgetName(clientKey(request))).take();
+  const wait = await env.UPLOAD_BUDGET.getByName(await budgetName(dailyKey(request))).take();
   if (wait > 0) return rateLimited(wait);
 
   const ttl: Ttl = (envelope.expires as Ttl | undefined) ?? "30d";
@@ -175,7 +193,7 @@ export async function unlockReport(request: Request, id: string, env: Env): Prom
   let issued: { pass: string; expiresAt: number } | undefined;
   if (meta.pwHash !== undefined) {
     const guard = env.UNLOCK_GUARD.getByName(id);
-    const visitor = clientKey(request);
+    const visitor = dailyKey(request);
     if (typeof pass === "string") {
       // A pass from an earlier right password: no guess counted, so a lockout can't touch it.
       const renewed = await guard.usePass(pass, Date.parse(meta.expiresAt ?? ""));

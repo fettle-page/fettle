@@ -2,7 +2,7 @@ import { DurableObject } from "cloudflare:workers";
 import { hashToken } from "./tokens.ts";
 
 /**
- * Share-link uploads one address (an IP, or an IPv6 /64) may make per day (UTC). The per-minute
+ * Share-link uploads one address (an IPv4 address, or an IPv6 /48: see dayKey) may make per day (UTC). The per-minute
  * limiter alone would allow 14,400 a day, each kept for up to a year; 100 is far more than one
  * person, or a repair shop sharing many PCs, needs.
  */

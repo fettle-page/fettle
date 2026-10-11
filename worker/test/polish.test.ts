@@ -2,7 +2,7 @@ import { env } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 import { newId } from "../src/ids.ts";
 import { hashPassword } from "../src/passwords.ts";
-import { rateKey, unlockReport } from "../src/reports.ts";
+import { dayKey, rateKey, unlockReport } from "../src/reports.ts";
 import { call, freshIp, share, tiredReport, untilFreshWindow, upload } from "./helpers.ts";
 
 describe("rateKey", () => {
@@ -17,6 +17,21 @@ describe("rateKey", () => {
     expect(rateKey("2001:0DB8:0001:0002:bbbb:cccc:dddd:eeee")).toBe("2001:db8:1:2::/64");
     expect(rateKey("2001:db8::1")).toBe("2001:db8:0:0::/64");
     expect(rateKey("::1")).toBe("0:0:0:0::/64");
+  });
+});
+
+describe("dayKey", () => {
+  it("keeps IPv4 addresses as they are", () => {
+    expect(dayKey("203.0.113.7")).toBe("203.0.113.7");
+    expect(dayKey("::ffff:203.0.113.7")).toBe("203.0.113.7");
+  });
+
+  // The daily caps count a whole /48: a free tunnel broker hands one person a /48 of 65,536 /64s.
+  it("groups IPv6 addresses by their /48", () => {
+    expect(dayKey("2001:db8:1:2:aaaa::1")).toBe("2001:db8:1::/48");
+    expect(dayKey("2001:db8:1:ffff::2")).toBe("2001:db8:1::/48");
+    expect(dayKey("2001:db8::1")).toBe("2001:db8:0::/48");
+    expect(dayKey("2001:db8:2::1")).not.toBe(dayKey("2001:db8:1::1"));
   });
 });
 

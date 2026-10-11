@@ -4,7 +4,7 @@ import { base64url, hashToken } from "./tokens.ts";
 /** Wrong passwords allowed per report per minute, across every visitor and data centre. */
 export const GUESSES_PER_MINUTE = 10;
 /**
- * Wrong passwords one visitor (an IP address, or an IPv6 /64) may try on one report per day (UTC).
+ * Wrong passwords one visitor (an IPv4 address, or an IPv6 /48: see dayKey) may try on one report per day (UTC).
  * Far more than anyone mistyping their own password needs, and it stops one person from using up
  * the report's whole day and locking everyone else out.
  */
@@ -12,7 +12,9 @@ export const GUESSES_PER_VISITOR_PER_DAY = 20;
 /**
  * Wrong passwords allowed per report per day across all visitors: the ceiling for someone with many
  * addresses. The minute cap alone would allow 14,400 a day; at 500, a dictionary of 10,000 common
- * passwords takes 20 days, and locking a report for a day takes 25 different addresses.
+ * passwords takes 20 days, and locking a report for a day takes 25 visitors: 25 IPv4 addresses or IPv6
+ * /48s. That is the trade-off: anyone with that many can still lock a report until midnight UTC, but
+ * people who already opened it keep their pass.
  */
 export const GUESSES_PER_DAY = 500;
 /** How long a browser that gave the right password can reopen the report without it; renewed on use. */

@@ -2,6 +2,7 @@ import { env } from "cloudflare:workers";
 import { runDurableObjectAlarm, runInDurableObject } from "cloudflare:test";
 import { describe, expect, it } from "vitest";
 import { budgetName, UPLOADS_PER_DAY, type UploadBudget } from "../src/budget.ts";
+import { dayKey } from "../src/reports.ts";
 import { call, DAY, freshIp, tiredReport, untilFreshWindow, upload } from "./helpers.ts";
 
 const MINUTE = 60_000;
@@ -50,6 +51,16 @@ describe("the daily upload budget", () => {
     expect(await refused.json()).toEqual({ error: "rate_limited" });
     expect(Number(refused.headers.get("retry-after"))).toBeGreaterThan(60);
     expect((await upload({ report: tiredReport() }, { ip: freshIp() })).status).toBe(201);
+  });
+});
+
+describe("the daily upload budget with IPv6", () => {
+  it("is shared by a whole /48, not just a /64", async () => {
+    await runInDurableObject(env.UPLOAD_BUDGET.getByName(await budgetName(dayKey("2001:db8:5:1::1"))), (_, state) =>
+      state.storage.put("used", { day: Math.floor(Date.now() / DAY), count: UPLOADS_PER_DAY }),
+    );
+    expect((await upload({ report: tiredReport() }, { ip: "2001:db8:5:2::1" })).status).toBe(429);
+    expect((await upload({ report: tiredReport() }, { ip: "2001:db8:6:1::1" })).status).toBe(201);
   });
 });
 

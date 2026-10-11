@@ -310,7 +310,9 @@ impl Fettle {
                     post(Event::LinkCreated(result.map_err(|f| crate::share::problem(&f))));
                 }));
             }
-            Effect::SaveLinks(links) => store.save_links(&links),
+            Effect::AddLink(link) => store.add_link(&link, (self.0.deps.now_ms)()),
+            Effect::ForgetLinks(ids) => store.forget_links(&ids, (self.0.deps.now_ms)()),
+            Effect::ReloadLinks => self.post_now(Event::LinksLoaded(store.load_links((self.0.deps.now_ms)()))),
             Effect::CopyText(text) => {
                 let ok = self.0.deps.clipboard.set_text(&text);
                 self.post_now(Event::LinkCopied(ok));

@@ -248,6 +248,8 @@ pub enum Event {
     CheckLinks,
     /// The ids the server said are gone (Err: it couldn't be asked).
     LinksChecked(Result<Vec<String>, ()>),
+    /// The saved links as they are now, other windows' included.
+    LinksLoaded(Vec<SavedLink>),
     Exported(Option<&'static str>),
     ShareBusy(bool),
     /// What this PC remembers of the last update check, at launch.
@@ -278,7 +280,12 @@ pub enum Effect {
     RenderPreview,
     /// Upload this check (with the engine version) as a link.
     Share { expires: Expiry, password: Option<Secret> },
-    SaveLinks(Vec<SavedLink>),
+    /// Save a new link beside the ones already saved (other windows' included).
+    AddLink(SavedLink),
+    /// Forget these links, keeping every other one saved.
+    ForgetLinks(Vec<String>),
+    /// Read the saved links again (another window may have shared or deleted some).
+    ReloadLinks,
     CopyText(String),
     OpenUrl(String),
     Delete(SavedLink),
@@ -416,10 +423,11 @@ impl State {
                     self.share = ShareStatus::Editing;
                     self.share_note = None;
                 }
+                self.panel = panel;
                 if panel == Panel::Links {
                     self.links_status = None;
+                    return vec![Effect::ReloadLinks];
                 }
-                self.panel = panel;
                 vec![]
             }
             Event::Back => {
@@ -535,9 +543,10 @@ impl State {
                 match result {
                     Ok(shared) => {
                         // The app keeps the delete token so it can delete the link later.
-                        self.links.push(SavedLink { id: shared.id.clone(), url: shared.url.clone(), delete_token: shared.delete_token.clone(), expires_at: shared.expires_at.clone() });
+                        let link = SavedLink { id: shared.id.clone(), url: shared.url.clone(), delete_token: shared.delete_token.clone(), expires_at: shared.expires_at.clone() };
+                        self.links.push(link.clone());
                         self.share = ShareStatus::Done(shared);
-                        vec![Effect::SaveLinks(self.links.clone())]
+                        vec![Effect::AddLink(link)]
                     }
                     Err((key, minutes)) => {
                         self.share = ShareStatus::Failed(key, minutes);
@@ -581,7 +590,7 @@ impl State {
                         self.links.retain(|l| l.id != id);
                         let key = if how == crate::share::Deleted::AlreadyGone { "links.already_gone" } else { "links.deleted" };
                         self.links_status = Some((key, false));
-                        vec![Effect::SaveLinks(self.links.clone())]
+                        vec![Effect::ForgetLinks(vec![id])]
                     }
                     Err(()) => {
                         self.links_status = Some(("links.delete_failed", true));
@@ -602,6 +611,7 @@ impl State {
                 match result {
                     Ok(gone) => {
                         let before = self.links.len();
+                        let forget: Vec<String> = self.links.iter().filter(|l| gone.contains(&l.id)).map(|l| l.id.clone()).collect();
                         self.links.retain(|l| !gone.contains(&l.id));
                         self.links_gone = before - self.links.len();
                         self.links_status = Some((
@@ -612,13 +622,17 @@ impl State {
                             },
                             false,
                         ));
-                        if self.links_gone > 0 { vec![Effect::SaveLinks(self.links.clone())] } else { vec![] }
+                        if forget.is_empty() { vec![] } else { vec![Effect::ForgetLinks(forget)] }
                     }
                     Err(()) => {
                         self.links_status = Some(("links.check_failed", true));
                         vec![]
                     }
                 }
+            }
+            Event::LinksLoaded(links) => {
+                self.links = links;
+                vec![]
             }
             Event::Exported(key) => {
                 self.export = key;
@@ -988,7 +1002,7 @@ mod tests {
         assert_eq!(s.share, ShareStatus::Done(shared("abc")));
         assert!(!s.share_busy);
         assert_eq!(s.links.len(), 1);
-        assert!(matches!(effects.as_slice(), [Effect::SaveLinks(l)] if l.len() == 1 && l[0].delete_token == "t"));
+        assert!(matches!(effects.as_slice(), [Effect::AddLink(l)] if l.id == "abc" && l.delete_token == "t"), "{effects:?}");
     }
 
     #[test]
@@ -1026,7 +1040,7 @@ mod tests {
         s.update(Event::Open(Panel::Links));
         assert!(matches!(s.update(Event::DeleteLink("a".into())).as_slice(), [Effect::Delete(l)] if l.id == "a"));
         assert_eq!(s.update(Event::DeleteLink("b".into())), vec![], "one at a time");
-        s.update(Event::LinkDeleted(Ok(("a".into(), crate::share::Deleted::Now))));
+        assert_eq!(s.update(Event::LinkDeleted(Ok(("a".into(), crate::share::Deleted::Now)))), vec![Effect::ForgetLinks(vec!["a".into()])]);
         assert_eq!(s.links.iter().map(|l| l.id.as_str()).collect::<Vec<_>>(), vec!["b"]);
         assert_eq!(s.links_status, Some(("links.deleted", false)));
         s.update(Event::DeleteLink("b".into()));
@@ -1055,7 +1069,7 @@ mod tests {
         assert!(s.update(Event::DeleteLink("a".into())).is_empty(), "no deleting while checking");
         let done = s.update(Event::LinksChecked(Ok(vec!["a".into(), "c".into()])));
         assert_eq!(s.links.iter().map(|l| l.id.as_str()).collect::<Vec<_>>(), vec!["b"]);
-        assert!(matches!(done.as_slice(), [Effect::SaveLinks(l)] if l.len() == 1));
+        assert_eq!(done, vec![Effect::ForgetLinks(vec!["a".into(), "c".into()])]);
         assert_eq!((s.links_status, s.links_gone), (Some(("links.some_gone", false)), 2));
         s.update(Event::CheckLinks);
         assert_eq!(s.update(Event::LinksChecked(Ok(vec![]))), vec![], "nothing gone, nothing to save");
@@ -1064,6 +1078,17 @@ mod tests {
         s.update(Event::LinksChecked(Ok(vec!["b".into()])));
         assert_eq!(s.links_status, Some(("links.one_gone", false)));
         assert_eq!(State::default().update(Event::CheckLinks), vec![], "nothing to check");
+    }
+
+    #[test]
+    fn opening_my_links_reads_them_again_so_another_windows_links_show() {
+        let mut s = with_links(&["a"]);
+        s.update(Event::Back);
+        assert_eq!(s.update(Event::Open(Panel::Links)), vec![Effect::ReloadLinks]);
+        let mut both = s.links.clone();
+        both.push(SavedLink { id: "b".into(), url: "https://fettle.page/r/b".into(), delete_token: "token-b".into(), expires_at: "2026-11-01T00:00:00Z".into() });
+        s.update(Event::LinksLoaded(both));
+        assert_eq!(s.links.iter().map(|l| l.id.as_str()).collect::<Vec<_>>(), vec!["a", "b"]);
     }
 
     #[test]

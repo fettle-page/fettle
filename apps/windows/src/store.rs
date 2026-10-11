@@ -27,6 +27,23 @@ pub trait Store {
     /// The links still alive at `now_ms`; expired ones are forgotten.
     fn load_links(&self, now_ms: i64) -> Vec<SavedLink>;
     fn save_links(&self, links: &[SavedLink]);
+    /// Adds a link to the ones saved now. Another window may have saved its own since this one
+    /// read the list, so the list is read again first: writing this window's copy whole would drop them.
+    fn add_link(&self, link: &SavedLink, now_ms: i64) {
+        let mut links = self.load_links(now_ms);
+        if !links.iter().any(|l| l.id == link.id) {
+            links.push(link.clone());
+        }
+        self.save_links(&links);
+    }
+    /// Forgets these links (deleted, or gone from the website), keeping every other window's.
+    fn forget_links(&self, ids: &[String], now_ms: i64) {
+        let links = self.load_links(now_ms);
+        let kept: Vec<SavedLink> = links.iter().filter(|l| !ids.contains(&l.id)).cloned().collect();
+        if kept.len() != links.len() {
+            self.save_links(&kept);
+        }
+    }
     /// The last update check (a missing or bad file is "never asked").
     fn load_update(&self) -> crate::update::UpdateRecord;
     fn save_update(&self, record: &crate::update::UpdateRecord);
@@ -335,6 +352,25 @@ pub(crate) mod tests {
         assert_eq!(store.load_links(now), vec![link("b", "2026-11-01T00:00:00Z")]);
         // The expired one is gone from the file too.
         assert_eq!(FileStore::new(dir).load_links(0).len(), 1);
+    }
+
+    #[test]
+    fn two_windows_never_lose_each_others_links() {
+        // Both windows loaded the same (empty) list at launch; each shares a link, then one deletes.
+        let dir = temp_dir();
+        let (a, b) = (FileStore::new(dir.clone()), FileStore::new(dir.clone()));
+        let link = |id: &str| SavedLink { id: id.into(), url: format!("https://fettle.page/r/{id}"), delete_token: format!("token-{id}"), expires_at: "2026-11-01T00:00:00Z".into() };
+        let ids = |s: &FileStore| s.load_links(0).into_iter().map(|l| l.id).collect::<Vec<_>>();
+        a.add_link(&link("a"), 0);
+        b.add_link(&link("b"), 0);
+        assert_eq!(ids(&a), ["a", "b"], "b's link didn't replace a's");
+        assert_eq!(a.load_links(0)[0].delete_token, "token-a");
+        b.add_link(&link("b"), 0);
+        assert_eq!(ids(&a), ["a", "b"], "never twice");
+        b.forget_links(&["a".to_string()], 0);
+        assert_eq!(ids(&a), ["b"]);
+        a.forget_links(&["gone".to_string()], 0);
+        assert_eq!(ids(&b), ["b"]);
     }
 
     #[test]

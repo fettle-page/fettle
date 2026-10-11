@@ -162,6 +162,62 @@ begin
   end;
 end;
 
+function GetFileAttributes(lpFileName: String): Cardinal;
+  external 'GetFileAttributesW@kernel32.dll stdcall';
+
+// Whether Path, or any folder above it, is a junction or a link.
+function ThroughALink(Path: String): Boolean;
+var
+  Attributes: Cardinal;
+begin
+  Result := False;
+  while Length(Path) > 3 do
+  begin
+    Attributes := GetFileAttributes(Path);
+    // $400: FILE_ATTRIBUTE_REPARSE_POINT; $FFFFFFFF: the path can't be read.
+    if (Attributes <> $FFFFFFFF) and ((Attributes and $400) <> 0) then
+    begin
+      Result := True;
+      Exit;
+    end;
+    Path := ExtractFileDir(Path);
+  end;
+end;
+
+// Deletes the files in Folder matching Pattern, never a folder and never anything below it.
+procedure DeleteMatching(Folder, Pattern: String);
+var
+  Found: TFindRec;
+begin
+  if FindFirst(Folder + '\' + Pattern, Found) then
+  try
+    repeat
+      if (Found.Attributes and FILE_ATTRIBUTE_DIRECTORY) = 0 then
+        DeleteFile(Folder + '\' + Found.Name);
+    until not FindNext(Found);
+  finally
+    FindClose(Found);
+  end;
+end;
+
+// Removes Fettle's own files from Folder, then the folder if that left it empty, and says whether
+// it's gone. An all-users uninstall runs this as administrator on folders each account controls, so
+// it deletes only files it names, one level deep, and leaves a folder reached through a junction alone.
+function RemoveFettleData(Folder: String): Boolean;
+begin
+  Result := False;
+  if ThroughALink(Folder) then
+    Exit;
+  DeleteFile(Folder + '\settings.json');
+  DeleteFile(Folder + '\last-report.json');
+  DeleteFile(Folder + '\links.json');
+  DeleteFile(Folder + '\update.json');
+  DeleteMatching(Folder, 'fettle-deep-*.json');
+  DeleteMatching(Folder, '*.tmp');
+  RemoveDir(Folder);
+  Result := not DirExists(Folder);
+end;
+
 // Uninstalling asks whether to remove Fettle's data too (it lives in each user's own AppData, so the
 // installer never put it there). For one user, that user's folder; for all users, every account's,
 // naming any folder that couldn't be removed. A silent uninstall keeps it all.
@@ -182,11 +238,8 @@ begin
       Exit;
     Left := '';
     for I := 0 to GetArrayLength(Folders) - 1 do
-    begin
-      DelTree(Folders[I], True, True, True);
-      if DirExists(Folders[I]) then
+      if not RemoveFettleData(Folders[I]) then
         Left := Left + #13#10 + Folders[I];
-    end;
     if Left <> '' then
       MsgBox(CustomMessage('RemoveDataLeft') + #13#10 + Left, mbInformation, MB_OK);
   end

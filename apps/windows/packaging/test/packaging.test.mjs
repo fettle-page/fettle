@@ -97,6 +97,23 @@ describe("fettle.iss: uninstalling for all users", () => {
     assert.match(iss, /'AppData\\Local\\Fettle'/);
   });
 
+  // It runs as administrator on folders each account controls: deleting a whole tree there could be
+  // turned (with a junction swapped in at the right moment) into deleting files anywhere.
+  it("deletes only Fettle's own files there, one level deep, and never through a junction", () => {
+    const remove = /function RemoveFettleData\(Folder: String\): Boolean;([\s\S]*?)\nend;/.exec(iss)?.[1] ?? "";
+    for (const name of ["settings.json", "last-report.json", "links.json", "update.json"]) assert.ok(remove.includes(`'\\${name}'`), name);
+    assert.match(remove, /DeleteMatching\(Folder, 'fettle-deep-\*\.json'\)/);
+    assert.match(remove, /DeleteMatching\(Folder, '\*\.tmp'\)/);
+    assert.match(remove, /if ThroughALink\(Folder\) then/);
+    assert.match(remove, /RemoveDir\(Folder\)/);
+    assert.doesNotMatch(remove, /DelTree/);
+    assert.match(iss, /external 'GetFileAttributesW@kernel32\.dll stdcall'/);
+    assert.match(iss, /\(Attributes and \$400\) <> 0/);
+    const allUsers = /if IsAdminInstallMode then([\s\S]*?)\n  else/.exec(/procedure CurUninstallStepChanged[\s\S]*/.exec(iss)?.[0] ?? "")?.[1] ?? "";
+    assert.match(allUsers, /if not RemoveFettleData\(Folders\[I\]\) then/);
+    assert.doesNotMatch(allUsers, /DelTree/);
+  });
+
   it("counts each folder once (a repaired profile leaves a second entry, ending in .bak, for the same one)", () => {
     assert.match(iss, /Copy\(Sids\[I\], Length\(Sids\[I\]\) - 3, 4\) <> '\.bak'/);
     assert.match(iss, /Seen\.IndexOf\(Lowercase\(Folder\)\) < 0/);

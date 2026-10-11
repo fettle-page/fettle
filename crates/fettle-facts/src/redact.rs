@@ -447,7 +447,7 @@ fn replace_ipv6(s: &str) -> String {
         let groups: Vec<&str> = addr.split(':').collect();
         let colons = groups.len() - 1;
         let shape = addr.contains("::") && !addr.contains(":::") || colons == 7;
-        let ok = shape && colons >= 2 && colons <= 7 && groups.iter().all(|g| g.len() <= 4) && addr.bytes().any(|c| c.is_ascii_digit());
+        let ok = shape && (2..=7).contains(&colons) && groups.iter().all(|g| g.len() <= 4) && addr.bytes().any(|c| c.is_ascii_digit());
         if !ok {
             return None;
         }

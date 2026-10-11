@@ -109,7 +109,7 @@ mod tests {
     fn not_found_is_silent_other_errors_are_kept() {
         use std::io::{Error, ErrorKind};
         assert_eq!(open_error(&Error::from(ErrorKind::NotFound)), None);
-        assert_eq!(open_error(&Error::from_raw_os_error(5)).is_some(), true);
+        assert!(open_error(&Error::from_raw_os_error(5)).is_some());
     }
 
     #[test]

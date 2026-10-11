@@ -50,19 +50,21 @@ pub fn rated_from_part_number(part: Option<&str>) -> Option<(u32, u32)> {
         return Some(found);
     }
     // Kingston Fury / HyperX: KF560C36… (DDR5-6000), HX432C16… (DDR4-3200)
-    if (starts("KF") || starts("HX")) && matches!(s.get(2), Some(b'3' | b'4' | b'5')) {
-        if let (Some(speed), Some(b'C'), Some(cl)) = (digits_at(s, 3, 2), s.get(5), digits_at(s, 6, 2)) {
-            return Some((speed * 100, cl));
-        }
+    if (starts("KF") || starts("HX"))
+        && matches!(s.get(2), Some(b'3' | b'4' | b'5'))
+        && let (Some(speed), Some(b'C'), Some(cl)) = (digits_at(s, 3, 2), s.get(5), digits_at(s, 6, 2))
+    {
+        return Some((speed * 100, cl));
     }
     // Crucial / Crucial Pro / Ballistix: CT16G56C46U5, CP16G60C36U5B, BL16G32C16U4B
     if starts("CT") || starts("CP") || starts("BL") {
         let run = s[2..].iter().take_while(|c| c.is_ascii_digit()).count();
         let at = 2 + run;
-        if run > 0 && s.get(at) == Some(&b'G') {
-            if let (Some(speed), Some(b'C'), Some(cl)) = (digits_at(s, at + 1, 2), s.get(at + 3), digits_at(s, at + 4, 2)) {
-                return Some((speed * 100, cl));
-            }
+        if run > 0
+            && s.get(at) == Some(&b'G')
+            && let (Some(speed), Some(b'C'), Some(cl)) = (digits_at(s, at + 1, 2), s.get(at + 3), digits_at(s, at + 4, 2))
+        {
+            return Some((speed * 100, cl));
         }
     }
     // TeamGroup: FF3D532G6000HC38ADC01

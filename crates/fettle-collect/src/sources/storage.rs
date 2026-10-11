@@ -1,83 +1,3 @@
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use windows::Win32::Foundation::GENERIC_WRITE;
-
-    const DESC: usize = size_of::<STORAGE_PROTOCOL_DATA_DESCRIPTOR>();
-    const SPECIFIC: usize = offset_of!(STORAGE_PROTOCOL_DATA_DESCRIPTOR, ProtocolSpecificData);
-    const PROTO: usize = size_of::<STORAGE_PROTOCOL_SPECIFIC_DATA>();
-
-    fn put(buf: &mut [u8], at: usize, v: u32) {
-        buf[at..at + 4].copy_from_slice(&v.to_le_bytes());
-    }
-
-    /// A reply buffer as the driver fills it: descriptor, then the log at ProtocolDataOffset.
-    fn reply() -> Vec<u8> {
-        let mut buf = vec![0u8; SPECIFIC + PROTO + LOG_LEN];
-        put(&mut buf, 0, DESC as u32);
-        put(&mut buf, 4, DESC as u32);
-        put(&mut buf, SPECIFIC + offset_of!(STORAGE_PROTOCOL_SPECIFIC_DATA, ProtocolDataOffset), PROTO as u32);
-        put(&mut buf, SPECIFIC + offset_of!(STORAGE_PROTOCOL_SPECIFIC_DATA, ProtocolDataLength), LOG_LEN as u32);
-        buf[SPECIFIC + PROTO + 5] = 7;
-        buf
-    }
-
-    #[test]
-    fn extracts_log_from_valid_reply() {
-        let buf = reply();
-        let log = extract_health_log(&buf, buf.len()).unwrap();
-        assert_eq!(log[5], 7);
-    }
-
-    #[test]
-    fn rejects_reply_with_unfilled_descriptor() {
-        let mut buf = reply();
-        put(&mut buf, 0, 0);
-        put(&mut buf, 4, 0);
-        assert!(extract_health_log(&buf, buf.len()).is_err());
-    }
-
-    // Fettle only reads: a drive is never opened with write access, and once the health log has
-    // been read, no further (stronger) open is tried.
-    #[test]
-    fn never_asks_for_write_access() {
-        for (name, access) in ACCESS_TRIES {
-            assert_eq!(access & GENERIC_WRITE.0, 0, "{name} asks for write access");
-        }
-        let mut asked = Vec::new();
-        let attempts = drive_attempts(|access| {
-            asked.push(access);
-            Opened::Failed("access denied".into())
-        });
-        assert_eq!(asked, vec![0, GENERIC_READ.0]);
-        assert_eq!(attempts.unwrap().len(), 2);
-    }
-
-    #[test]
-    fn stops_at_the_first_access_that_reads_the_log() {
-        let mut asked = Vec::new();
-        let attempts = drive_attempts(|access| {
-            asked.push(access);
-            Opened::Log(Ok([0u8; LOG_LEN]))
-        })
-        .unwrap();
-        assert_eq!(asked, vec![0]);
-        assert_eq!(attempts.len(), 1);
-        assert_eq!(attempts[0]["ok"], true);
-    }
-
-    #[test]
-    fn a_drive_that_isn_t_there_is_skipped() {
-        assert!(drive_attempts(|_| Opened::Missing).is_none());
-    }
-
-    #[test]
-    fn rejects_reply_shorter_than_log() {
-        let buf = reply();
-        assert!(extract_health_log(&buf, buf.len() - 1).is_err());
-    }
-}
-
 use super::nvme::parse_nvme_health_log;
 use serde_json::{Value, json};
 use std::mem::{offset_of, size_of};
@@ -103,7 +23,8 @@ const ACCESS_TRIES: [(&str, u32); 2] = [("none", 0), ("read", GENERIC_READ.0)];
 enum Opened {
     Missing,
     Failed(String),
-    Log(Result<[u8; LOG_LEN], String>),
+    // Boxed: the log is 512 bytes, the other variants a few.
+    Log(Result<Box<[u8; LOG_LEN]>, String>),
 }
 
 /// Tries each access in turn and stops at the first that reads the log. None: there's no such drive.
@@ -136,7 +57,7 @@ pub fn nvme_health() -> Result<Value, String> {
                 unsafe {
                     let _ = CloseHandle(handle);
                 }
-                Opened::Log(result)
+                Opened::Log(result.map(Box::new))
             }
         });
         if let Some(attempts) = attempts {
@@ -223,4 +144,84 @@ fn extract_health_log(buf: &[u8], returned: usize) -> Result<[u8; LOG_LEN], Stri
     let mut log = [0u8; LOG_LEN];
     log.copy_from_slice(&buf[start..start + LOG_LEN]);
     Ok(log)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use windows::Win32::Foundation::GENERIC_WRITE;
+
+    const DESC: usize = size_of::<STORAGE_PROTOCOL_DATA_DESCRIPTOR>();
+    const SPECIFIC: usize = offset_of!(STORAGE_PROTOCOL_DATA_DESCRIPTOR, ProtocolSpecificData);
+    const PROTO: usize = size_of::<STORAGE_PROTOCOL_SPECIFIC_DATA>();
+
+    fn put(buf: &mut [u8], at: usize, v: u32) {
+        buf[at..at + 4].copy_from_slice(&v.to_le_bytes());
+    }
+
+    /// A reply buffer as the driver fills it: descriptor, then the log at ProtocolDataOffset.
+    fn reply() -> Vec<u8> {
+        let mut buf = vec![0u8; SPECIFIC + PROTO + LOG_LEN];
+        put(&mut buf, 0, DESC as u32);
+        put(&mut buf, 4, DESC as u32);
+        put(&mut buf, SPECIFIC + offset_of!(STORAGE_PROTOCOL_SPECIFIC_DATA, ProtocolDataOffset), PROTO as u32);
+        put(&mut buf, SPECIFIC + offset_of!(STORAGE_PROTOCOL_SPECIFIC_DATA, ProtocolDataLength), LOG_LEN as u32);
+        buf[SPECIFIC + PROTO + 5] = 7;
+        buf
+    }
+
+    #[test]
+    fn extracts_log_from_valid_reply() {
+        let buf = reply();
+        let log = extract_health_log(&buf, buf.len()).unwrap();
+        assert_eq!(log[5], 7);
+    }
+
+    #[test]
+    fn rejects_reply_with_unfilled_descriptor() {
+        let mut buf = reply();
+        put(&mut buf, 0, 0);
+        put(&mut buf, 4, 0);
+        assert!(extract_health_log(&buf, buf.len()).is_err());
+    }
+
+    // Fettle only reads: a drive is never opened with write access, and once the health log has
+    // been read, no further (stronger) open is tried.
+    #[test]
+    fn never_asks_for_write_access() {
+        for (name, access) in ACCESS_TRIES {
+            assert_eq!(access & GENERIC_WRITE.0, 0, "{name} asks for write access");
+        }
+        let mut asked = Vec::new();
+        let attempts = drive_attempts(|access| {
+            asked.push(access);
+            Opened::Failed("access denied".into())
+        });
+        assert_eq!(asked, vec![0, GENERIC_READ.0]);
+        assert_eq!(attempts.unwrap().len(), 2);
+    }
+
+    #[test]
+    fn stops_at_the_first_access_that_reads_the_log() {
+        let mut asked = Vec::new();
+        let attempts = drive_attempts(|access| {
+            asked.push(access);
+            Opened::Log(Ok(Box::new([0u8; LOG_LEN])))
+        })
+        .unwrap();
+        assert_eq!(asked, vec![0]);
+        assert_eq!(attempts.len(), 1);
+        assert_eq!(attempts[0]["ok"], true);
+    }
+
+    #[test]
+    fn a_drive_that_isn_t_there_is_skipped() {
+        assert!(drive_attempts(|_| Opened::Missing).is_none());
+    }
+
+    #[test]
+    fn rejects_reply_shorter_than_log() {
+        let buf = reply();
+        assert!(extract_health_log(&buf, buf.len() - 1).is_err());
+    }
 }

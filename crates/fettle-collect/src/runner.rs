@@ -113,11 +113,11 @@ pub fn run_all_with(sources: Vec<(String, Source)>, timeout: Duration, on_done: 
     }
     let waited = timeout.as_millis() as u64;
     for name in names {
-        if !raw.contains_key(&name) {
-            abandon_flight(&name);
+        if let std::collections::btree_map::Entry::Vacant(slot) = raw.entry(name) {
+            abandon_flight(slot.key());
             let result = SourceResult { ok: false, ms: waited, data: None, error: Some(format!("timed out after {waited} ms")) };
-            on_done(&name, &result);
-            raw.insert(name, result);
+            on_done(slot.key(), &result);
+            slot.insert(result);
         }
     }
     raw
@@ -204,7 +204,7 @@ mod tests {
         );
         let seen = seen.into_inner().unwrap();
         assert_eq!(seen.len(), 4, "{seen:?}");
-        assert_eq!(seen.iter().position(|s| s.0 == "fast-cb").unwrap() < seen.iter().position(|s| s.0 == "slow-cb").unwrap(), true);
+        assert!(seen.iter().position(|s| s.0 == "fast-cb").unwrap() < seen.iter().position(|s| s.0 == "slow-cb").unwrap());
         // The timed-out one is reported last, when the scan gives up on it.
         assert_eq!(seen.last().unwrap(), &("hang-cb".to_string(), false));
         assert_eq!(raw.len(), 4);

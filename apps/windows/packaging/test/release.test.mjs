@@ -107,6 +107,19 @@ describe("workflows", () => {
     assert.match(ci, /rustup toolchain install .* --target wasm32-unknown-unknown/);
   });
 
+  // The installer script and the packaging checks (runtime DLLs, start checks) run on every push, not
+  // first on the release tag, where a failure can't be fixed by moving the tag.
+  it("ci.yml builds the installer and the zip too, with the same checked Inno Setup as the release", () => {
+    const ci = workflow("ci.yml");
+    const at = (s) => {
+      const i = ci.indexOf(s);
+      assert.ok(i >= 0, `${s} missing`);
+      return i;
+    };
+    assert.ok(at(INNO_SHA256) < at("Start-Process"), "the Inno Setup download is checked before it runs");
+    assert.ok(at("cargo test") < at("npm run package:windows"));
+  });
+
   it("release.yml runs only for version tags, checks the tag first, and drafts the release", () => {
     const r = workflow("release.yml");
     assert.match(r, /tags:\s*\n\s*- "v\*"/);

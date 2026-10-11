@@ -1,4 +1,4 @@
-# Every push and pull request: all tests, the same ones run locally (npm test and cargo test).
+# Every push and pull request: all tests, the same ones run locally (npm test and cargo test), then the downloads.
 name: CI
 
 on:
@@ -44,3 +44,17 @@ jobs:
       - run: npm test
       # Every test program runs, so one run shows every failure.
       - run: cargo test --workspace --locked --no-fail-fast
+
+      # The downloads, built as the release builds them (the installer script, the runtime DLLs and the
+      # start checks), so a packaging problem shows on a push, not first on a release tag.
+      - name: Install Inno Setup 6.7.3
+        shell: pwsh
+        run: |
+          $exe = Join-Path $env:RUNNER_TEMP "innosetup-6.7.3.exe"
+          Invoke-WebRequest -Uri "https://github.com/jrsoftware/issrc/releases/download/is-6_7_3/innosetup-6.7.3.exe" -OutFile $exe
+          $hash = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLower()
+          if ($hash -ne "9c73c3bae7ed48d44112a0f48e66742c00090bdb5bef71d9d3c056c66e97b732") { throw "The Inno Setup download doesn't match its known hash ($hash)" }
+          $dir = Join-Path $env:RUNNER_TEMP "inno"
+          Start-Process -FilePath $exe -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/CURRENTUSER", "/DIR=$dir" -Wait
+          "ISCC=$dir\ISCC.exe" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+      - run: npm run package:windows

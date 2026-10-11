@@ -118,7 +118,7 @@ const it: Faq[] = [
     a: [
       "Le app nuove senza un certificato di firma del codice ricevono un avviso di SmartScreen, e i download di Fettle non sono ancora firmati: la firma gratuita per i progetti open source va a progetti già molto conosciuti, e Fettle è nuovo.",
       "Fino ad allora l'avviso può comparire: scegli \"Ulteriori informazioni\", poi \"Esegui comunque\". Il codice sorgente è pubblico e ogni versione viene compilata alla luce del sole, così puoi verificare cosa stai avviando.",
-      "Il browser potrebbe avvisarti prima che il file \"non viene scaricato comunemente\": nell'elenco dei download apri il menu del file (…), scegli \"Mantieni\", poi \"Mostra altro\" e \"Mantieni comunque\".",
+      "Prima ancora, il browser potrebbe avvisarti che il file \"non viene scaricato comunemente\": nell'elenco dei download apri il menu del file (…), scegli \"Mantieni\", poi \"Mostra altro\" e \"Mantieni comunque\".",
     ],
   },
   {
@@ -134,7 +134,7 @@ const it: Faq[] = [
     id: "share",
     q: "Cosa c'è in un link condiviso, e chi può vederlo?",
     a: [
-      "Il report dietro lo scontrino che vedi nell'app, e nient'altro. Numeri di serie, nome del PC, il tuo nome, nome utente, indirizzo email e indirizzi di rete non ci sono mai. Chiunque abbia il link può aprirlo, quindi condividilo dove intendi tu.",
+      "Il report da cui nasce lo scontrino che vedi nell'app, e nient'altro. Numeri di serie, nome del PC, il tuo nome, nome utente, indirizzo email e indirizzi di rete non ci sono mai. Chiunque abbia il link può aprirlo, quindi condividilo dove intendi tu.",
       "I link scadono dopo 7 giorni, 30 giorni o 1 anno, a tua scelta. Puoi aggiungere una password, e ricevi un link privato per eliminarlo quando vuoi. L'app conserva anche i tuoi link in I miei link condivisi, così puoi eliminarli in qualsiasi momento.",
     ],
   },

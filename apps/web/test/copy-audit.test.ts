@@ -1,6 +1,7 @@
 // The website copy points from the 2026-10-11 audit: what each page must (and mustn't) say.
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
+import { releases } from "../src/content/changelog.ts";
 import { faqs } from "../src/content/faq.ts";
 import { home } from "../src/i18n/home.ts";
 import { pages } from "../src/i18n/pages.ts";
@@ -101,5 +102,30 @@ describe("the privacy page's counting", () => {
     expect(privacy("it")).toContain("le visite alle pagine condivise, le letture e le eliminazioni dei report");
     expect(pages("en").privacy.updated).toBe("Last updated: 11 October 2026");
     expect(pages("it").privacy.updated).toMatch(/11 ottobre 2026/);
+  });
+});
+
+describe("the Italian wording after review", () => {
+  const changelogIt = JSON.stringify(releases.map((r) => r.notes.it));
+  const all = everything("it") + changelogIt;
+
+  it("says where the receipt comes from without a calque", () => {
+    expect(all).not.toContain("dietro lo scontrino");
+    expect(faq("it", "share")).toContain("Il report da cui nasce lo scontrino");
+  });
+
+  it("puts the browser's warning first in the sentence", () => {
+    expect(all).not.toContain("avvisarti prima che il file");
+    expect(pages("it").download.warning.join(" ")).toContain("Prima ancora, il browser potrebbe avvisarti che il file");
+    expect(faq("it", "warning")).toContain("Prima ancora, il browser potrebbe avvisarti che il file");
+  });
+
+  it("doesn't put 'di serie' right above 'Numero di serie' on the home slip", () => {
+    expect(home("it").slipHead).toBe("Nascosto in automatico");
+  });
+
+  it("says what is left out of a GUID-ending startup app's name", () => {
+    expect(changelogIt).not.toContain("condivisa senza,");
+    expect(changelogIt).toContain("condivisa senza il GUID");
   });
 });

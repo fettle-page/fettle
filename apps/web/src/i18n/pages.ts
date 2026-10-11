@@ -192,7 +192,7 @@ const it: Pages = {
       {
         h: "Link condivisi",
         p: [
-          "Solo quando scegli di condividere, Fettle carica il report dietro lo scontrino che vedi, con i dati personali tolti, e nient'altro. Viene conservato su Cloudflare, solo nei suoi data center nell'UE, per il tempo che scegli (7 giorni, 30 giorni o 1 anno) e poi eliminato. Un link privato di eliminazione ti permette di toglierlo prima.",
+          "Solo quando scegli di condividere, Fettle carica il report da cui nasce lo scontrino che vedi, con i dati personali tolti, e nient'altro. Viene conservato su Cloudflare, solo nei suoi data center nell'UE, per il tempo che scegli (7 giorni, 30 giorni o 1 anno) e poi eliminato. Un link privato di eliminazione ti permette di toglierlo prima.",
           "Se aggiungi una password, il nostro server conserva solo un'impronta (hash), mai la password. Dopo una password corretta conserva anche l'impronta di un permesso, così lo stesso browser può riaprire lo scontrino; il permesso scade 24 ore dall'ultimo utilizzo. Chiunque abbia il link, e la password se l'hai impostata, può aprire lo scontrino.",
         ],
       },
@@ -248,7 +248,7 @@ const it: Pages = {
     warning: [
       "Le app nuove senza certificato di firma del codice ricevono un avviso di SmartScreen al primo avvio, e i download di Fettle non sono ancora firmati, quindi potresti vedere \"Windows ha protetto il PC\".",
       "Scegli \"Ulteriori informazioni\", poi \"Esegui comunque\". Il codice sorgente è pubblico e ogni versione viene compilata alla luce del sole, così puoi verificare cosa stai avviando.",
-      "Il browser potrebbe avvisarti prima che il file \"non viene scaricato comunemente\": nell'elenco dei download apri il menu del file (…), scegli \"Mantieni\", poi \"Mostra altro\" e \"Mantieni comunque\".",
+      "Prima ancora, il browser potrebbe avvisarti che il file \"non viene scaricato comunemente\": nell'elenco dei download apri il menu del file (…), scegli \"Mantieni\", poi \"Mostra altro\" e \"Mantieni comunque\".",
     ],
     signingLink: "Policy di firma del codice",
   },

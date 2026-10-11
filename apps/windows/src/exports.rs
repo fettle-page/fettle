@@ -168,22 +168,54 @@ fn save_as(dialogs: &dyn Dialogs, owner: &slint::Window, report: &Report, model:
     if json {
         filters.push((t("export.filter_json", lang, &[]), vec!["json".to_string()]));
     }
-    let mut path = dialogs.save(owner, &suggested_name(model), &filters)?;
+    let path = dialogs.save(owner, &suggested_name(model), &filters)?;
     let ext = path.extension().map(|e| e.to_string_lossy().to_lowercase());
     let written = if json && ext.as_deref() == Some("json") {
         write_json(&path, report)
     } else {
-        if ext.as_deref() != Some("pdf") {
-            path.set_extension("pdf");
-        }
-        write_pdf(&path, model)
+        write_pdf(&pdf_path(path), model)
     };
     Some(if written.is_ok() { "export.saved" } else { "export.failed" })
+}
+
+/// Where to write a PDF the user named `chosen` in the save dialog. A name not ending in .pdf gets
+/// ".pdf" added (receipt.txt becomes receipt.txt.pdf, never an existing receipt.pdf), and since
+/// Windows only asked before replacing the name the user typed, a name made up here never replaces a
+/// file: receipt.txt (2).pdf, (3) and so on.
+fn pdf_path(chosen: PathBuf) -> PathBuf {
+    if chosen.extension().is_some_and(|e| e.eq_ignore_ascii_case("pdf")) {
+        return chosen;
+    }
+    let name = chosen.file_name().map(|n| n.to_string_lossy().into_owned()).unwrap_or_else(|| "fettle".into());
+    (1..)
+        .map(|n| chosen.with_file_name(if n == 1 { format!("{name}.pdf") } else { format!("{name} ({n}).pdf") }))
+        .find(|p| !p.exists())
+        .expect("a free name")
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_name_without_pdf_gets_it_added_and_never_replaces_another_file() {
+        let dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/tmp/fettle-pdf-name");
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        // The name chosen in the dialog (Windows already asked before replacing that one).
+        assert_eq!(pdf_path(dir.join("receipt.pdf")), dir.join("receipt.pdf"));
+        assert_eq!(pdf_path(dir.join("receipt.PDF")), dir.join("receipt.PDF"));
+        // Another name keeps what was typed, so receipt.txt never turns into an existing receipt.pdf.
+        std::fs::write(dir.join("receipt.pdf"), "someone's file").unwrap();
+        assert_eq!(pdf_path(dir.join("receipt.txt")), dir.join("receipt.txt.pdf"));
+        assert_eq!(pdf_path(dir.join("receipt")), dir.join("receipt (2).pdf"), "no ending at all, and receipt.pdf is taken");
+        // And a name Fettle made up never replaces a file Windows didn't ask about.
+        std::fs::write(dir.join("receipt.txt.pdf"), "another file").unwrap();
+        assert_eq!(pdf_path(dir.join("receipt.txt")), dir.join("receipt.txt (2).pdf"));
+        std::fs::write(dir.join("receipt.txt (2).pdf"), "and another").unwrap();
+        assert_eq!(pdf_path(dir.join("receipt.txt")), dir.join("receipt.txt (3).pdf"));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 
     #[test]
     fn opens_https_links_and_the_local_worker() {

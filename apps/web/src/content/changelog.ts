@@ -23,6 +23,7 @@ export const releases: Release[] = [
         "Reopening a password-protected share link in the same browser keeps it open for another 24 hours.",
         "The share server's logs name a link by a short code instead of its ID, so the logs alone can't open a link.",
         "The share server now limits each address to 100 uploads a day, and 60 share page views a minute.",
+        "The home and download pages no longer wait for GitHub to show the download count.",
       ],
       it: [
         "Su Windows 10, Fettle non dice più che un PC è iscritto agli Extended Security Updates solo perché ha installato un aggiornamento in ritardo. Ora lo ricava dalla build di Windows e, quando non può saperlo, ti chiede di controllare in Windows Update.",
@@ -38,6 +39,7 @@ export const releases: Release[] = [
         "Riaprire nello stesso browser un link condiviso con password lo mantiene aperto per altre 24 ore.",
         "I log del server di condivisione indicano un link con un breve codice invece del suo ID, così dai soli log non si può aprire un link.",
         "Il server di condivisione ora limita ogni indirizzo a 100 caricamenti al giorno e a 60 visite al minuto alle pagine condivise.",
+        "La home e la pagina di download non aspettano più GitHub per mostrare il numero di download.",
       ],
     },
   },

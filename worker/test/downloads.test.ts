@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import raw from "../wrangler.jsonc?raw";
-import { downloadCount, resetDownloadCount } from "../src/downloads.ts";
+import { ageDownloadCount, downloadCount, resetDownloadCount } from "../src/downloads.ts";
 import { call } from "./helpers.ts";
 
 // The download count, as a section of the main download button on the home and download pages: GitHub's own total for the installer and the
@@ -71,6 +71,39 @@ describe("the download count", () => {
     await call("/it/download");
     await call("/download");
     expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  it("shares one GitHub request between visitors who arrive together", async () => {
+    answer(() => new Promise((r) => setTimeout(() => r(github(RELEASES)), 100)));
+    await Promise.all([call("/"), call("/download"), call("/it")]);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
+  });
+
+  // GitHub's slow answers are timers made inside the Worker's own request: Workers forbid settling
+  // one request's promise from another context, such as the test's.
+  const slowly = (ms: number, body: unknown) => answer(() => new Promise<Response>((r) => setTimeout(() => r(github(body)), ms)));
+  const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+  it("never keeps a page waiting on a slow GitHub", async () => {
+    slowly(1500, RELEASES);
+    const started = Date.now();
+    const first = await call("/");
+    expect(Date.now() - started).toBeLessThan(1200);
+    expect(line(await first.text())![0]).toMatch(/\shidden(\s|$)/);
+    await pause(1800);
+    expect(line(await (await call("/")).text())!.slice(1)).toEqual(["8", "8 downloads"]);
+  });
+
+  it("shows an hour-old count straight away and refreshes it in the background", async () => {
+    await call("/");
+    ageDownloadCount();
+    slowly(1500, [release(false, [["Fettle-Setup-1.0.0.exe", 20]])]);
+    const started = Date.now();
+    expect(line(await (await call("/")).text())!.slice(1)).toEqual(["8", "8 downloads"]);
+    expect(Date.now() - started).toBeLessThan(1200);
+    expect(fetchSpy).toHaveBeenCalledTimes(2);
+    await pause(1800);
+    expect(line(await (await call("/")).text())!.slice(1)).toEqual(["20", "20 downloads"]);
   });
 
   it("leaves the line out when GitHub doesn't answer, and the page still works", async () => {

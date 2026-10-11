@@ -23,11 +23,11 @@ async function api(request: Request, env: Env, path: string): Promise<Response> 
 }
 
 export default {
-  async fetch(request, env): Promise<Response> {
+  async fetch(request, env, ctx): Promise<Response> {
     const { pathname } = new URL(request.url);
     if (pathname === "/api" || pathname.startsWith("/api/")) return api(request, env, pathname);
     if (pathname === "/r" || pathname.startsWith("/r/")) return sharePage(request, env);
-    if (DOWNLOAD_PAGES.has(pathname)) return withDownloadCount(request, env);
+    if (DOWNLOAD_PAGES.has(pathname)) return withDownloadCount(request, env, ctx);
     return env.ASSETS.fetch(request);
   },
 } satisfies ExportedHandler<Env>;

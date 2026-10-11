@@ -1,6 +1,9 @@
 // The download count, as a section of the main download button on the home and download pages: GitHub's own total for the installer and the zip
 // of every published release. Asked for at most once an hour (per isolate) and written into the page's
 // empty line, so visitors' browsers never contact GitHub and nothing about who downloaded is kept.
+// A page never waits on GitHub: only one visitor's request asks at a time (Workers can't share one
+// request's promise with another, so the others just use what's known), an old count is shown while it
+// is refreshed in the background, and a fresh isolate waits a moment at most, then leaves the line out.
 import { release } from "@fettle/web/release";
 
 /** The pages with a download count (apps/web DownloadCount.astro); wrangler.jsonc runs the Worker first on them. */
@@ -9,11 +12,37 @@ export const DOWNLOAD_PAGES = new Set(["/", "/it", "/download", "/it/download"])
 const HOUR = 3_600_000;
 /** After a failed ask, try again in five minutes rather than an hour. */
 const RETRY = 5 * 60_000;
-let known: { count: number | null; at: number } | undefined;
+/** The longest a page waits for a first answer, when the isolate has no count yet. */
+const COLD_WAIT = 300;
+/** Taken as abandoned after this long (the asking request may have been cancelled). */
+const ASKING_MAX = 10_000;
+type Known = { count: number | null; at: number };
+let known: Known | undefined;
+/** When a request started asking GitHub, or 0 when none is. */
+let askedAt = 0;
 
 /** For tests: forget the remembered count. */
 export function resetDownloadCount(): void {
   known = undefined;
+  askedAt = 0;
+}
+
+/** For tests: make the remembered count an hour old. */
+export function ageDownloadCount(): void {
+  if (known) known.at -= HOUR;
+}
+
+/** Asks GitHub and remembers the answer (or, on failure, when to try again). */
+function refresh(env: Env): Promise<void> {
+  askedAt = Date.now();
+  return askGitHub(env)
+    .then((fresh) => {
+      const now = Date.now();
+      known = fresh !== null ? { count: fresh, at: now } : { count: known?.count ?? null, at: now - HOUR + RETRY };
+    })
+    .finally(() => {
+      askedAt = 0;
+    });
 }
 
 function releasesUrl(): string | null {
@@ -50,17 +79,25 @@ async function askGitHub(env: Env): Promise<number | null> {
   }
 }
 
-/** The count, from memory when it's under an hour old; the last good one if GitHub fails meanwhile. */
-export async function downloadCount(env: Env): Promise<number | null> {
-  const now = Date.now();
-  if (known && now - known.at < HOUR) return known.count;
-  const fresh = await askGitHub(env);
-  known = fresh !== null ? { count: fresh, at: now } : { count: known?.count ?? null, at: now - HOUR + RETRY };
-  return known.count;
+/**
+ * The count, from memory when it's under an hour old. An older one is shown as it is while it's
+ * refreshed in the background; the last good one stays if GitHub fails meanwhile.
+ */
+export async function downloadCount(env: Env, ctx?: ExecutionContext): Promise<number | null> {
+  if (known && Date.now() - known.at < HOUR) return known.count;
+  // Another visitor's request is already asking: show what's known, without waiting.
+  if (askedAt && Date.now() - askedAt < ASKING_MAX) return known?.count ?? null;
+  const pending = refresh(env);
+  ctx?.waitUntil(pending);
+  if (known) return known.count;
+  // A fresh isolate: wait a moment for the first answer, never longer.
+  await Promise.race([pending, new Promise((r) => setTimeout(r, COLD_WAIT))]);
+  // Read again: the answer may have arrived while this request waited.
+  return (known as Known | undefined)?.count ?? null;
 }
 
 /** A home or download page with its download count filled in (or left hidden when there's no count). */
-export async function withDownloadCount(request: Request, env: Env): Promise<Response> {
+export async function withDownloadCount(request: Request, env: Env, ctx?: ExecutionContext): Promise<Response> {
   if (request.method !== "GET" && request.method !== "HEAD") return env.ASSETS.fetch(request);
   // A bare request: the visitor's conditional headers would otherwise get a 304 that keeps an old count.
   const page = await env.ASSETS.fetch(new Request(request.url, { method: request.method }));
@@ -68,7 +105,7 @@ export async function withDownloadCount(request: Request, env: Env): Promise<Res
   const headers = new Headers(page.headers);
   headers.delete("etag");
   headers.delete("content-length");
-  const count = request.method === "GET" ? await downloadCount(env) : null;
+  const count = request.method === "GET" ? await downloadCount(env, ctx) : null;
   const plain = new Response(page.body, { status: page.status, headers });
   if (count === null) return plain;
   // The section shows the number; screen readers get the whole phrase ("1,234 downloads").

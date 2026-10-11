@@ -23,9 +23,9 @@ fn load_fonts() {
     static LOADED: OnceLock<()> = OnceLock::new();
     LOADED.get_or_init(|| {
         for data in [DISPLAY, MONO, MONO_BOLD] {
-            let mut count = 0u32;
+            let count = 0u32;
             unsafe {
-                let _ = AddFontMemResourceEx(data.as_ptr().cast(), data.len() as u32, None, &mut count);
+                let _ = AddFontMemResourceEx(data.as_ptr().cast(), data.len() as u32, None, &count);
             }
         }
     });
@@ -415,7 +415,7 @@ mod tests {
                 let _ = image::save_buffer(std::path::Path::new(&dir).join(name), &rgba, pw as u32, ph as u32, image::ExtendedColorType::Rgba8);
             }
         }
-        let bars = last.iter().filter_map(|op| match op { Op::Rect { x, y, fill: Some(_), .. } => Some((*x, *y)), _ => None }).last().expect("the barcode");
+        let bars = last.iter().filter_map(|op| match op { Op::Rect { x, y, fill: Some(_), .. } => Some((*x, *y)), _ => None }).next_back().expect("the barcode");
         let (bx, by) = ((bars.0 * s) as i32, (bars.1 * s) as i32);
         assert!(inked(&px, w, bx - 60, by, bx + 10, by + 30) > 100, "the barcode is on paper");
     }

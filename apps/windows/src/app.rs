@@ -44,6 +44,10 @@ pub trait Printer {
     fn print(&self, owner: &slint::Window, model: &fettle_receipt::ReceiptModel) -> Result<bool, String>;
 }
 
+/// The Deep check: Windows' prompt (owned by this window handle), then the elevated scan and how
+/// long it ran.
+pub type DeepScan = Arc<dyn Fn(isize) -> Result<(Report, f64), crate::state::DeepError> + Send + Sync>;
+
 /// What the app needs from the outside world. Real ones by default; tests swap in fakes.
 pub struct Deps {
     /// Windows' display language, for "Auto".
@@ -74,12 +78,12 @@ pub struct Deps {
     /// The Deep check's elevated scan: Windows asks first (in a prompt owned by the window, its HWND,
     /// 0 for none), then the helper's report and how long its scan took (not counting the prompt).
     /// Runs off the window's thread; Err says why there's none.
-    pub deep_scan: Arc<dyn Fn(isize) -> Result<(Report, f64), crate::state::DeepError> + Send + Sync>,
+    pub deep_scan: DeepScan,
 }
 
 thread_local! {
     // The app on this thread, for events posted from other threads.
-    static APP: RefCell<Weak<Inner>> = RefCell::new(Weak::new());
+    static APP: RefCell<Weak<Inner>> = const { RefCell::new(Weak::new()) };
 }
 
 impl Default for Deps {
@@ -306,7 +310,7 @@ impl Fettle {
                 self.0.deps.background.spawn(Box::new(move || {
                     // A transport that panics still ends with a message the panel can show.
                     let result = std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| crate::share::share_report(&*http, &origin, &report, Some(expires), password.as_ref().map(|p| p.0.as_str()))))
-                        .unwrap_or_else(|_| Err(crate::share::Failure { error: "bad_response", retry_after: None, detail: None }));
+                        .unwrap_or(Err(crate::share::Failure { error: "bad_response", retry_after: None, detail: None }));
                     post(Event::LinkCreated(result.map_err(|f| crate::share::problem(&f))));
                 }));
             }

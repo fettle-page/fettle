@@ -267,7 +267,7 @@ pub enum Event {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Effect {
     RunScan,
-    SaveLast(Report),
+    SaveLast(Box<Report>),
     ClearLast,
     SaveSettings(Settings),
     /// Run the Deep check: the elevated helper's scan, merged with the user's own.
@@ -402,7 +402,7 @@ impl State {
                 let mut effects = Vec::new();
                 if self.settings.remember {
                     self.last = Some(report.clone());
-                    effects.push(Effect::SaveLast(report));
+                    effects.push(Effect::SaveLast(Box::new(report)));
                 }
                 if self.settings.show_private {
                     effects.push(Effect::LoadPrivate);
@@ -452,7 +452,7 @@ impl State {
                 if on {
                     if let Some(c) = &self.current {
                         self.last = Some(c.report.clone());
-                        effects.push(Effect::SaveLast(c.report.clone()));
+                        effects.push(Effect::SaveLast(Box::new(c.report.clone())));
                     }
                 } else {
                     self.last = None;
@@ -716,7 +716,7 @@ mod tests {
         let mut s = State::default();
         s.update(Event::Start);
         let r = report("2026-10-09T10:00:00Z");
-        assert_eq!(s.update(Event::Finished(Ok(r.clone()), 0.7)), vec![Effect::SaveLast(r.clone())]);
+        assert_eq!(s.update(Event::Finished(Ok(r.clone()), 0.7)), vec![Effect::SaveLast(Box::new(r.clone()))]);
         assert_eq!((s.main_view(), s.mat()), (MainView::Result, Mat::Live));
         assert_eq!(s.last, Some(r));
     }
@@ -781,7 +781,7 @@ mod tests {
         s.update(Event::Start);
         let r = report("2026-10-09T10:00:00Z");
         s.update(Event::Finished(Ok(r.clone()), 0.7));
-        assert!(s.update(Event::SetRemember(true)).contains(&Effect::SaveLast(r)));
+        assert!(s.update(Event::SetRemember(true)).contains(&Effect::SaveLast(Box::new(r))));
     }
 
     #[test]
@@ -935,7 +935,7 @@ mod tests {
         assert_eq!((s.main_view(), s.mat()), (MainView::Result, Mat::Live));
         assert_eq!(s.current.as_ref().map(|c| c.report.clone()), Some(deep.clone()));
         assert_eq!(s.deep, Deep::Idle);
-        assert!(effects.contains(&Effect::SaveLast(deep)), "{effects:?}");
+        assert!(effects.contains(&Effect::SaveLast(Box::new(deep))), "{effects:?}");
         // A refused or failed one keeps the quick receipt and says why.
         s.update(Event::DeepAsked);
         s.update(Event::DeepFinished(Err(DeepError::Cancelled), 0.0));

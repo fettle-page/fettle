@@ -75,6 +75,7 @@ pub struct Response {
 
 /// One HTTPS request. Err means no answer at all (offline, DNS, TLS, timeout).
 pub trait Http: Send + Sync {
+    #[expect(clippy::result_unit_err, reason = "no answer is all the callers need to know: they say so the same way whatever the cause")]
     fn send(&self, method: &str, url: &str, headers: &[(&str, String)], body: Option<Vec<u8>>) -> Result<Response, ()>;
 }
 

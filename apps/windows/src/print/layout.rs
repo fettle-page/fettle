@@ -53,13 +53,16 @@ pub enum Face {
     MonoBold,
 }
 
+/// A rectangle's outline: its colour, width and, if dashed, (on, off) lengths.
+pub type Stroke = (Rgb, f32, Option<(f32, f32)>);
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Op {
     /// Text on a baseline at (x, y); `spacing` is extra space after each character.
     Text { x: f32, y: f32, face: Face, size: f32, text: String, colour: Rgb, spacing: f32 },
     /// `dash`: (on, off) lengths.
     Line { x1: f32, y1: f32, x2: f32, y2: f32, colour: Rgb, width: f32, dash: Option<(f32, f32)> },
-    Rect { x: f32, y: f32, w: f32, h: f32, fill: Option<Rgb>, stroke: Option<(Rgb, f32, Option<(f32, f32)>)> },
+    Rect { x: f32, y: f32, w: f32, h: f32, fill: Option<Rgb>, stroke: Option<Stroke> },
     /// The fettle. wordmark with its top-left at (x, y), `h` tall.
     Wordmark { x: f32, y: f32, h: f32 },
     /// `ops` drawn around (cx, cy), turned by `degrees` (the inked stamp).

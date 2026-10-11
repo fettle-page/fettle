@@ -1,10 +1,10 @@
 //! The last privacy pass over a finished report, before it is shown, saved or shared.
 //!
 //! The report format has no fields for serials, product keys or network details, so what is left
-//! to catch is identifying text that slips into ordinary strings: the PC's name and account names
-//! in error details and startup names, profile folders in paths, account SIDs, and (in error
-//! details only) MAC and IPv4 addresses. The app gathers the names on Windows; this module only
-//! rewrites text.
+//! to catch is identifying text that slips into ordinary strings: the PC's name, account names,
+//! the account's full name, the domain and email addresses in error details and startup names,
+//! profile folders in paths, account SIDs, and (in error details only) MAC and IPv4 addresses and
+//! network server names. The app gathers the names on Windows; this module only rewrites text.
 
 use crate::startup_names::friendly_startup_name;
 use crate::{Check, Report};
@@ -13,30 +13,71 @@ use crate::{Check, Report};
 #[derive(Debug, Clone, Default)]
 pub struct Redactor {
     usernames: Vec<String>,
+    /// Account names under `MIN_NAME_LEN`: hidden only right after a `\` or `/`, where they name
+    /// the account (`PC\al`, `/home/al`), since as plain words they'd match too much.
+    short_names: Vec<String>,
     hostnames: Vec<String>,
+    domains: Vec<String>,
 }
 
 /// Names shorter than this are too likely to match unrelated words.
 const MIN_NAME_LEN: usize = 3;
 
 /// What this module writes in place of private text. A name is never matched inside one of these.
-const PLACEHOLDERS: &[&str] = &["<user>", "<pc-name>", "<sid>", "<private>", "<mac>", "<ip>"];
+const PLACEHOLDERS: &[&str] = &["<user>", "<pc-name>", "<domain>", "<email>", "<server>", "<sid>", "<private>", "<mac>", "<ip>"];
+
+/// Words a full name may hold that aren't anyone's name ("Windows User", "Utente PC", "Dell Owner"):
+/// matching them would hide ordinary words in startup names.
+const COMMON_WORDS: &[&str] = &[
+    "user", "users", "admin", "administrator", "owner", "guest", "windows", "microsoft", "home", "office", "family", "local",
+    "account", "utente", "amministratore", "proprietario", "famiglia", "casa", "ufficio", "the", "and", "del", "della", "van",
+    "von", "dell", "lenovo", "acer", "asus", "msi", "toshiba", "samsung", "sony", "fujitsu", "surface", "medion", "gigabyte",
+];
+
+/// What Windows puts in USERDOMAIN when the account isn't in a company domain.
+const NOT_DOMAINS: &[&str] = &["WORKGROUP", "AzureAD", "MicrosoftAccount", "NT AUTHORITY", "BUILTIN", "NT SERVICE", "Window Manager", "Font Driver Host"];
 
 /// Profile folders that belong to no one in particular.
 const SHARED_PROFILES: &[&str] = &["Public", "Default", "Default User", "All Users", "<user>"];
 
 impl Redactor {
     pub fn new<S: Into<String>>(usernames: impl IntoIterator<Item = S>, hostname: impl Into<String>) -> Redactor {
-        let mut names: Vec<String> = Vec::new();
+        let mut r = Redactor::default();
         for name in usernames.into_iter().map(Into::into) {
             let name = name.trim().to_string();
-            if name.chars().count() >= MIN_NAME_LEN && !names.iter().any(|n| n.eq_ignore_ascii_case(&name)) {
-                names.push(name);
+            if name.chars().count() >= MIN_NAME_LEN {
+                add_name(&mut r.usernames, name);
+            } else if !name.is_empty() && !r.short_names.iter().any(|n| n.eq_ignore_ascii_case(&name)) {
+                r.short_names.push(name);
             }
         }
-        // Longest first, so "jdoe.CONTOSO" is replaced whole before "jdoe" can match inside it.
-        names.sort_by_key(|n| std::cmp::Reverse(n.len()));
-        Redactor { usernames: names, hostnames: Vec::new() }.with_hostname(hostname)
+        r.with_hostname(hostname)
+    }
+
+    /// The account's full name ("Mario Rossi"): hidden whole, and by each of its words that isn't a
+    /// common one, so a disk renamed "Rossi backup" doesn't give the surname away.
+    pub fn with_full_name(mut self, name: impl Into<String>) -> Redactor {
+        let name = name.into().trim().to_string();
+        for word in name.split_whitespace().filter(|w| !COMMON_WORDS.iter().any(|c| c.eq_ignore_ascii_case(w))) {
+            if word.chars().count() >= MIN_NAME_LEN {
+                add_name(&mut self.usernames, word.to_string());
+            }
+        }
+        if name.chars().count() >= MIN_NAME_LEN {
+            add_name(&mut self.usernames, name);
+        }
+        self
+    }
+
+    /// The account's domain (USERDOMAIN): a company's name. Outside a domain Windows puts the PC's
+    /// name or a fixed word there, which aren't a domain.
+    pub fn with_domain(mut self, domain: impl Into<String>) -> Redactor {
+        let domain = domain.into().trim().to_string();
+        let usual = NOT_DOMAINS.iter().any(|d| d.eq_ignore_ascii_case(&domain)) || self.hostnames.iter().any(|h| h.eq_ignore_ascii_case(&domain));
+        if domain.chars().count() >= MIN_NAME_LEN && !usual {
+            add_name(&mut self.domains, domain);
+        }
+        self
     }
 
     /// Another name this PC goes by: `COMPUTERNAME` is cut to 15 characters, the DNS name isn't.
@@ -60,21 +101,28 @@ impl Redactor {
 
     /// Free text (startup names, error details) with the PC's identity taken out.
     pub fn text(&self, s: &str) -> String {
-        let mut s = self.hardware(s);
+        // Email addresses first, whole, before a name inside one ("mario.rossi@…") can match.
+        let mut s = replace_emails(&self.hardware(s));
         // PC names first: they often start with the username ("MARIO-PC"), and replacing the
         // username first would leave the rest of the PC name behind.
         for host in &self.hostnames {
             s = replace_word(&s, host, "<pc-name>");
         }
+        for domain in &self.domains {
+            s = replace_word(&s, domain, "<domain>");
+        }
         for name in &self.usernames {
             s = replace_word(&s, name, "<user>");
+        }
+        for name in &self.short_names {
+            s = replace_after_separator(&s, name, "<user>");
         }
         s
     }
 
-    /// Free text such as error details, which may also quote network addresses.
+    /// Free text such as error details, which may also quote network addresses and servers.
     pub fn detail(&self, s: &str) -> String {
-        replace_ipv4(&replace_macs(&self.text(s)))
+        replace_unc_servers(&replace_ipv4(&replace_macs(&self.text(s))))
     }
 
     /// Rewrites every text field in the report, and gives startup items their readable names.
@@ -157,6 +205,15 @@ impl Redactor {
     }
 }
 
+/// Adds `name` unless it's there already, keeping the longest first, so "jdoe.CONTOSO" is replaced
+/// whole before "jdoe" can match inside it.
+fn add_name(names: &mut Vec<String>, name: String) {
+    if !names.iter().any(|n| n.eq_ignore_ascii_case(&name)) {
+        names.push(name);
+        names.sort_by_key(|n| std::cmp::Reverse(n.len()));
+    }
+}
+
 fn is_shared_profile(name: &str) -> bool {
     SHARED_PROFILES.iter().any(|p| p.eq_ignore_ascii_case(name))
 }
@@ -189,16 +246,16 @@ fn hide_usbstor_instance(s: &str) -> String {
     }
 }
 
-/// Replaces the folder name after any `\Users\`, so profiles of other or renamed
+/// Replaces the folder name after any `\Users\` (or `/Users/`), so profiles of other or renamed
 /// accounts don't leak even when their name isn't known.
 fn replace_profile_folders(s: &str) -> String {
-    const MARKER: &str = r"\users\";
+    const MARKERS: [&str; 2] = [r"\users\", "/users/"];
     // ASCII lowercasing keeps byte offsets identical to `s`.
     let lower = s.to_ascii_lowercase();
     let mut out = String::with_capacity(s.len());
     let mut i = 0;
-    while let Some(found) = lower[i..].find(MARKER) {
-        let seg_start = i + found + MARKER.len();
+    while let Some(found) = MARKERS.iter().filter_map(|m| lower[i..].find(m)).min() {
+        let seg_start = i + found + MARKERS[0].len();
         let rest = &s[seg_start..];
         // Folder names can hold spaces ("Ana Lima"), so the name ends at a separator, a line break,
         // or where an error message carries on (" (os error 5)", ": access denied"). Brackets alone
@@ -257,6 +314,61 @@ fn replace_word(s: &str, needle: &str, with: &str) -> String {
             && !inside_placeholder(s, i);
         found.then_some(needle.len())
     })
+}
+
+/// `name` (ASCII case-insensitive) as a whole word right after a `\` or `/`.
+fn replace_after_separator(s: &str, name: &str, with: &str) -> String {
+    replace_matches(s, with, |s, i| {
+        let end = i + name.len();
+        let found = s.get(i..end).is_some_and(|w| w.eq_ignore_ascii_case(name))
+            && matches!(s[..i].chars().next_back(), Some('\\' | '/'))
+            && !is_word_char(s[end..].chars().next());
+        found.then_some(name.len())
+    })
+}
+
+/// Email addresses: a name, an @ and a domain with at least one dot that ends in letters.
+fn replace_emails(s: &str) -> String {
+    let local = |c: u8| c.is_ascii_alphanumeric() || b"._%+_-".contains(&c);
+    replace_matches(s, "<email>", |s, i| {
+        let b = s.as_bytes();
+        if i > 0 && local(b[i - 1]) {
+            return None;
+        }
+        let name = b[i..].iter().take_while(|c| local(**c)).count();
+        if name == 0 || b.get(i + name) != Some(&b'@') {
+            return None;
+        }
+        let at = i + name + 1;
+        let run = b[at..].iter().take_while(|c| c.is_ascii_alphanumeric() || **c == b'-' || **c == b'.').count();
+        // A sentence can end right after an address: "for ana@example.com."
+        let domain = s[at..at + run].trim_end_matches('.');
+        let labels: Vec<&str> = domain.split('.').collect();
+        let top = labels.last().copied().unwrap_or("");
+        let ok = labels.len() >= 2 && labels.iter().all(|l| !l.is_empty()) && top.len() >= 2 && top.bytes().all(|c| c.is_ascii_alphabetic());
+        ok.then_some(name + 1 + domain.len())
+    })
+}
+
+/// The server in a network path (`\\NAS\share` → `\\<server>\share`). Windows' own `\\?\` and
+/// `\\.\` prefixes aren't servers.
+fn replace_unc_servers(s: &str) -> String {
+    let mut out = String::with_capacity(s.len());
+    let mut rest = s;
+    while let Some(at) = rest.find(r"\\") {
+        let (before, after) = rest.split_at(at + 2);
+        out.push_str(before);
+        let len = after.bytes().take_while(|c| c.is_ascii_alphanumeric() || *c == b'-' || *c == b'_' || *c == b'.').count();
+        let server = &after[..len];
+        if !server.is_empty() && server != "." && after[len..].starts_with('\\') {
+            out.push_str("<server>");
+            rest = &after[len..];
+        } else {
+            rest = after;
+        }
+    }
+    out.push_str(rest);
+    out
 }
 
 /// Six hex pairs joined by ':' or '-', the same one throughout.
@@ -424,6 +536,60 @@ mod tests {
         assert_eq!(r.text("Caffè di jdoe, perché sì"), "Caffè di <user>, perché sì");
         assert_eq!(r.detail("non raggiungibile: 10.0.0.7."), "non raggiungibile: <ip>.");
         assert_eq!(r.detail("è 00:1A:2B:3C:4D:5E"), "è <mac>");
+    }
+
+    #[test]
+    fn email_addresses_are_hidden() {
+        assert_eq!(r().text("OneDrive - mario.rossi@contoso.com"), "OneDrive - <email>");
+        assert_eq!(r().detail("sign-in failed for Ana_Lima+fettle@example.co.uk."), "sign-in failed for <email>.");
+        // Not an address: no dot after the @, or nothing before it.
+        assert_eq!(r().text("Tool @home and x@y"), "Tool @home and x@y");
+    }
+
+    #[test]
+    fn a_profile_path_with_forward_slashes_is_hidden() {
+        assert_eq!(r().text("C:/Users/mystery/AppData/x.exe"), "C:/Users/<user>/AppData/x.exe");
+        assert_eq!(r().text("C:/Users/Public/x"), "C:/Users/Public/x");
+    }
+
+    #[test]
+    fn a_network_server_name_in_an_error_is_hidden() {
+        assert_eq!(r().detail(r"can't open \\NAS-ROSSI\backup\x"), r"can't open \\<server>\backup\x");
+        assert_eq!(r().detail(r"\\?\C:\long\path"), r"\\?\C:\long\path");
+        assert_eq!(r().detail(r"\\.\PhysicalDrive0"), r"\\.\PhysicalDrive0");
+    }
+
+    #[test]
+    fn a_short_account_name_is_hidden_where_it_names_the_account() {
+        // Two letters would match too many words, so only after a separator, as in PC\al or /al/.
+        let r = Redactor::new(["al"], "DESKTOP-ABC");
+        assert_eq!(r.text(r"DESKTOP-ABC\al"), r"<pc-name>\<user>");
+        assert_eq!(r.text("/home/al/x"), "/home/<user>/x");
+        assert_eq!(r.text("Realtek al Alarm"), "Realtek al Alarm");
+    }
+
+    #[test]
+    fn the_full_name_is_hidden_whole_and_by_its_words() {
+        let r = Redactor::new(["mario"], "DESKTOP-ABC").with_full_name("Mario Rossi");
+        assert_eq!(r.text("Mario Rossi.lnk"), "<user>.lnk");
+        assert_eq!(r.text("Rossi backup"), "<user> backup");
+        // Common words in a full name ("Windows User", "Admin") aren't names.
+        let r = Redactor::new(["mario"], "DESKTOP-ABC").with_full_name("Windows User");
+        assert_eq!(r.text("Windows Security notification icon"), "Windows Security notification icon");
+        assert_eq!(r.text("Windows User Sync"), "<user> Sync");
+    }
+
+    #[test]
+    fn the_domain_is_hidden_but_not_the_usual_placeholders() {
+        let r = Redactor::new(["jdoe"], "DESKTOP-ABC").with_domain("CONTOSO");
+        assert_eq!(r.text(r"CONTOSO\jdoe"), r"<domain>\<user>");
+        for usual in ["WORKGROUP", "AzureAD", "MicrosoftAccount", "NT AUTHORITY", "BUILTIN"] {
+            let r = Redactor::new(["jdoe"], "DESKTOP-ABC").with_domain(usual);
+            assert_eq!(r.text(usual), usual);
+        }
+        // On a PC outside a domain, the domain is the PC's own name.
+        let r = Redactor::new(["jdoe"], "DESKTOP-ABC").with_domain("DESKTOP-ABC");
+        assert_eq!(r.text("DESKTOP-ABC"), "<pc-name>");
     }
 
     /// Every text field in the report is either cleaned by `Redactor::report` or can't hold a

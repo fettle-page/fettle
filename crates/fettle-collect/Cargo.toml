@@ -12,7 +12,7 @@ serde_json = "1.0.151"
 
 [target.'cfg(windows)'.dependencies]
 winreg = "0.56.0"
-windows = { version = "0.62.2", features = ["Win32_Foundation", "Win32_Graphics_Dxgi", "Win32_Security", "Win32_Storage_FileSystem", "Win32_System_IO", "Win32_System_Ioctl", "Win32_System_SystemInformation", "Win32_System_Threading"] }
+windows = { version = "0.62.2", features = ["Win32_Foundation", "Win32_Graphics_Dxgi", "Win32_NetworkManagement_NetManagement", "Win32_Security", "Win32_Security_Authentication_Identity", "Win32_Storage_FileSystem", "Win32_System_IO", "Win32_System_Ioctl", "Win32_System_SystemInformation", "Win32_System_Threading"] }
 wmi = "0.18.4"
 
 [dev-dependencies]

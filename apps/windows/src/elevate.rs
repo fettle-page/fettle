@@ -90,7 +90,8 @@ fn write_where_asked(path: &Path, report: &Report) -> std::io::Result<()> {
     let json = serde_json::to_vec(report).map_err(std::io::Error::other)?;
     let mut file = open_new(path)?;
     if !made_at(&file, path).unwrap_or(false) {
-        remove_open(&file);
+        // Refused either way; if even deleting fails, all that's left is an empty file.
+        let _ = remove_open(&file);
         return Err(std::io::Error::other("the report file was made somewhere else"));
     }
     file.write_all(&json)
@@ -145,20 +146,30 @@ fn made_at(_file: &std::fs::File, _path: &Path) -> std::io::Result<bool> {
     Ok(true)
 }
 
-/// Deletes the open `file` (through its handle, so it's this file whatever its path is by now).
-fn remove_open(file: &std::fs::File) {
+/// Deletes the open `file` (through its handle, so it's this file whatever its path is by now). Its
+/// name goes when this handle closes, even if something else (an antivirus scanner) has it open too;
+/// where Windows can't do that (before Windows 10 1709, or not NTFS), when the last handle closes.
+fn remove_open(file: &std::fs::File) -> std::io::Result<()> {
     #[cfg(windows)]
     {
         use std::os::windows::io::AsRawHandle;
         use windows::Win32::Foundation::HANDLE;
-        use windows::Win32::Storage::FileSystem::{FILE_DISPOSITION_INFO, FileDispositionInfo, SetFileInformationByHandle};
-        let delete = FILE_DISPOSITION_INFO { DeleteFile: true };
-        // SAFETY: an open handle with DELETE access, and the struct the info class asks for. The file
-        // goes when the handle closes.
-        let _ = unsafe { SetFileInformationByHandle(HANDLE(file.as_raw_handle()), FileDispositionInfo, (&raw const delete).cast(), size_of::<FILE_DISPOSITION_INFO>() as u32) };
+        use windows::Win32::Storage::FileSystem::{
+            FILE_DISPOSITION_FLAG_DELETE, FILE_DISPOSITION_FLAG_POSIX_SEMANTICS, FILE_DISPOSITION_INFO, FILE_DISPOSITION_INFO_EX, FILE_DISPOSITION_INFO_EX_FLAGS,
+            FileDispositionInfo, FileDispositionInfoEx, SetFileInformationByHandle,
+        };
+        let handle = HANDLE(file.as_raw_handle());
+        let now = FILE_DISPOSITION_INFO_EX { Flags: FILE_DISPOSITION_INFO_EX_FLAGS(FILE_DISPOSITION_FLAG_DELETE.0 | FILE_DISPOSITION_FLAG_POSIX_SEMANTICS.0) };
+        // SAFETY: an open handle with DELETE access, and the struct each info class asks for.
+        let removed = unsafe { SetFileInformationByHandle(handle, FileDispositionInfoEx, (&raw const now).cast(), size_of::<FILE_DISPOSITION_INFO_EX>() as u32) };
+        if removed.is_err() {
+            let on_close = FILE_DISPOSITION_INFO { DeleteFile: true };
+            unsafe { SetFileInformationByHandle(handle, FileDispositionInfo, (&raw const on_close).cast(), size_of::<FILE_DISPOSITION_INFO>() as u32) }?;
+        }
     }
     #[cfg(not(windows))]
     let _ = file;
+    Ok(())
 }
 
 /// Whether `folder` or any folder above it is a junction or a symbolic link. Other reparse points,
@@ -364,6 +375,20 @@ mod tests {
         let windows_path = |p: &Path| p.to_string_lossy().replace('/', "\\");
         let made = std::process::Command::new("cmd").args(["/C", "mklink", "/J"]).arg(windows_path(link)).arg(windows_path(target)).output().unwrap();
         assert!(made.status.success(), "{made:?}");
+    }
+
+    #[test]
+    fn a_file_made_in_the_wrong_place_goes_even_while_something_else_has_it_open() {
+        // An antivirus scanner may open a new file the moment it's made; its name must still go when the
+        // helper lets go, not when the scanner does (or never, if it holds on past the helper's exit).
+        use std::os::windows::fs::OpenOptionsExt;
+        let path = scratch("held").join("fettle-deep-1-1.json");
+        let file = std::fs::OpenOptions::new().write(true).create_new(true).access_mode(0x4000_0000 | 0x0001_0000).share_mode(7).open(&path).unwrap();
+        let scanner = std::fs::OpenOptions::new().read(true).share_mode(7).open(&path).unwrap();
+        remove_open(&file).unwrap();
+        drop(file);
+        assert!(!path.exists(), "the name is gone while the other handle is still open");
+        drop(scanner);
     }
 
     #[test]

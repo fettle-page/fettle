@@ -32,7 +32,10 @@ describe("the daily upload budget", () => {
     const stub = fresh();
     await takes(stub, 3, today() - 2 * DAY);
     await runDurableObjectAlarm(stub);
-    expect(await runInDurableObject(stub, async (_, state) => (await state.storage.list()).size)).toBe(0);
+    // The day ended two days ago, so the clean-up alarm was due the moment it was set: workerd may run
+    // it on its own, and then runDurableObjectAlarm finds none while that run is still on its way.
+    // Wait for the clean-up, whichever of the two runs it.
+    await vi.waitFor(async () => expect(await runInDurableObject(stub, async (_, state) => (await state.storage.list()).size)).toBe(0));
   });
 
   it("is named by a hash, never by the address", async () => {

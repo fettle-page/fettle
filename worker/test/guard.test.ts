@@ -1,6 +1,6 @@
 import { env } from "cloudflare:workers";
 import { runDurableObjectAlarm, runInDurableObject } from "cloudflare:test";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { GUESSES_PER_DAY, GUESSES_PER_VISITOR_PER_DAY, type UnlockGuard } from "../src/guard.ts";
 import { DAY } from "./helpers.ts";
 
@@ -54,7 +54,10 @@ describe("UnlockGuard", () => {
     expect(keys.length).toBeGreaterThan(0);
     expect(keys.join(" ")).not.toContain("198.51.100");
     await runDurableObjectAlarm(stub);
-    expect(await runInDurableObject(stub, async (_, state) => (await state.storage.list()).size)).toBe(0);
+    // The day ended two days ago, so the clean-up alarm was due the moment it was set: workerd may run
+    // it on its own, and then runDurableObjectAlarm finds none while that run is still on its way.
+    // Wait for the clean-up, whichever of the two runs it.
+    await vi.waitFor(async () => expect(await runInDurableObject(stub, async (_, state) => (await state.storage.list()).size)).toBe(0));
   });
 
   it("gives a right password's tries back", async () => {

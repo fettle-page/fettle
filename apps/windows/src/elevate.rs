@@ -30,7 +30,8 @@ pub enum Helper {
 }
 
 /// What the command line asks of this copy. The helper runs as administrator, so it only writes a new
-/// `fettle-deep-*.json` at an absolute local path (never a network share or a `\\?\` or `\\.\` device path).
+/// `fettle-deep-*.json` at an absolute local path (never a network share, a `\\?\` or `\\.\` device path,
+/// or a stream inside a file).
 pub fn helper_target(args: impl IntoIterator<Item = String>) -> Helper {
     let mut args = args.into_iter().skip(1);
     while let Some(a) = args.next() {
@@ -46,7 +47,7 @@ pub fn helper_target(args: impl IntoIterator<Item = String>) -> Helper {
 
 fn acceptable(path: &Path) -> bool {
     let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
-    !path.as_os_str().to_string_lossy().starts_with(r"\\") && path.is_absolute() && name.starts_with("fettle-deep-") && name.ends_with(".json")
+    !path.as_os_str().to_string_lossy().starts_with(r"\\") && path.is_absolute() && name.starts_with("fettle-deep-") && name.ends_with(".json") && !name.contains(':')
 }
 
 /// The report file the helper is asked to write into `dir`, checked the way the helper will check it,
@@ -72,12 +73,6 @@ fn local_form(path: PathBuf) -> Option<PathBuf> {
     (drive.len() >= 3 && drive[0].is_ascii_alphabetic() && drive[1] == b':' && drive[2] == b'\\').then(|| PathBuf::from(plain))
 }
 
-/// Writes `report` to a file that must not exist yet (never overwrites one).
-pub fn write_new(path: &Path, report: &Report) -> std::io::Result<()> {
-    let json = serde_json::to_vec(report).map_err(std::io::Error::other)?;
-    std::fs::OpenOptions::new().write(true).create_new(true).open(path)?.write_all(&json)
-}
-
 /// Writes the helper's report: only a new file, and only into real folders all the way up (a junction
 /// or link anywhere on the path could point anywhere the administrator can write).
 pub fn write_report(path: &Path, report: &Report) -> std::io::Result<()> {
@@ -85,7 +80,85 @@ pub fn write_report(path: &Path, report: &Report) -> std::io::Result<()> {
     if through_a_link(folder)? {
         return Err(std::io::Error::other("the path goes through a junction or a link"));
     }
-    write_new(path, report)
+    write_where_asked(path, report)
+}
+
+/// Makes the new file, then checks where Windows actually made it before writing a byte: a folder
+/// swapped for a junction after the check above (a race) would have sent it elsewhere. If it isn't
+/// at `path` itself, it's removed again and nothing is written.
+fn write_where_asked(path: &Path, report: &Report) -> std::io::Result<()> {
+    let json = serde_json::to_vec(report).map_err(std::io::Error::other)?;
+    let mut file = open_new(path)?;
+    if !made_at(&file, path).unwrap_or(false) {
+        remove_open(&file);
+        return Err(std::io::Error::other("the report file was made somewhere else"));
+    }
+    file.write_all(&json)
+}
+
+/// A new file that no one else can open while the helper has it, and that it may delete.
+fn open_new(path: &Path) -> std::io::Result<std::fs::File> {
+    let mut options = std::fs::OpenOptions::new();
+    options.write(true).create_new(true);
+    #[cfg(windows)]
+    {
+        use std::os::windows::fs::OpenOptionsExt;
+        use windows::Win32::Foundation::GENERIC_WRITE;
+        use windows::Win32::Storage::FileSystem::DELETE;
+        options.access_mode(GENERIC_WRITE.0 | DELETE.0).share_mode(0);
+    }
+    options.open(path)
+}
+
+/// Whether the open `file` is `path`: its final path (junctions and links followed) is the same
+/// local path, letter for letter but for case.
+#[cfg(windows)]
+fn made_at(file: &std::fs::File, path: &Path) -> std::io::Result<bool> {
+    use std::os::windows::ffi::{OsStrExt, OsStringExt};
+    use std::os::windows::io::AsRawHandle;
+    use windows::Win32::Foundation::HANDLE;
+    use windows::Win32::Globalization::{CSTR_EQUAL, CompareStringOrdinal};
+    use windows::Win32::Storage::FileSystem::{FILE_NAME_NORMALIZED, GETFINALPATHNAMEBYHANDLE_FLAGS, GetFinalPathNameByHandleW, VOLUME_NAME_DOS};
+
+    let handle = HANDLE(file.as_raw_handle());
+    let mut buf = vec![0u16; 512];
+    loop {
+        // SAFETY: an open handle and a buffer of the length passed.
+        let len = unsafe { GetFinalPathNameByHandleW(handle, &mut buf, GETFINALPATHNAMEBYHANDLE_FLAGS(FILE_NAME_NORMALIZED.0 | VOLUME_NAME_DOS.0)) } as usize;
+        if len == 0 {
+            return Err(std::io::Error::last_os_error());
+        }
+        if len < buf.len() {
+            buf.truncate(len);
+            break;
+        }
+        buf.resize(len + 1, 0);
+    }
+    let Some(made) = local_form(PathBuf::from(std::ffi::OsString::from_wide(&buf))) else { return Ok(false) };
+    let (made, asked): (Vec<u16>, Vec<u16>) = (made.as_os_str().encode_wide().collect(), path.as_os_str().encode_wide().collect());
+    // SAFETY: two whole UTF-16 strings.
+    Ok(unsafe { CompareStringOrdinal(&made, &asked, true) } == CSTR_EQUAL)
+}
+
+#[cfg(not(windows))]
+fn made_at(_file: &std::fs::File, _path: &Path) -> std::io::Result<bool> {
+    Ok(true)
+}
+
+/// Deletes the open `file` (through its handle, so it's this file whatever its path is by now).
+fn remove_open(file: &std::fs::File) {
+    #[cfg(windows)]
+    {
+        use std::os::windows::io::AsRawHandle;
+        use windows::Win32::Foundation::HANDLE;
+        use windows::Win32::Storage::FileSystem::{FILE_DISPOSITION_INFO, FileDispositionInfo, SetFileInformationByHandle};
+        let delete = FILE_DISPOSITION_INFO { DeleteFile: true };
+        // SAFETY: an open handle with DELETE access, and the struct the info class asks for. The file
+        // goes when the handle closes.
+        let _ = unsafe { SetFileInformationByHandle(HANDLE(file.as_raw_handle()), FileDispositionInfo, (&raw const delete).cast(), size_of::<FILE_DISPOSITION_INFO>() as u32) };
+    }
+    #[cfg(not(windows))]
+    let _ = file;
 }
 
 /// Whether `folder` or any folder above it is a junction or a symbolic link. Other reparse points,
@@ -260,7 +333,8 @@ mod tests {
         let good = dir.join("fettle-deep-123-456.json");
         assert_eq!(helper_target(args(&["fettle.exe", "--deep-scan", good.to_str().unwrap()])), Helper::Write(good.clone()));
         // Any other file name is refused: the helper runs as administrator.
-        for bad in [r"C:\Windows\System32\drivers\etc\hosts", r"C:\Users\x\fettle-deep-1.txt", r"C:\Users\x\settings.json", "fettle-deep-1-1.json", r"Fettle data\fettle-deep-1-1.json"] {
+        // Nor a stream inside a file ("name:stream"), which the name alone would let through.
+        for bad in [r"C:\Windows\System32\drivers\etc\hosts", r"C:\Users\x\fettle-deep-1.txt", r"C:\Users\x\settings.json", "fettle-deep-1-1.json", r"Fettle data\fettle-deep-1-1.json", r"C:\Users\x\fettle-deep-1-1.json:x.json", r"C:\Users\x\settings.json:fettle-deep-1-1.json"] {
             assert_eq!(helper_target(args(&["fettle.exe", "--deep-scan", bad])), Helper::Refuse, "{bad}");
         }
         assert_eq!(helper_target(args(&["fettle.exe", "--deep-scan"])), Helper::Refuse);
@@ -271,21 +345,50 @@ mod tests {
 
     #[test]
     fn the_helper_never_overwrites_a_file() {
-        let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/tmp/fettle-elevate");
-        std::fs::create_dir_all(&dir).unwrap();
-        let path = dir.join("fettle-deep-1-1.json");
-        let _ = std::fs::remove_file(&path);
-        let report = Report { schema_version: 1, app_version: "1.0.0".into(), engine_version: None, collected_at: "2026-10-10T10:00:00Z".into(), elevated: true, facts: Default::default() };
-        assert!(write_new(&path, &report).is_ok());
-        assert!(write_new(&path, &report).is_err(), "already there");
-        let _ = std::fs::remove_file(&path);
+        let path = scratch("overwrite").join("fettle-deep-1-1.json");
+        assert!(write_report(&path, &a_report()).is_ok());
+        assert!(write_report(&path, &a_report()).is_err(), "already there");
     }
 
+    /// A fresh folder for a test, by its real path (as the app hands the helper one).
     fn scratch(name: &str) -> PathBuf {
         let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/tmp/fettle-elevate").join(name);
         let _ = std::fs::remove_dir_all(&dir);
         std::fs::create_dir_all(&dir).unwrap();
-        dir
+        local_form(std::fs::canonicalize(&dir).unwrap()).unwrap()
+    }
+
+    fn junction(link: &Path, target: &Path) {
+        // mklink reads a "/" in an unquoted path as a switch (a path without spaces isn't quoted), so
+        // hand it backslashes only.
+        let windows_path = |p: &Path| p.to_string_lossy().replace('/', "\\");
+        let made = std::process::Command::new("cmd").args(["/C", "mklink", "/J"]).arg(windows_path(link)).arg(windows_path(target)).output().unwrap();
+        assert!(made.status.success(), "{made:?}");
+    }
+
+    #[test]
+    fn the_report_lands_only_where_the_helper_was_asked_to_write_it() {
+        // The folders were checked before the file was made, but a folder swapped for a junction in
+        // between would send the file elsewhere: the file Windows actually made is checked too, and
+        // removed before anything is written to it.
+        let dir = scratch("swapped");
+        let real = dir.join("real");
+        std::fs::create_dir_all(&real).unwrap();
+        let link = dir.join("link");
+        junction(&link, &real);
+        assert!(write_where_asked(&link.join("fettle-deep-1-1.json"), &a_report()).is_err(), "made through a junction");
+        assert!(!real.join("fettle-deep-1-1.json").exists(), "and gone again");
+        // A path that only gets there by going up and down again isn't the one asked for either.
+        let roundabout = real.join("..").join("real").join("fettle-deep-1-2.json");
+        assert!(write_where_asked(&roundabout, &a_report()).is_err(), "{roundabout:?}");
+        assert!(!real.join("fettle-deep-1-2.json").exists());
+        // The path itself, in any case (Windows paths aren't case-sensitive), is written.
+        let upper = PathBuf::from(real.join("fettle-deep-1-3.json").to_str().unwrap().to_uppercase());
+        write_where_asked(&upper, &a_report()).unwrap();
+        let written: Report = serde_json::from_slice(&std::fs::read(real.join("fettle-deep-1-3.json")).unwrap()).unwrap();
+        assert_eq!(written, a_report());
+        std::fs::remove_dir(&link).unwrap();
+        let _ = std::fs::remove_dir_all(&dir);
     }
 
     fn a_report() -> Report {
@@ -309,6 +412,8 @@ mod tests {
         let path = deep_report_path(&dir, 7, 9).expect("a local folder");
         assert_eq!(path, local_form(std::fs::canonicalize(&dir).unwrap()).unwrap().join("fettle-deep-7-9.json"));
         assert_eq!(helper_target(args(&["fettle.exe", "--deep-scan", path.to_str().unwrap()])), Helper::Write(path.clone()));
+        // And the helper writes there: the path the app hands it is one it accepts all the way.
+        write_report(&path, &a_report()).unwrap();
     }
 
     #[test]
@@ -326,11 +431,7 @@ mod tests {
         let real = dir.join("real");
         std::fs::create_dir_all(&real).unwrap();
         let link = dir.join("link");
-        // mklink reads a "/" in an unquoted path as a switch (a path without spaces isn't quoted), so
-        // hand it backslashes only.
-        let windows_path = |p: &std::path::Path| p.to_string_lossy().replace('/', "\\");
-        let made = std::process::Command::new("cmd").args(["/C", "mklink", "/J"]).arg(windows_path(&link)).arg(windows_path(&real)).output().unwrap();
-        assert!(made.status.success(), "{made:?}");
+        junction(&link, &real);
         assert!(write_report(&link.join("fettle-deep-1-1.json"), &a_report()).is_err(), "a junction may point anywhere");
         assert!(!real.join("fettle-deep-1-1.json").exists());
         assert!(write_report(&real.join("fettle-deep-1-1.json"), &a_report()).is_ok());

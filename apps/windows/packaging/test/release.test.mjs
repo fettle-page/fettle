@@ -98,6 +98,18 @@ describe("workflows", () => {
     assert.equal(pins[0], pins[1]);
   });
 
+  // There's no .nvmrc (repo-files refuses hidden files), so package.json's engines field is where the
+  // repo says which Node it needs, and it must be the major version the workflows build with.
+  it("package.json's engines field asks for the Node version the workflows run", () => {
+    const node = JSON.parse(readFileSync(join(root, "package.json"), "utf8")).engines?.node;
+    assert.ok(node, "package.json has engines.node");
+    for (const name of ["ci.yml", "release.yml"]) {
+      const version = /^\s+node-version: (\d+)$/m.exec(workflow(name));
+      assert.ok(version, `${name} sets node-version to a major version`);
+      assert.match(node, new RegExp(`^>=${version[1]}(\\.\\d+){0,2}$`), name);
+    }
+  });
+
   it("ci.yml runs every test on pushes and pull requests", () => {
     const ci = workflow("ci.yml");
     assert.match(ci, /^\s+push:/m);

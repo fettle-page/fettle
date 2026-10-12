@@ -18,7 +18,7 @@ describe("the brain", () => {
 
   it("an offset zone shows local time without UTC", () => {
     const { model } = brain.receiptFor(report(files[0]!), "it", { offsetMinutes: 120 });
-    expect(model.meta.when).toBe("06/10/2026 23:26");
+    expect(model.meta.when).toBe("06/10/2026 12:35");
   });
 
   it("text() reads the crates' copy, in both catalogs", () => {

@@ -5,9 +5,9 @@
       "status": "ok"
     },
     "data": {
-      "cycle_count": 142,
-      "design_capacity_mwh": 35300,
-      "full_charge_capacity_mwh": 30540
+      "cycle_count": 312,
+      "design_capacity_mwh": 45000,
+      "full_charge_capacity_mwh": 36500
     }
   },
   "graphics": {
@@ -19,11 +19,11 @@
       "adapters": [
         {
           "driver_date": "2022-08-16",
-          "driver_version": "31.0.12024.0",
-          "name": "AMD Radeon Graphics",
+          "driver_version": "31.0.101.2111",
+          "name": "Intel UHD Graphics 620",
           "software": false,
           "temperature_c": null,
-          "vram_bytes": 521334784
+          "vram_bytes": 134217728
         },
         {
           "driver_date": null,
@@ -44,15 +44,15 @@
     "data": {
       "modules": [
         {
-          "bank_label": "P0 CHANNEL B",
-          "capacity_bytes": 4294967296,
+          "bank_label": "BANK 0",
+          "capacity_bytes": 8589934592,
           "configured_speed_mts": 2400,
           "configured_voltage_mv": 1200,
-          "device_locator": "DIMM 0",
+          "device_locator": "ChannelA-DIMM0",
           "form_factor": null,
           "kind": "ddr4",
-          "manufacturer": "Micron Technology",
-          "part_number": "4ATF51264HZ-2G6E!",
+          "manufacturer": "Samsung",
+          "part_number": "M471A1K43CB1-CRC",
           "speed_mts": 2400
         }
       ],
@@ -69,27 +69,17 @@
         {
           "enabled": false,
           "location": "run_key",
+          "name": "OneDrive"
+        },
+        {
+          "enabled": false,
+          "location": "run_key",
           "name": "Teams"
-        },
-        {
-          "enabled": true,
-          "location": "run_key",
-          "name": "RemoteWebControl"
-        },
-        {
-          "enabled": null,
-          "location": "run_key",
-          "name": "GoogleDriveFS"
         },
         {
           "enabled": null,
           "location": "run_key",
           "name": "MicrosoftEdgeAutoLaunch_0123456789ABCDEF0123456789ABCDEF"
-        },
-        {
-          "enabled": null,
-          "location": "run_key",
-          "name": "RiotClient"
         },
         {
           "enabled": true,
@@ -102,39 +92,19 @@
           "name": "RtkAudUService"
         },
         {
-          "enabled": false,
-          "location": "run_key",
-          "name": "Reflect UI"
-        },
-        {
           "enabled": null,
           "location": "run_key",
-          "name": "Autodesk Access Service"
-        },
-        {
-          "enabled": null,
-          "location": "run_key",
-          "name": "Autodesk Access"
+          "name": "Example Tray "
         },
         {
           "enabled": false,
           "location": "run_key",
-          "name": "LocalServiceControl"
-        },
-        {
-          "enabled": true,
-          "location": "run_key",
-          "name": "WebPluginService"
-        },
-        {
-          "enabled": null,
-          "location": "run_key",
-          "name": "Autodesk Genuine Service "
+          "name": "Example Updater"
         },
         {
           "enabled": false,
           "location": "folder",
-          "name": "AnyDesk.lnk"
+          "name": "Example Remote.lnk"
         }
       ]
     }
@@ -149,15 +119,15 @@
         {
           "bus": "nvme",
           "media": "ssd",
-          "model": "WDC PC SN520 SDAPMUW-256G-1101",
+          "model": "SK hynix BC501 HFM256GDJTNG-8310A",
           "nvme": {
             "available_spare_pct": 100,
             "available_spare_threshold_pct": 10,
             "critical_warning": 0,
             "media_errors": 0,
-            "percentage_used": 1,
-            "power_on_hours": 366,
-            "temperature_c": 36
+            "percentage_used": 3,
+            "power_on_hours": 2210,
+            "temperature_c": 38
           },
           "size_bytes": 256060514304,
           "smart": null
@@ -165,9 +135,9 @@
         {
           "bus": "usb",
           "media": "unknown",
-          "model": "Kingston DataTraveler 3.0",
+          "model": "SanDisk Ultra",
           "nvme": null,
-          "size_bytes": 124117843968,
+          "size_bytes": 30752636928,
           "smart": null
         }
       ],
@@ -187,19 +157,19 @@
     },
     "data": {
       "bios_date": "2023-04-10",
-      "bios_version": "E8CN39WW",
-      "board": "LENOVO LNVNB161216",
+      "bios_version": "TEST1.07W",
+      "board": "Example Laptops EXL-14 TEST",
       "chassis": "laptop",
-      "cores": 2,
-      "cpu_name": "AMD Ryzen 3 3250U with Radeon Graphics",
+      "cores": 4,
+      "cpu_name": "Intel Core i5-8250U CPU @ 1.60GHz",
       "displays": [
         {
-          "height_cm": 19,
+          "height_cm": 17,
           "name": null,
-          "width_cm": 34
+          "width_cm": 31
         }
       ],
-      "threads": 4
+      "threads": 8
     }
   },
   "windows": {
@@ -210,18 +180,18 @@
     "data": {
       "build": 19045,
       "display_version": "22H2",
-      "edition_id": "ProfessionalEducation",
+      "edition_id": "Professional",
       "esu": null,
       "installation_type": "Client",
-      "last_update_installed": "2026-09-25",
-      "product": "Windows 10 Pro Education",
+      "last_update_installed": "2026-09-10",
+      "product": "Windows 10 Pro",
       "secure_boot": false,
       "tpm": {
         "present": true,
         "spec_version": "2.0, 0, 1.38"
       },
-      "ubr": 6466,
-      "uptime_seconds": 15171
+      "ubr": 6456,
+      "uptime_seconds": 264840
     }
   }
 }

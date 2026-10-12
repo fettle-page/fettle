@@ -1,9 +1,9 @@
-// Reports for the test page: the dev-workstation dumps as the Rust scan reports them (their cases in
-// the receipt corpus), plus a made-up tired laptop that trips every verdict level and the awkward
+// Reports for the test page: the made-up desktop's dumps as the Rust scan reports them (their cases
+// in the receipt corpus), plus a made-up tired laptop that trips every verdict level and the awkward
 // inputs (empty values, odd sizes, partial scans).
 import { parseReport, type Report } from "@fettle/report-schema";
-import adminSmart from "../../../crates/fettle-receipt/tests/parity/cases/dump-dev-workstation-admin-1791322268.json" with { type: "json" };
-import user from "../../../crates/fettle-receipt/tests/parity/cases/dump-dev-workstation-user-1791321847.json" with { type: "json" };
+import adminSmart from "../../../crates/fettle-receipt/tests/parity/cases/dump-dev-workstation-admin-1791282900.json" with { type: "json" };
+import user from "../../../crates/fettle-receipt/tests/parity/cases/dump-dev-workstation-user-1791282600.json" with { type: "json" };
 
 function valid(input: unknown): Report {
   const parsed = parseReport(input);

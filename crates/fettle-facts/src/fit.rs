@@ -111,7 +111,7 @@ mod tests {
     use serde_json::Value;
 
     fn sample() -> Report {
-        let case = concat!(env!("CARGO_MANIFEST_DIR"), "/../fettle-receipt/tests/parity/cases/dump-dev-workstation-user-1791321847.json");
+        let case = concat!(env!("CARGO_MANIFEST_DIR"), "/../fettle-receipt/tests/parity/cases/dump-dev-workstation-user-1791282600.json");
         let case: Value = serde_json::from_str(&std::fs::read_to_string(case).unwrap()).unwrap();
         serde_json::from_value(case["report"].clone()).unwrap()
     }
@@ -231,7 +231,7 @@ mod every_field {
     #[test]
     #[ignore]
     fn write_a_report_with_every_limited_field_overlong_then_fitted() {
-        let case = concat!(env!("CARGO_MANIFEST_DIR"), "/../fettle-receipt/tests/parity/cases/dump-dev-workstation-admin-1791321978.json");
+        let case = concat!(env!("CARGO_MANIFEST_DIR"), "/../fettle-receipt/tests/parity/cases/dump-dev-workstation-admin-1791282900.json");
         let case: Value = serde_json::from_str(&std::fs::read_to_string(case).unwrap()).unwrap();
         let schema = serde_json::to_value(schemars::schema_for!(Report)).unwrap();
         let mut value = case["report"].clone();

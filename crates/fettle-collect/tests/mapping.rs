@@ -27,15 +27,10 @@ fn stem(path: &Path) -> String {
     path.file_stem().unwrap().to_string_lossy().into_owned()
 }
 
-/// The tracked dumps: the corpus's, then made-up scans with odd values they don't have.
-fn corpus_dumps() -> Vec<PathBuf> {
-    json_files(root().join("../../spike/dumps"))
-}
-
-fn all_dumps() -> Vec<PathBuf> {
-    let mut all = corpus_dumps();
-    all.extend(json_files(root().join("tests/dumps")));
-    all
+/// The tracked dumps: made-up scans of a desktop and a Windows 10 laptop (each as a user and as an
+/// administrator), and one with odd values.
+fn dumps() -> Vec<PathBuf> {
+    json_files(root().join("tests/dumps"))
 }
 
 fn load(path: &Path) -> Dump {
@@ -45,7 +40,7 @@ fn load(path: &Path) -> Dump {
 #[test]
 fn each_dump_maps_to_its_pinned_facts() {
     let mut checked = 0;
-    for path in all_dumps() {
+    for path in dumps() {
         let name = stem(&path);
         let dump = load(&path);
         let got = serde_json::to_value(fettle_collect::map::facts(&dump.sources, dump.collected_at())).unwrap();
@@ -60,7 +55,7 @@ fn each_dump_maps_to_its_pinned_facts() {
         assert_eq!(got, want, "{name}");
         checked += 1;
     }
-    assert_eq!(checked, 6);
+    assert_eq!(checked, 5);
 }
 
 /// The receipt corpus's dump cases hold the report this crate makes of each dump, envelope and
@@ -69,7 +64,7 @@ fn each_dump_maps_to_its_pinned_facts() {
 fn the_receipt_corpus_holds_the_report_made_from_each_dump() {
     let cases = root().join("../fettle-receipt/tests/parity/cases");
     let mut checked = 0;
-    for path in corpus_dumps() {
+    for path in dumps() {
         let name = format!("dump-{}", stem(&path));
         let got = serde_json::to_value(load(&path).report()).unwrap();
         let case: Value = serde_json::from_str(&fs::read_to_string(cases.join(format!("{name}.json"))).expect("a corpus case for each dump")).unwrap();

@@ -1,6 +1,6 @@
 //! Scans this PC and builds a Fettle report.
 //!
-//! Sources (Windows only) return raw JSON in the same shape as a spike dump entry, all in parallel.
+//! Sources (Windows only) return raw JSON, all in parallel: the shape a saved scan (`dump`) keeps.
 //! The mapping turns that raw data into typed facts on any OS, and the privacy pass runs last.
 
 pub mod dump;

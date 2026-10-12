@@ -1,8 +1,6 @@
 [workspace]
 resolver = "3"
 members = ["crates/fettle-facts", "crates/fettle-collect", "crates/fettle-verdicts", "crates/fettle-receipt", "crates/fettle-wasm", "apps/windows"]
-# The spike is throwaway and has its own toolchain settings.
-exclude = ["spike"]
 
 # The receipt as WebAssembly for the website and share Worker (crates/fettle-wasm): small over fast.
 # Its own profile, so the Windows app's release build is untouched.

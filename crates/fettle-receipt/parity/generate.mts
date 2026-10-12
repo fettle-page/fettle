@@ -5,8 +5,9 @@
 // `npm run parity:goldens` runs this: it writes each case's report, keeping the expected receipt of
 // any report that didn't change, then has the Rust receipt fill in what's new or changed
 // (FETTLE_REGEN_GOLDENS=1, tests/parity.rs). Since 2026-10-10 the Rust receipt is the only one.
-// The dump cases come from crates/fettle-collect (examples/map_dump.rs), whose own pinned facts
-// (tests/mapping.rs) are rewritten in the same run.
+// The dump cases come from crates/fettle-collect's made-up scans (tests/dumps, through
+// examples/map_dump.rs), whose own pinned facts (tests/mapping.rs, tests/report.rs) are rewritten
+// in the same run.
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
@@ -195,7 +196,7 @@ export function generateReports(seed: number, count: number): Report[] {
 
 const here = (rel: string) => fileURLToPath(new URL(rel, import.meta.url));
 export const CASES_DIR = here("../tests/parity/cases");
-const DUMPS = here("../../../spike/dumps");
+const DUMPS = here("../../fettle-collect/tests/dumps");
 const SEED = 20261009;
 const GENERATED = 400;
 
@@ -249,8 +250,8 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
   console.log(`parity: ${written} report(s) written, ${kept} unchanged`);
   const env = { ...CARGO_ENV, FETTLE_REGEN_GOLDENS: "1" };
   const cargo = (args: string[]) => spawnSync("cargo", args, { cwd: ROOT, env, stdio: "inherit" }).status ?? 1;
-  // The mapping's pinned facts, then the receipts.
-  const mapping = cargo(["test", "-q", "-p", "fettle-collect", "--test", "mapping"]);
+  // The mapping's pinned facts and the hostile report (both made from the dumps), then the receipts.
+  const mapping = cargo(["test", "-q", "-p", "fettle-collect", "--test", "mapping", "--test", "report"]);
   if (mapping !== 0) process.exit(mapping);
   process.exit(cargo(["test", "-q", "-p", "fettle-receipt", "--test", "parity", "regenerate_goldens", "--", "--nocapture"]));
 }

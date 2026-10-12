@@ -117,8 +117,10 @@ describe("tracked files", () => {
   });
 
   it("allows the repo's own dotfiles, the workflows, READMEs, SECURITY.md and the site's .well-known", () => {
-    const ok = [".gitattributes", ".gitignore", ".github/workflows/ci.yml", ".github/actions/windows-deps/action.yml", "README.md", "worker/README.md", "SECURITY.md", "packages/brain/.gitignore", "apps/web/public/.well-known/security.txt", "spike/.cargo/config.toml"];
+    const ok = [".gitattributes", ".gitignore", ".github/workflows/ci.yml", ".github/actions/windows-deps/action.yml", "README.md", "worker/README.md", "SECURITY.md", "packages/brain/.gitignore", "apps/web/public/.well-known/security.txt"];
     assert.deepEqual(unexpectedPaths(ok), []);
+    // The spike and its build settings are gone (2026-10-12): nothing hidden comes back under it.
+    assert.deepEqual(unexpectedPaths(["spike/.cargo/config.toml"]), ["spike/.cargo/config.toml"]);
     assert.deepEqual(unexpectedPaths(["docs/SECURITY.md"]), ["docs/SECURITY.md"]);
     // Only the one shared action, and only its action.yml.
     const actions = [".github/actions/other/action.yml", ".github/actions/windows-deps/run.ps1"];

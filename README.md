@@ -82,7 +82,7 @@ The [code signing policy](https://fettle.page/code-signing) explains how release
 | Path | What it is |
 |---|---|
 | `crates/fettle-facts` | The report format, in Rust (the app's collectors produce it). JSON Schema and zod are generated from it. |
-| `crates/fettle-collect` | The Windows scan: reads every source in parallel, maps it to the report and hides private details. |
+| `crates/fettle-collect` | The Windows scan: reads every source in parallel, maps it to the report and hides private details. In `kit/`, the test kit for other PCs. |
 | `crates/fettle-verdicts` | The verdict engine: facts in, plain-words verdicts out (English and Italian). |
 | `crates/fettle-receipt` | The receipt everyone shows: verdicts, wording and numbers, already in one language. Its copy lives in `copy/*.json`. |
 | `crates/fettle-wasm` | The receipt as WebAssembly, for the website build and the share Worker. |
@@ -93,7 +93,6 @@ The [code signing policy](https://fettle.page/code-signing) explains how release
 | `packages/share-client` | The app's side of share links: upload and delete, tested against the Worker. |
 | `apps/web` | The website (Astro, static), including the share page. |
 | `worker` | A Cloudflare Worker: serves the website and the share-link API (R2 storage). |
-| `spike` | A throwaway Rust CLI used to test Windows data sources. |
 | `assets/brand` | Logo and app icon. |
 | `.github/workflows` | CI runs every test on each push; a version tag builds the downloads and drafts a GitHub release. |
 
@@ -111,7 +110,7 @@ npm run dev:share             # the website + share Worker on http://localhost:8
 node worker/scripts/seed.mjs  # upload a sample report to the local Worker and print its links
 cargo test --workspace        # the Rust crates
 cargo run -p fettle-collect   # scan this PC and print the report (Windows)
-npm run kit                   # build target/fettle-test-kit.zip to run on other PCs
+npm run kit                   # build target/fettle-test-kit.zip (crates/fettle-collect/kit) to run on other PCs
 npm run package:windows       # the installer, portable zip and SHA256SUMS.txt in target/package (needs Inno Setup 6)
 ```
 

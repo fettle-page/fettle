@@ -659,25 +659,20 @@ mod tests {
 
     #[test]
     fn system_from_the_dev_workstation_dump() {
-        #[derive(serde::Deserialize)]
-        struct Dump {
-            sources: Raw,
-        }
-        let text = include_str!("../../../spike/dumps/dev-workstation-user-1791321847.json");
-        let dump: Dump = serde_json::from_str(text).unwrap();
+        let dump = crate::dump::Dump::from_json(include_str!("../tests/dumps/dev-workstation-user-1791282600.json")).unwrap();
         let sys = system(&Sources(&dump.sources));
         assert_eq!(sys.check.status, CheckStatus::Ok);
         assert_eq!(
             sys.data.unwrap(),
             System {
-                cpu_name: Some("AMD Ryzen 7 9800X3D 8-Core Processor".into()),
+                cpu_name: Some("AMD Ryzen 7 7700X 8-Core Processor".into()),
                 cores: Some(8),
                 threads: Some(16),
-                board: Some("Gigabyte Technology Co., Ltd. X870E AORUS MASTER X3D".into()),
-                bios_version: Some("F8a".into()),
-                bios_date: Some("2026-09-23".into()),
+                board: Some("Example Boards Ltd. EX-B650 TEST".into()),
+                bios_version: Some("TEST-1.02".into()),
+                bios_date: Some("2026-08-15".into()),
                 chassis: Some(Chassis::Desktop),
-                displays: vec![Display { name: Some("Odyssey G80SH".into()), width_cm: Some(60), height_cm: Some(34) }],
+                displays: vec![Display { name: Some("Test Monitor 27".into()), width_cm: Some(60), height_cm: Some(34) }],
             }
         );
     }

@@ -1,25 +1,17 @@
 //! Raw sources to the finished report: envelope, mapping and the privacy pass together.
 
+use fettle_collect::dump::Dump;
 use fettle_collect::{Raw, build_report};
 use fettle_facts::redact::Redactor;
 use fettle_facts::{CheckStatus, Report, SCHEMA_VERSION};
-use serde::Deserialize;
-use std::time::{Duration, UNIX_EPOCH};
-
-#[derive(Deserialize)]
-struct Dump {
-    collected_at_unix: u64,
-    elevated: bool,
-    sources: Raw,
-}
 
 fn dump() -> Dump {
-    serde_json::from_str(include_str!("../../../spike/dumps/dev-workstation-user-1791321847.json")).unwrap()
+    Dump::from_json(include_str!("dumps/dev-workstation-user-1791282600.json")).unwrap()
 }
 
 fn build(raw: &Raw, d: &Dump) -> Report {
     let redactor = Redactor::new(["jdoe"], "DESKTOP-ABC");
-    build_report(raw, UNIX_EPOCH + Duration::from_secs(d.collected_at_unix), d.elevated, &redactor, "0.1.0")
+    build_report(raw, d.collected_at(), d.elevated, &redactor, "0.1.0")
 }
 
 #[test]
@@ -29,8 +21,8 @@ fn the_envelope_is_filled_in() {
     assert_eq!(report.schema_version, SCHEMA_VERSION);
     assert_eq!(report.app_version, "0.1.0");
     assert!(!report.elevated);
-    // 1791321847 = 2026-10-06T21:24:07Z
-    assert_eq!(report.collected_at, "2026-10-06T21:24:07Z");
+    // 1791282600 = 2026-10-06T10:30:00Z
+    assert_eq!(report.collected_at, "2026-10-06T10:30:00Z");
 }
 
 #[test]

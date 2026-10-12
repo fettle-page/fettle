@@ -8,7 +8,6 @@ const ALLOWED_HIDDEN = [
   /^\.github\/ISSUE_TEMPLATE\/(bug_report\.md|feature_request\.md|config\.yml)$/,
   /^\.github\/pull_request_template\.md$/,
   /^apps\/web\/public\/\.well-known\/[\w.-]+$/,
-  /^spike\/\.cargo\/config\.toml$/,
 ];
 const ALLOWED_MARKDOWN = /^((.+\/)?README|SECURITY|CONTRIBUTING|\.github\/ISSUE_TEMPLATE\/(bug_report|feature_request)|\.github\/pull_request_template)\.md$/;
 

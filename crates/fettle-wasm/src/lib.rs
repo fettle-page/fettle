@@ -137,8 +137,8 @@ mod tests {
     fn italian_and_an_offset_are_honoured() {
         let v = out(run(report().as_bytes(), 1, 1, 120, false));
         assert_eq!(v["model"]["locale"], "it");
-        // The first case was checked at 21:26 UTC: 23:26 two hours east, with no "UTC".
-        assert_eq!(v["model"]["meta"]["when"], "06/10/2026 23:26");
+        // The first case was checked at 10:35 UTC: 12:35 two hours east, with no "UTC".
+        assert_eq!(v["model"]["meta"]["when"], "06/10/2026 12:35");
         assert!(v.get("markdown").is_none());
     }
 

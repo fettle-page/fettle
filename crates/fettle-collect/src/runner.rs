@@ -13,7 +13,7 @@ use std::time::{Duration, Instant};
 /// One data source. Runs on its own thread, so it must own everything it uses.
 pub type Source = Box<dyn FnOnce() -> Result<Value, String> + Send + 'static>;
 
-/// What one source returned: the same shape as an entry in a spike dump.
+/// What one source returned: the same shape as an entry in a saved scan (tests/dumps).
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct SourceResult {
     pub ok: bool,

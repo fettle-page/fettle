@@ -1,5 +1,5 @@
 {
-  "spike_version": "made-up",
+  "note": "Made up for tests: odd values a real scan rarely has.",
   "label": "odd-text",
   "collected_at_unix": 1791500000,
   "elevated": true,

@@ -10,11 +10,9 @@ set /p "LABEL=Short name for this PC / Nome breve per questo PC (e.g. old-laptop
 if "%LABEL%"=="" set "LABEL=unlabelled"
 rem fltmc only works as administrator and needs no service (net session fails when the Server service is off).
 fltmc >nul 2>&1 && (set "MODE=admin") || (set "MODE=user")
-echo.
-echo [1/2] Raw test dump / Dati grezzi (%MODE%)...
-"%~dp0fettle-spike.exe" --label "%LABEL%"
 if not exist "%~dp0dumps" mkdir "%~dp0dumps"
-echo [2/2] Fettle report (%MODE%)...
+echo.
+echo Fettle report / Rapporto di Fettle (%MODE%)...
 "%~dp0fettle-collect.exe" --out "%~dp0dumps\%LABEL%-%MODE%-report.json"
 echo.
 echo Done. Send everything in the "dumps" folder next to this file.

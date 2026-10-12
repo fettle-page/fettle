@@ -1,4 +1,4 @@
-//! The Windows data sources, ported from the spike. Each returns raw JSON in the spike dump's shape.
+//! The Windows data sources. Each returns raw JSON, in the shape a saved scan keeps (crate::dump).
 //!
 //! Every WQL query names its columns: only what `map.rs` reads is selected. That keeps
 //! `Win32_Processor` fast (`SELECT *` costs about 1 s) and keeps identifying fields such as serials
@@ -23,7 +23,7 @@ const WMI: &str = r"ROOT\WMI";
 const STORAGE: &str = r"ROOT\Microsoft\Windows\Storage";
 const TPM: &str = r"ROOT\CIMV2\Security\MicrosoftTpm";
 
-/// (source name, namespace, WQL). The names match the spike's, so dumps and parity tests line up.
+/// (source name, namespace, WQL). The names are the keys of a saved scan's sources (tests/dumps).
 pub const WMI_SOURCES: &[(&str, &str, &str)] = &[
     ("os", CIMV2, "SELECT Caption, LastBootUpTime FROM Win32_OperatingSystem"),
     ("computer_system", CIMV2, "SELECT PCSystemType, PCSystemTypeEx FROM Win32_ComputerSystem"),
@@ -97,26 +97,23 @@ mod tests {
         assert!(names(true).contains(&"tpm".to_string()));
     }
 
-    /// The spike dumps were taken with `SELECT *`. Cut each WMI source down to the columns our
-    /// queries name: if the mapping reads any column we don't select, the facts come out different.
+    /// The test dumps' rows carry every column `SELECT *` returns, the ones our queries don't name
+    /// holding "FAKE" decoys. Cut each WMI source down to the columns our queries name: if the
+    /// mapping reads any column we don't select, the facts come out different.
     #[test]
     fn the_mapping_only_reads_columns_the_queries_select() {
-        #[derive(serde::Deserialize)]
-        struct Dump {
-            collected_at_unix: u64,
-            sources: crate::Raw,
-        }
+        use crate::dump::Dump;
         let columns = |wql: &str| -> Vec<String> {
             let list = wql.trim_start_matches("SELECT ").split(" FROM ").next().unwrap();
             list.split(',').map(|c| c.trim().to_string()).collect()
         };
         for text in [
-            include_str!("../../../../spike/dumps/dev-workstation-admin-1791322268.json"),
-            include_str!("../../../../spike/dumps/dev-workstation-user-1791321847.json"),
-            // A Windows 10 laptop: real battery, TPM and SO-DIMM rows.
-            include_str!("../../../../spike/dumps/laptop-win10-admin-1791461324.json"),
+            include_str!("../../tests/dumps/dev-workstation-admin-1791282900.json"),
+            include_str!("../../tests/dumps/dev-workstation-user-1791282600.json"),
+            // A Windows 10 laptop: battery, TPM and SO-DIMM rows.
+            include_str!("../../tests/dumps/laptop-win10-admin-1791385440.json"),
         ] {
-            let dump: Dump = serde_json::from_str(text).unwrap();
+            let dump = Dump::from_json(text).unwrap();
             let mut cut = dump.sources.clone();
             for &(name, _, wql) in WMI_SOURCES.iter().chain([&TPM_SOURCE]) {
                 let keep = columns(wql);
@@ -125,10 +122,10 @@ mod tests {
                     row.retain(|k, _| keep.contains(k));
                 }
             }
-            let at = std::time::UNIX_EPOCH + std::time::Duration::from_secs(dump.collected_at_unix);
+            let at = dump.collected_at();
             assert_eq!(crate::map::facts(&cut, at), crate::map::facts(&dump.sources, at));
         }
-        // Neither dump has a battery, so a laptop's rows (with every column WMI has) are made up here.
+        // Battery rows with other columns WMI has, made up here.
         let row = |v: serde_json::Value| crate::SourceResult { ok: true, ms: 1, data: Some(v), error: None };
         let full: crate::Raw = [
             ("battery_cimv2", serde_json::json!([{ "Name": "Battery", "DeviceID": "123SERIAL", "Chemistry": 6 }])),

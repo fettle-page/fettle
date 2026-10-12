@@ -14,12 +14,12 @@
     "data": {
       "adapters": [
         {
-          "driver_date": "2026-09-25",
-          "driver_version": "32.0.21045.11001",
-          "name": "AMD Radeon RX 6900 XT",
+          "driver_date": "2026-09-01",
+          "driver_version": "32.0.15.6094",
+          "name": "NVIDIA GeForce RTX 4070",
           "software": false,
           "temperature_c": null,
-          "vram_bytes": 17130815488
+          "vram_bytes": 12610174976
         },
         {
           "driver_date": null,
@@ -42,26 +42,26 @@
         {
           "bank_label": "P0 CHANNEL A",
           "capacity_bytes": 17179869184,
-          "configured_speed_mts": 6000,
-          "configured_voltage_mv": 1100,
+          "configured_speed_mts": 5600,
+          "configured_voltage_mv": 1250,
           "device_locator": "DIMM 1",
           "form_factor": "dimm",
           "kind": "ddr5",
-          "manufacturer": "G.SKILL",
-          "part_number": "F5-6000J2836G16G",
-          "speed_mts": 6000
+          "manufacturer": "Corsair",
+          "part_number": "CMK32GX5M2B5600C36",
+          "speed_mts": 5600
         },
         {
           "bank_label": "P0 CHANNEL B",
           "capacity_bytes": 17179869184,
-          "configured_speed_mts": 6000,
-          "configured_voltage_mv": 1100,
+          "configured_speed_mts": 5600,
+          "configured_voltage_mv": 1250,
           "device_locator": "DIMM 1",
           "form_factor": "dimm",
           "kind": "ddr5",
-          "manufacturer": "G.SKILL",
-          "part_number": "F5-6000J2836G16G",
-          "speed_mts": 6000
+          "manufacturer": "Corsair",
+          "part_number": "CMK32GX5M2B5600C36",
+          "speed_mts": 5600
         }
       ],
       "slots_total": 4
@@ -77,17 +77,12 @@
         {
           "enabled": true,
           "location": "run_key",
-          "name": "GoogleDriveFS"
-        },
-        {
-          "enabled": true,
-          "location": "run_key",
-          "name": "Everything"
+          "name": "Steam"
         },
         {
           "enabled": false,
           "location": "run_key",
-          "name": "AMDNoiseSuppression"
+          "name": "Discord"
         },
         {
           "enabled": true,
@@ -97,17 +92,27 @@
         {
           "enabled": false,
           "location": "run_key",
+          "name": "Spotify"
+        },
+        {
+          "enabled": false,
+          "location": "run_key",
           "name": "SecurityHealth"
+        },
+        {
+          "enabled": true,
+          "location": "run_key",
+          "name": "RtkAudUService"
         },
         {
           "enabled": null,
           "location": "run_once",
-          "name": "msedge_cleanup_{56EB18F8-B008-4CBD-B6D2-8C97FE7E9062}"
+          "name": "Example Cleanup_{00000000-0000-0000-0000-000000000001}"
         },
         {
           "enabled": true,
           "location": "folder",
-          "name": "Fosi Audio USB Audio Device Control Panel Autostart.lnk"
+          "name": "Example Audio Panel.lnk"
         }
       ]
     }
@@ -122,47 +127,31 @@
         {
           "bus": "sata",
           "media": "ssd",
-          "model": "CT1000MX500SSD1",
+          "model": "CT500MX500SSD1",
           "nvme": null,
-          "size_bytes": 1000204886016,
+          "size_bytes": 500107862016,
           "smart": null
         },
         {
-          "bus": "nvme",
-          "media": "ssd",
-          "model": "Samsung SSD 9100 PRO 1TB",
-          "nvme": {
-            "available_spare_pct": 100,
-            "available_spare_threshold_pct": 10,
-            "critical_warning": 0,
-            "media_errors": 0,
-            "percentage_used": 0,
-            "power_on_hours": 426,
-            "temperature_c": 45
-          },
-          "size_bytes": 1000204886016,
-          "smart": null
-        },
-        {
-          "bus": "nvme",
-          "media": "ssd",
-          "model": "WDC PC SN730 SDBPNTY-1T00-1101",
-          "nvme": {
-            "available_spare_pct": 100,
-            "available_spare_threshold_pct": 10,
-            "critical_warning": 0,
-            "media_errors": 0,
-            "percentage_used": 0,
-            "power_on_hours": 3607,
-            "temperature_c": 45
-          },
-          "size_bytes": 1024209543168,
+          "bus": "sata",
+          "media": "hdd",
+          "model": "ST2000DM008-2FR102",
+          "nvme": null,
+          "size_bytes": 2000398934016,
           "smart": null
         },
         {
           "bus": "sata",
           "media": "ssd",
-          "model": "Samsung SSD 860 EVO 1TB",
+          "model": "Samsung SSD 870 EVO 500GB",
+          "nvme": null,
+          "size_bytes": 500107862016,
+          "smart": null
+        },
+        {
+          "bus": "nvme",
+          "media": "ssd",
+          "model": "WD Blue SN580 1TB",
           "nvme": null,
           "size_bytes": 1000204886016,
           "smart": null
@@ -170,15 +159,15 @@
         {
           "bus": "nvme",
           "media": "ssd",
-          "model": "CT1000T500SSD8",
+          "model": "Samsung SSD 990 PRO 1TB",
           "nvme": {
             "available_spare_pct": 100,
-            "available_spare_threshold_pct": 5,
+            "available_spare_threshold_pct": 10,
             "critical_warning": 0,
             "media_errors": 0,
-            "percentage_used": 0,
-            "power_on_hours": 1490,
-            "temperature_c": 42
+            "percentage_used": 2,
+            "power_on_hours": 1530,
+            "temperature_c": 44
           },
           "size_bytes": 1000204886016,
           "smart": null
@@ -186,34 +175,19 @@
       ],
       "volumes": [
         {
-          "free_bytes": 780048232448,
+          "free_bytes": 612345597952,
           "letter": "C:",
-          "size_bytes": 999075868672
+          "size_bytes": 999456043008
         },
         {
-          "free_bytes": 986183569408,
+          "free_bytes": 210987654144,
           "letter": "D:",
-          "size_bytes": 1000185262080
+          "size_bytes": 500105216000
         },
         {
-          "free_bytes": 999359123456,
+          "free_bytes": 1203456789504,
           "letter": "E:",
-          "size_bytes": 1000203087872
-        },
-        {
-          "free_bytes": 474917806080,
-          "letter": "F:",
-          "size_bytes": 1024208138240
-        },
-        {
-          "free_bytes": 258747310080,
-          "letter": "G:",
-          "size_bytes": 1000203087872
-        },
-        {
-          "free_bytes": 741045817344,
-          "letter": "X:",
-          "size_bytes": 999075868672
+          "size_bytes": 2000396800000
         }
       ]
     }
@@ -224,16 +198,16 @@
       "status": "ok"
     },
     "data": {
-      "bios_date": "2026-09-23",
-      "bios_version": "F8a",
-      "board": "Gigabyte Technology Co., Ltd. X870E AORUS MASTER X3D",
+      "bios_date": "2026-08-15",
+      "bios_version": "TEST-1.02",
+      "board": "Example Boards Ltd. EX-B650 TEST",
       "chassis": "desktop",
       "cores": 8,
-      "cpu_name": "AMD Ryzen 7 9800X3D 8-Core Processor",
+      "cpu_name": "AMD Ryzen 7 7700X 8-Core Processor",
       "displays": [
         {
           "height_cm": 34,
-          "name": "Odyssey G80SH",
+          "name": "Test Monitor 27",
           "width_cm": 60
         }
       ],
@@ -246,20 +220,17 @@
       "status": "ok"
     },
     "data": {
-      "build": 26300,
-      "display_version": "26H2",
-      "edition_id": "ProfessionalWorkstation",
+      "build": 26200,
+      "display_version": "25H2",
+      "edition_id": "Professional",
       "esu": null,
       "installation_type": "Client",
-      "last_update_installed": "2026-09-29",
-      "product": "Windows 11 Pro for Workstations",
+      "last_update_installed": "2026-09-30",
+      "product": "Windows 11 Pro",
       "secure_boot": true,
-      "tpm": {
-        "present": true,
-        "spec_version": "2.0, 0, 1.59"
-      },
-      "ubr": 9550,
-      "uptime_seconds": 36656
+      "tpm": null,
+      "ubr": 6584,
+      "uptime_seconds": 37234
     }
   }
 }

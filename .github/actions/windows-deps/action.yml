@@ -1,0 +1,34 @@
+# The two downloads CI and the release both build with, each checked against a pinned hash before it
+# is used: Skia's prebuilt libraries (for cargo) and Inno Setup (for the installer). One copy here,
+# so the two workflows can't drift apart. Needs the repository checked out first.
+name: Windows build downloads
+description: Fetch Skia's prebuilt libraries and install Inno Setup, both checked against pinned hashes.
+
+runs:
+  using: composite
+  steps:
+    # skia-bindings' build script downloads Skia's prebuilt libraries without checking them: fetch the
+    # archive this build uses here, check it, and point the build at the checked copy. A new
+    # skia-bindings version (or other features) needs a different archive: update the name and hash.
+    - name: Fetch Skia's prebuilt libraries (checked)
+      shell: pwsh
+      run: |
+        $name = "skia-binaries-b7f043e0b1e2a850e702-x86_64-pc-windows-msvc-d3d-ganesh-gl-jpegd-jpege-pdf.tar.gz"
+        $dir = Join-Path $env:RUNNER_TEMP "skia"
+        New-Item -ItemType Directory -Force -Path $dir | Out-Null
+        $file = Join-Path $dir $name
+        Invoke-WebRequest -Uri "https://github.com/rust-skia/skia-binaries/releases/download/0.153.3/$name" -OutFile $file
+        $hash = (Get-FileHash $file -Algorithm SHA256).Hash.ToLower()
+        if ($hash -ne "a19adbcb3c8e9d691ce4e9350fcc3e3ce066a0793263d5358185efbceae46f30") { throw "The Skia download doesn't match its known hash ($hash)" }
+        "SKIA_BINARIES_URL=file://$($dir.Replace('\', '/'))/skia-binaries-{key}.tar.gz" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8
+
+    - name: Install Inno Setup 6.7.3
+      shell: pwsh
+      run: |
+        $exe = Join-Path $env:RUNNER_TEMP "innosetup-6.7.3.exe"
+        Invoke-WebRequest -Uri "https://github.com/jrsoftware/issrc/releases/download/is-6_7_3/innosetup-6.7.3.exe" -OutFile $exe
+        $hash = (Get-FileHash $exe -Algorithm SHA256).Hash.ToLower()
+        if ($hash -ne "9c73c3bae7ed48d44112a0f48e66742c00090bdb5bef71d9d3c056c66e97b732") { throw "The Inno Setup download doesn't match its known hash ($hash)" }
+        $dir = Join-Path $env:RUNNER_TEMP "inno"
+        Start-Process -FilePath $exe -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/CURRENTUSER", "/DIR=$dir" -Wait
+        "ISCC=$dir\ISCC.exe" | Out-File -FilePath $env:GITHUB_ENV -Append -Encoding utf8

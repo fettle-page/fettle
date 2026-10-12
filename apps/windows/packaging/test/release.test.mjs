@@ -1,12 +1,15 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, it } from "node:test";
 import { appVersion, checkTag, sums } from "../release.mjs";
 
 const root = join(import.meta.dirname, "../../../..");
 const workflow = (name) => readFileSync(join(root, ".github", "workflows", name), "utf8");
+// The steps both workflows share: the checked Skia and Inno Setup downloads.
+const ACTION = "./.github/actions/windows-deps";
+const action = () => readFileSync(join(root, ACTION, "action.yml"), "utf8");
 const scripts = Object.keys(JSON.parse(readFileSync(join(root, "package.json"), "utf8")).scripts);
 const INNO_SHA256 = "9c73c3bae7ed48d44112a0f48e66742c00090bdb5bef71d9d3c056c66e97b732";
 // skia-binaries 0.153.3, the archive the app builds with (matches GitHub's digest for that asset).
@@ -51,6 +54,8 @@ describe("workflows", () => {
       const uses = [...workflow(name).matchAll(/uses:\s*(\S+)(.*)$/gm)];
       assert.ok(uses.length > 0);
       for (const [, ref, rest] of uses) {
+        // The repo's own action comes with the checkout, so it has no version to pin.
+        if (ref === ACTION) continue;
         assert.match(ref, /^[\w.-]+\/[\w.-]+@[0-9a-f]{40}$/, ref);
         assert.match(rest, /# v\d+\.\d+\.\d+/, ref);
       }
@@ -67,14 +72,14 @@ describe("workflows", () => {
     });
 
     // skia-bindings' build script downloads Skia's prebuilt libraries and doesn't check them.
-    it(`${name} checks Skia's prebuilt libraries against a pinned hash before cargo runs`, () => {
+    // The shared action fetches and checks them (and Inno Setup).
+    it(`${name} runs the shared action after the checkout and before anything builds`, () => {
       const w = workflow(name);
-      const skia = /^name = "skia-bindings"\nversion = "([^"]+)"/m.exec(lockfile)[1];
-      assert.ok(w.includes(`/releases/download/${skia}/`), `downloads the archive for skia-bindings ${skia}, as Cargo.lock has it`);
-      const check = w.indexOf(SKIA_SHA256);
-      assert.ok(check >= 0, "checks the pinned hash");
-      assert.ok(w.indexOf("SKIA_BINARIES_URL=file://") > check, "points the build at the checked file");
-      assert.ok(w.indexOf("run: npm ci") > check && w.indexOf("run: cargo ") > check, "before anything builds");
+      const uses = w.indexOf(`uses: ${ACTION}\n`);
+      assert.ok(uses >= 0, `uses ${ACTION}`);
+      assert.ok(w.indexOf("uses: actions/checkout@") < uses, "a local action needs the checkout first");
+      assert.ok(w.indexOf("run: npm ci") > uses && w.indexOf("run: cargo ") > uses, "before anything builds");
+      assert.ok(w.indexOf("npm run package:windows") > uses, "before the installer is built");
     });
 
     it(`${name} builds with exactly the dependencies in Cargo.lock`, () => {
@@ -83,6 +88,37 @@ describe("workflows", () => {
       for (const run of runs) assert.match(run, /--locked/, run);
     });
   }
+
+  it("the shared action checks Skia's prebuilt libraries against a pinned hash and points the build at the checked copy", () => {
+    const a = action();
+    const skia = /^name = "skia-bindings"\nversion = "([^"]+)"/m.exec(lockfile)[1];
+    assert.ok(a.includes(`/releases/download/${skia}/`), `downloads the archive for skia-bindings ${skia}, as Cargo.lock has it`);
+    const check = a.indexOf(SKIA_SHA256);
+    assert.ok(check >= 0, "checks the pinned hash");
+    assert.ok(a.indexOf("SKIA_BINARIES_URL=file://") > check, "points the build at the checked file");
+  });
+
+  it("the shared action checks the Inno Setup download before running it", () => {
+    const a = action();
+    assert.match(a, /^\s+using: composite$/m);
+    assert.ok(a.indexOf(INNO_SHA256) >= 0 && a.indexOf(INNO_SHA256) < a.indexOf("Start-Process"));
+    // Each run step in a composite action must name its shell.
+    assert.equal((a.match(/^\s+run: \|$/gm) ?? []).length, (a.match(/^\s+shell: pwsh$/gm) ?? []).length);
+  });
+
+  // One copy of each pinned download, so CI and the release can't check different files.
+  it("each pinned download hash appears exactly once under .github", () => {
+    const files = readdirSync(join(root, ".github"), { recursive: true }).filter((f) => /\.ya?ml$/.test(f));
+    const all = files.map((f) => readFileSync(join(root, ".github", f), "utf8")).join("\n");
+    for (const hash of [SKIA_SHA256, INNO_SHA256]) assert.equal(all.split(hash).length - 1, 1, hash);
+  });
+
+  // A newer push to the same branch makes an older CI run pointless. A release run is never
+  // cancelled: its tag can't be moved and run again.
+  it("ci.yml cancels an older run for the same branch, and release.yml never cancels", () => {
+    assert.match(workflow("ci.yml"), /^concurrency:\n\s+group: \$\{\{ github\.workflow \}\}-\$\{\{ github\.ref \}\}\n\s+cancel-in-progress: true$/m);
+    assert.doesNotMatch(workflow("release.yml"), /cancel-in-progress/);
+  });
 
   // rust-toolchain.toml can't name both a version and the MSVC host (rustup refuses it, and a PC whose
   // default host is GNU can't build the app), so it says "stable" for local builds and the workflows
@@ -130,7 +166,7 @@ describe("workflows", () => {
       assert.ok(i >= 0, `${s} missing`);
       return i;
     };
-    assert.ok(at(INNO_SHA256) < at("Start-Process"), "the Inno Setup download is checked before it runs");
+    assert.ok(at(`uses: ${ACTION}`) < at("npm run package:windows"), "Inno Setup is installed (checked) before the installer is built");
     assert.ok(at("cargo test") < at("npm run package:windows"));
   });
 
@@ -149,7 +185,7 @@ describe("workflows", () => {
     };
     assert.ok(at("npm run release:check") < at("npm test"));
     assert.ok(at("npm test") < at("npm run package:windows"));
-    assert.ok(at(INNO_SHA256) < at("Start-Process"), "the Inno Setup download is checked before it runs");
+    assert.ok(at(`uses: ${ACTION}`) < at("npm run package:windows"), "Inno Setup is installed (checked) before the installer is built");
     assert.ok(at("npm run package:windows") < at("attest-build-provenance"));
     assert.match(r, /gh release create[^\n]*--draft/);
     assert.match(r, /SHA256SUMS\.txt/);
@@ -171,10 +207,10 @@ describe("workflows", () => {
     assert.doesNotMatch(build, /: write/);
     // A cache can be filled by another workflow run; the downloads are built from a clean npm ci.
     assert.doesNotMatch(build, /cache:/, "the release build restores no cache");
-    for (const step of ["npm ci", "npm test", "cargo test", "npm run package:windows", "upload-artifact"]) assert.ok(build.includes(step), `build: ${step}`);
+    for (const step of ["actions/checkout", ACTION, "npm ci", "npm test", "cargo test", "npm run package:windows", "upload-artifact"]) assert.ok(build.includes(step), `build: ${step}`);
     assert.match(publish, /needs: build/);
     for (const right of ["contents: write", "id-token: write", "attestations: write"]) assert.ok(publish.includes(right), `publish: ${right}`);
     for (const step of ["download-artifact", "sha256sum -c SHA256SUMS.txt", "attest-build-provenance", "gh release create"]) assert.ok(publish.includes(step), `publish: ${step}`);
-    for (const forbidden of ["npm ", "cargo ", "actions/checkout", "Inno Setup"]) assert.ok(!publish.includes(forbidden), `publish runs ${forbidden}`);
+    for (const forbidden of ["npm ", "cargo ", "actions/checkout", ACTION, "Inno Setup"]) assert.ok(!publish.includes(forbidden), `publish runs ${forbidden}`);
   });
 });

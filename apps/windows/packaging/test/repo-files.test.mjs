@@ -114,9 +114,12 @@ describe("tracked files", () => {
   });
 
   it("allows the repo's own dotfiles, the workflows, READMEs, SECURITY.md and the site's .well-known", () => {
-    const ok = [".gitattributes", ".gitignore", ".github/workflows/ci.yml", "README.md", "worker/README.md", "SECURITY.md", "packages/brain/.gitignore", "apps/web/public/.well-known/security.txt", "spike/.cargo/config.toml"];
+    const ok = [".gitattributes", ".gitignore", ".github/workflows/ci.yml", ".github/actions/windows-deps/action.yml", "README.md", "worker/README.md", "SECURITY.md", "packages/brain/.gitignore", "apps/web/public/.well-known/security.txt", "spike/.cargo/config.toml"];
     assert.deepEqual(unexpectedPaths(ok), []);
     assert.deepEqual(unexpectedPaths(["docs/SECURITY.md"]), ["docs/SECURITY.md"]);
+    // Only the one shared action, and only its action.yml.
+    const actions = [".github/actions/other/action.yml", ".github/actions/windows-deps/run.ps1"];
+    assert.deepEqual(unexpectedPaths(actions), actions);
   });
 
   it("SECURITY.md gives the same contact as the site's security.txt", () => {

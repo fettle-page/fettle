@@ -4,6 +4,7 @@ const ALLOWED_HIDDEN = [
   /^\.gitattributes$/,
   /^(.+\/)?\.gitignore$/,
   /^\.github\/workflows\/[\w.-]+\.ya?ml$/,
+  /^\.github\/actions\/windows-deps\/action\.yml$/,
   /^apps\/web\/public\/\.well-known\/[\w.-]+$/,
   /^spike\/\.cargo\/config\.toml$/,
 ];

@@ -3,7 +3,7 @@
 use fettle_collect::dump::Dump;
 use fettle_collect::{Raw, build_report};
 use fettle_facts::redact::Redactor;
-use fettle_facts::{CheckStatus, Report, SCHEMA_VERSION};
+use fettle_facts::{CheckCode, CheckStatus, Report, SCHEMA_VERSION};
 
 fn dump() -> Dump {
     Dump::from_json(include_str!("dumps/dev-workstation-user-1791282600.json")).unwrap()
@@ -34,9 +34,10 @@ fn names_are_hidden_and_startup_names_cleaned() {
     memory.data = None;
     memory.error = Some(r"WMI on DESKTOP-ABC as jdoe failed: C:\Users\jdoe\x".into());
     let report = build(&raw, &d);
+    // The error's text stays on the PC: the report only says what kind of error it was.
+    assert!(!serde_json::to_string(&report).unwrap().contains("WMI on"));
     let check = report.facts.memory.unwrap().check;
-    assert_eq!(check.status, CheckStatus::Failed);
-    assert_eq!(check.detail.as_deref(), Some(r"WMI on <pc-name> as <user> failed: C:\Users\<user>\x"));
+    assert_eq!((check.status, check.code, check.detail), (CheckStatus::Failed, Some(CheckCode::Other), None));
     let names: Vec<String> = report.facts.startup.unwrap().data.unwrap().items.into_iter().filter_map(|i| i.name).collect();
     assert!(names.iter().any(|n| n == "Microsoft Edge"), "{names:?}");
     assert!(!names.iter().any(|n| n.contains("AutoLaunch_")), "{names:?}");

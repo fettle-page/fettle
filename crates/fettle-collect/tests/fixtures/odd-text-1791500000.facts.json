@@ -1,14 +1,14 @@
 {
   "battery": {
     "check": {
-      "detail": null,
+      "code": null,
       "status": "not_present"
     },
     "data": null
   },
   "graphics": {
     "check": {
-      "detail": null,
+      "code": null,
       "status": "ok"
     },
     "data": {
@@ -26,7 +26,7 @@
   },
   "memory": {
     "check": {
-      "detail": null,
+      "code": null,
       "status": "ok"
     },
     "data": {
@@ -49,7 +49,7 @@
   },
   "startup": {
     "check": {
-      "detail": null,
+      "code": null,
       "status": "ok"
     },
     "data": {
@@ -58,21 +58,21 @@
   },
   "storage": {
     "check": {
-      "detail": null,
+      "code": "timed_out",
       "status": "failed"
     },
     "data": null
   },
   "system": {
     "check": {
-      "detail": null,
+      "code": null,
       "status": "failed"
     },
     "data": null
   },
   "windows": {
     "check": {
-      "detail": null,
+      "code": null,
       "status": "ok"
     },
     "data": {

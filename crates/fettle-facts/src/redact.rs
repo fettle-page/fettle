@@ -824,16 +824,16 @@ mod tests {
             elevated: false,
             facts: Facts {
                 system: Some(Section {
-                    check: Check { status: CheckStatus::Failed, detail: Some("RYZEN said no to Pro".into()) },
+                    check: Check { status: CheckStatus::Failed, code: None, detail: Some("RYZEN said no to Pro".into()) },
                     data: Some(System { cpu_name: Some("AMD Ryzen 7 9800X3D".into()), ..Default::default() }),
                 }),
-                windows: Some(Section { check: Check { status: CheckStatus::Ok, detail: None }, data: Some(Windows { product: Some("Windows 11 Pro".into()), ..Default::default() }) }),
+                windows: Some(Section { check: Check { status: CheckStatus::Ok, code: None, detail: None }, data: Some(Windows { product: Some("Windows 11 Pro".into()), ..Default::default() }) }),
                 graphics: Some(Section {
-                    check: Check { status: CheckStatus::Ok, detail: None },
+                    check: Check { status: CheckStatus::Ok, code: None, detail: None },
                     data: Some(Graphics { adapters: vec![Gpu { name: Some("AMD Radeon RX 6900 XT".into()), ..Default::default() }] }),
                 }),
                 startup: Some(Section {
-                    check: Check { status: CheckStatus::Ok, detail: None },
+                    check: Check { status: CheckStatus::Ok, code: None, detail: None },
                     data: Some(Startup { items: vec![StartupItem { name: Some("Pro tools".into()), ..Default::default() }] }),
                 }),
                 ..Default::default()
@@ -860,11 +860,11 @@ mod tests {
             elevated: false,
             facts: Facts {
                 storage: Some(Section {
-                    check: Check { status: CheckStatus::Failed, detail: Some(r"open C:\Users\alex\x at 10.0.0.7 failed".into()) },
+                    check: Check { status: CheckStatus::Failed, code: None, detail: Some(r"open C:\Users\alex\x at 10.0.0.7 failed".into()) },
                     data: Some(Storage { disks: vec![Disk { model: Some(r"DESKTOP-ABC data at C:\Users\alex\vhd".into()), ..Default::default() }], ..Default::default() }),
                 }),
                 startup: Some(Section {
-                    check: Check { status: CheckStatus::Ok, detail: None },
+                    check: Check { status: CheckStatus::Ok, code: None, detail: None },
                     data: Some(Startup {
                         items: vec![
                             StartupItem { name: Some("MicrosoftEdgeAutoLaunch_AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA".into()), ..Default::default() },

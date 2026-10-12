@@ -529,7 +529,7 @@ mod tests {
 
     fn startup(names: &[&str]) -> Option<Section<Startup>> {
         let items = names.iter().map(|n| StartupItem { name: Some(n.to_string()), ..Default::default() }).collect();
-        Some(Section { check: fettle_facts::Check { status: fettle_facts::CheckStatus::Ok, detail: None }, data: Some(Startup { items }) })
+        Some(Section { check: fettle_facts::Check { status: fettle_facts::CheckStatus::Ok, code: None, detail: None }, data: Some(Startup { items }) })
     }
 
     #[test]

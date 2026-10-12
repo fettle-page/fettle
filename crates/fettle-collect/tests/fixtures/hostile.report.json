@@ -6,14 +6,14 @@
   "facts": {
     "battery": {
       "check": {
-        "detail": null,
+        "code": null,
         "status": "not_present"
       },
       "data": null
     },
     "graphics": {
       "check": {
-        "detail": null,
+        "code": null,
         "status": "ok"
       },
       "data": {
@@ -39,7 +39,7 @@
     },
     "memory": {
       "check": {
-        "detail": null,
+        "code": null,
         "status": "ok"
       },
       "data": {
@@ -74,7 +74,7 @@
     },
     "startup": {
       "check": {
-        "detail": null,
+        "code": null,
         "status": "ok"
       },
       "data": {
@@ -124,7 +124,7 @@
     },
     "storage": {
       "check": {
-        "detail": null,
+        "code": null,
         "status": "ok"
       },
       "data": {
@@ -199,7 +199,7 @@
     },
     "system": {
       "check": {
-        "detail": null,
+        "code": null,
         "status": "ok"
       },
       "data": {
@@ -221,7 +221,7 @@
     },
     "windows": {
       "check": {
-        "detail": null,
+        "code": null,
         "status": "ok"
       },
       "data": {

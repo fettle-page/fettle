@@ -38,12 +38,51 @@
             "check": {
               "type": "object",
               "properties": {
+                "code": {
+                  "description": "Why the section couldn't be read (since 1.0.4).",
+                  "anyOf": [
+                    {
+                      "description": "Why a section couldn't be read: a code, so no text from Windows travels in a report.",
+                      "oneOf": [
+                        {
+                          "description": "Windows didn't answer in time.",
+                          "type": "string",
+                          "const": "timed_out"
+                        },
+                        {
+                          "description": "Windows refused to tell this account.",
+                          "type": "string",
+                          "const": "access_denied"
+                        },
+                        {
+                          "description": "This PC or this version of Windows doesn't offer it.",
+                          "type": "string",
+                          "const": "not_available"
+                        },
+                        {
+                          "description": "Fettle's own code failed while reading it.",
+                          "type": "string",
+                          "const": "crashed"
+                        },
+                        {
+                          "description": "Any other error.",
+                          "type": "string",
+                          "const": "other"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null
+                },
                 "detail": {
+                  "description": "Windows' own error text, as reports from Fettle 1.0.3 and earlier carried it. Newer reports\nleave it out (they have `code`); older ones keep it, cleaned by the privacy pass.",
                   "type": [
                     "string",
                     "null"
                   ],
-                  "default": null,
                   "maxLength": 256
                 },
                 "status": {
@@ -112,12 +151,51 @@
             "check": {
               "type": "object",
               "properties": {
+                "code": {
+                  "description": "Why the section couldn't be read (since 1.0.4).",
+                  "anyOf": [
+                    {
+                      "description": "Why a section couldn't be read: a code, so no text from Windows travels in a report.",
+                      "oneOf": [
+                        {
+                          "description": "Windows didn't answer in time.",
+                          "type": "string",
+                          "const": "timed_out"
+                        },
+                        {
+                          "description": "Windows refused to tell this account.",
+                          "type": "string",
+                          "const": "access_denied"
+                        },
+                        {
+                          "description": "This PC or this version of Windows doesn't offer it.",
+                          "type": "string",
+                          "const": "not_available"
+                        },
+                        {
+                          "description": "Fettle's own code failed while reading it.",
+                          "type": "string",
+                          "const": "crashed"
+                        },
+                        {
+                          "description": "Any other error.",
+                          "type": "string",
+                          "const": "other"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null
+                },
                 "detail": {
+                  "description": "Windows' own error text, as reports from Fettle 1.0.3 and earlier carried it. Newer reports\nleave it out (they have `code`); older ones keep it, cleaned by the privacy pass.",
                   "type": [
                     "string",
                     "null"
                   ],
-                  "default": null,
                   "maxLength": 256
                 },
                 "status": {
@@ -218,12 +296,51 @@
             "check": {
               "type": "object",
               "properties": {
+                "code": {
+                  "description": "Why the section couldn't be read (since 1.0.4).",
+                  "anyOf": [
+                    {
+                      "description": "Why a section couldn't be read: a code, so no text from Windows travels in a report.",
+                      "oneOf": [
+                        {
+                          "description": "Windows didn't answer in time.",
+                          "type": "string",
+                          "const": "timed_out"
+                        },
+                        {
+                          "description": "Windows refused to tell this account.",
+                          "type": "string",
+                          "const": "access_denied"
+                        },
+                        {
+                          "description": "This PC or this version of Windows doesn't offer it.",
+                          "type": "string",
+                          "const": "not_available"
+                        },
+                        {
+                          "description": "Fettle's own code failed while reading it.",
+                          "type": "string",
+                          "const": "crashed"
+                        },
+                        {
+                          "description": "Any other error.",
+                          "type": "string",
+                          "const": "other"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null
+                },
                 "detail": {
+                  "description": "Windows' own error text, as reports from Fettle 1.0.3 and earlier carried it. Newer reports\nleave it out (they have `code`); older ones keep it, cleaned by the privacy pass.",
                   "type": [
                     "string",
                     "null"
                   ],
-                  "default": null,
                   "maxLength": 256
                 },
                 "status": {
@@ -395,12 +512,51 @@
             "check": {
               "type": "object",
               "properties": {
+                "code": {
+                  "description": "Why the section couldn't be read (since 1.0.4).",
+                  "anyOf": [
+                    {
+                      "description": "Why a section couldn't be read: a code, so no text from Windows travels in a report.",
+                      "oneOf": [
+                        {
+                          "description": "Windows didn't answer in time.",
+                          "type": "string",
+                          "const": "timed_out"
+                        },
+                        {
+                          "description": "Windows refused to tell this account.",
+                          "type": "string",
+                          "const": "access_denied"
+                        },
+                        {
+                          "description": "This PC or this version of Windows doesn't offer it.",
+                          "type": "string",
+                          "const": "not_available"
+                        },
+                        {
+                          "description": "Fettle's own code failed while reading it.",
+                          "type": "string",
+                          "const": "crashed"
+                        },
+                        {
+                          "description": "Any other error.",
+                          "type": "string",
+                          "const": "other"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null
+                },
                 "detail": {
+                  "description": "Windows' own error text, as reports from Fettle 1.0.3 and earlier carried it. Newer reports\nleave it out (they have `code`); older ones keep it, cleaned by the privacy pass.",
                   "type": [
                     "string",
                     "null"
                   ],
-                  "default": null,
                   "maxLength": 256
                 },
                 "status": {
@@ -480,12 +636,51 @@
             "check": {
               "type": "object",
               "properties": {
+                "code": {
+                  "description": "Why the section couldn't be read (since 1.0.4).",
+                  "anyOf": [
+                    {
+                      "description": "Why a section couldn't be read: a code, so no text from Windows travels in a report.",
+                      "oneOf": [
+                        {
+                          "description": "Windows didn't answer in time.",
+                          "type": "string",
+                          "const": "timed_out"
+                        },
+                        {
+                          "description": "Windows refused to tell this account.",
+                          "type": "string",
+                          "const": "access_denied"
+                        },
+                        {
+                          "description": "This PC or this version of Windows doesn't offer it.",
+                          "type": "string",
+                          "const": "not_available"
+                        },
+                        {
+                          "description": "Fettle's own code failed while reading it.",
+                          "type": "string",
+                          "const": "crashed"
+                        },
+                        {
+                          "description": "Any other error.",
+                          "type": "string",
+                          "const": "other"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null
+                },
                 "detail": {
+                  "description": "Windows' own error text, as reports from Fettle 1.0.3 and earlier carried it. Newer reports\nleave it out (they have `code`); older ones keep it, cleaned by the privacy pass.",
                   "type": [
                     "string",
                     "null"
                   ],
-                  "default": null,
                   "maxLength": 256
                 },
                 "status": {
@@ -757,12 +952,51 @@
             "check": {
               "type": "object",
               "properties": {
+                "code": {
+                  "description": "Why the section couldn't be read (since 1.0.4).",
+                  "anyOf": [
+                    {
+                      "description": "Why a section couldn't be read: a code, so no text from Windows travels in a report.",
+                      "oneOf": [
+                        {
+                          "description": "Windows didn't answer in time.",
+                          "type": "string",
+                          "const": "timed_out"
+                        },
+                        {
+                          "description": "Windows refused to tell this account.",
+                          "type": "string",
+                          "const": "access_denied"
+                        },
+                        {
+                          "description": "This PC or this version of Windows doesn't offer it.",
+                          "type": "string",
+                          "const": "not_available"
+                        },
+                        {
+                          "description": "Fettle's own code failed while reading it.",
+                          "type": "string",
+                          "const": "crashed"
+                        },
+                        {
+                          "description": "Any other error.",
+                          "type": "string",
+                          "const": "other"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null
+                },
                 "detail": {
+                  "description": "Windows' own error text, as reports from Fettle 1.0.3 and earlier carried it. Newer reports\nleave it out (they have `code`); older ones keep it, cleaned by the privacy pass.",
                   "type": [
                     "string",
                     "null"
                   ],
-                  "default": null,
                   "maxLength": 256
                 },
                 "status": {
@@ -903,12 +1137,51 @@
             "check": {
               "type": "object",
               "properties": {
+                "code": {
+                  "description": "Why the section couldn't be read (since 1.0.4).",
+                  "anyOf": [
+                    {
+                      "description": "Why a section couldn't be read: a code, so no text from Windows travels in a report.",
+                      "oneOf": [
+                        {
+                          "description": "Windows didn't answer in time.",
+                          "type": "string",
+                          "const": "timed_out"
+                        },
+                        {
+                          "description": "Windows refused to tell this account.",
+                          "type": "string",
+                          "const": "access_denied"
+                        },
+                        {
+                          "description": "This PC or this version of Windows doesn't offer it.",
+                          "type": "string",
+                          "const": "not_available"
+                        },
+                        {
+                          "description": "Fettle's own code failed while reading it.",
+                          "type": "string",
+                          "const": "crashed"
+                        },
+                        {
+                          "description": "Any other error.",
+                          "type": "string",
+                          "const": "other"
+                        }
+                      ]
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "default": null
+                },
                 "detail": {
+                  "description": "Windows' own error text, as reports from Fettle 1.0.3 and earlier carried it. Newer reports\nleave it out (they have `code`); older ones keep it, cleaned by the privacy pass.",
                   "type": [
                     "string",
                     "null"
                   ],
-                  "default": null,
                   "maxLength": 256
                 },
                 "status": {

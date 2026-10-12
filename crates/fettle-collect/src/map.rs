@@ -37,6 +37,10 @@ impl Sources<'_> {
     fn error(&self, name: &str) -> Option<String> {
         self.get(name).and_then(|r| r.error.clone())
     }
+    /// Why a source failed, as a code: the error's text stays on this PC.
+    fn code(&self, name: &str) -> Option<CheckCode> {
+        self.get(name).and_then(|r| r.error.as_deref()).map(error_code)
+    }
     /// WMI's "access denied": the data is there for an administrator.
     fn access_denied(&self, name: &str) -> bool {
         self.error(name).is_some_and(|e| e.contains("0x80041003"))
@@ -44,10 +48,29 @@ impl Sources<'_> {
 }
 
 fn ok<T>(data: T) -> Section<T> {
-    Section { check: Check { status: CheckStatus::Ok, detail: None }, data: Some(data) }
+    Section { check: Check { status: CheckStatus::Ok, code: None, detail: None }, data: Some(data) }
 }
-fn status<T>(status: CheckStatus, detail: Option<String>) -> Section<T> {
-    Section { check: Check { status, detail }, data: None }
+fn status<T>(status: CheckStatus, code: Option<CheckCode>) -> Section<T> {
+    Section { check: Check { status, code, detail: None }, data: None }
+}
+
+/// The kind of error a source's text describes: the runner's own words (runner.rs) or the error
+/// number Windows gave (WMI, the registry, a drive).
+fn error_code(error: &str) -> CheckCode {
+    let e = error.to_ascii_lowercase();
+    let has = |codes: &[&str]| codes.iter().any(|c| e.contains(c));
+    if e.starts_with("timed out after") || e.starts_with("still running from the last scan") {
+        CheckCode::TimedOut
+    } else if e.starts_with("panicked") {
+        CheckCode::Crashed
+    } else if has(&["0x80041003", "0x80070005", "(os error 5)", "access is denied"]) {
+        CheckCode::AccessDenied
+    } else if has(&["0x80041010", "0x8004100c", "0x8004100e"]) {
+        // Invalid class, not supported, invalid namespace: not on this PC or this Windows.
+        CheckCode::NotAvailable
+    } else {
+        CheckCode::Other
+    }
 }
 
 fn u64_of(v: &Value, key: &str) -> Option<u64> {
@@ -146,7 +169,7 @@ fn hotfix_day(s: &str) -> Option<String> {
 fn system(s: &Sources) -> Section<System> {
     const PARTS: [&str; 4] = ["cpu", "baseboard", "bios", "computer_system"];
     if PARTS.iter().all(|p| s.rows(p).is_none()) {
-        return status(CheckStatus::Failed, s.error("cpu"));
+        return status(CheckStatus::Failed, s.code("cpu"));
     }
     let cpu = s.first("cpu");
     let board = s.first("baseboard").and_then(|b| {
@@ -324,7 +347,7 @@ fn value_key(v: &Value) -> String {
 }
 
 fn storage(s: &Sources) -> Section<Storage> {
-    let Some(disks) = s.rows("physical_disks") else { return status(CheckStatus::Failed, s.error("physical_disks")) };
+    let Some(disks) = s.rows("physical_disks") else { return status(CheckStatus::Failed, s.code("physical_disks")) };
     let smart = s.rows("smart_predict_data").cloned().unwrap_or_default();
     let models: Vec<Option<String>> = disks.iter().map(|d| text_of(d, "FriendlyName")).collect();
     let disks = disks
@@ -372,7 +395,7 @@ fn battery(s: &Sources) -> Section<Battery> {
     let full = row("battery_full_capacity").and_then(|r| u32_of(r, "FullChargedCapacity"));
     let cycles = row("battery_cycle_count").and_then(|r| u32_of(r, "CycleCount"));
     if design.is_none() && full.is_none() {
-        return if s.access_denied("battery_static") { status(CheckStatus::NeedsAdmin, None) } else { status(CheckStatus::Failed, s.error("battery_static")) };
+        return if s.access_denied("battery_static") { status(CheckStatus::NeedsAdmin, None) } else { status(CheckStatus::Failed, s.code("battery_static")) };
     }
     ok(Battery { design_capacity_mwh: design, full_charge_capacity_mwh: full, cycle_count: cycles })
 }
@@ -380,7 +403,7 @@ fn battery(s: &Sources) -> Section<Battery> {
 // ---------- memory ----------
 
 fn memory(s: &Sources) -> Section<Memory> {
-    let Some(modules) = s.rows("memory_modules") else { return status(CheckStatus::Failed, s.error("memory_modules")) };
+    let Some(modules) = s.rows("memory_modules") else { return status(CheckStatus::Failed, s.code("memory_modules")) };
     let modules = modules
         .iter()
         .map(|m| MemoryModule {
@@ -419,7 +442,7 @@ fn memory(s: &Sources) -> Section<Memory> {
 fn windows(s: &Sources, now: i64) -> Section<Windows> {
     let reg = s.get("windows_registry").filter(|r| r.ok).and_then(|r| r.data.as_ref());
     let (Some(reg), Some(os)) = (reg, s.first("os")) else {
-        return status(CheckStatus::Failed, s.error("windows_registry").or_else(|| s.error("os")));
+        return status(CheckStatus::Failed, s.code("windows_registry").or_else(|| s.code("os")));
     };
     let boot = str_of(os, "LastBootUpTime").and_then(wmi_date);
     let last_update = s.rows("hotfixes").and_then(|rows| rows.iter().filter_map(|h| str_of(h, "InstalledOn").and_then(hotfix_day)).max());
@@ -447,7 +470,7 @@ fn windows(s: &Sources, now: i64) -> Section<Windows> {
 // ---------- startup ----------
 
 fn startup(s: &Sources) -> Section<Startup> {
-    let Some(reg) = s.rows("startup_registry") else { return status(CheckStatus::Failed, s.error("startup_registry")) };
+    let Some(reg) = s.rows("startup_registry") else { return status(CheckStatus::Failed, s.code("startup_registry")) };
     let approved = s.rows("startup_approved").cloned().unwrap_or_default();
     let enabled = |hive: &str, key: &str, name: &str| {
         approved
@@ -484,7 +507,7 @@ fn startup(s: &Sources) -> Section<Startup> {
 // ---------- graphics ----------
 
 fn graphics(s: &Sources) -> Section<Graphics> {
-    let Some(adapters) = s.rows("dxgi_adapters") else { return status(CheckStatus::Failed, s.error("dxgi_adapters")) };
+    let Some(adapters) = s.rows("dxgi_adapters") else { return status(CheckStatus::Failed, s.code("dxgi_adapters")) };
     let controllers = s.rows("video_controllers").cloned().unwrap_or_default();
     let adapters = adapters
         .iter()
@@ -633,8 +656,8 @@ mod tests {
         assert_eq!(none.check.status, CheckStatus::NotPresent);
         let locked = battery(&Sources(&raw(&[("battery_cimv2", rows(json!([{ "Name": "x" }]))), ("battery_static", err("WMI: 0x80041003"))])));
         assert_eq!(locked.check.status, CheckStatus::NeedsAdmin);
-        let missing = battery(&Sources(&raw(&[("battery_cimv2", rows(json!([{ "Name": "x" }]))), ("battery_static", err("Invalid class"))])));
-        assert_eq!((missing.check.status, missing.check.detail.as_deref()), (CheckStatus::Failed, Some("Invalid class")));
+        let missing = battery(&Sources(&raw(&[("battery_cimv2", rows(json!([{ "Name": "x" }]))), ("battery_static", err(r"WMI ROOT\WMI: HRESULT Call failed with: 0x80041010"))])));
+        assert_eq!((missing.check.status, missing.check.code, missing.check.detail), (CheckStatus::Failed, Some(CheckCode::NotAvailable), None));
     }
 
     #[test]
@@ -696,7 +719,7 @@ mod tests {
         assert_eq!((sys.chassis, sys.board), (Some(Chassis::Laptop), None));
         assert_eq!(sys.displays, vec![Display { name: Some("DELL".into()), width_cm: None, height_cm: None }, Display::default()]);
         let none = system(&Sources(&raw(&[("cpu", err("timed out after 4000 ms"))])));
-        assert_eq!((none.check.status, none.check.detail.as_deref()), (CheckStatus::Failed, Some("timed out after 4000 ms")));
+        assert_eq!((none.check.status, none.check.code, none.check.detail), (CheckStatus::Failed, Some(CheckCode::TimedOut), None));
     }
 
     fn nvme_drive(n: u64, health: Value) -> Value {
@@ -872,11 +895,33 @@ mod tests {
     }
 
     #[test]
-    fn a_failed_source_fails_its_section_with_the_error() {
+    fn a_failed_source_fails_its_section_with_the_error_s_code() {
         let r = raw(&[("memory_modules", err("timed out after 4000 ms"))]);
         let m = memory(&Sources(&r));
-        assert_eq!((m.check.status, m.check.detail.as_deref()), (CheckStatus::Failed, Some("timed out after 4000 ms")));
+        assert_eq!((m.check.status, m.check.code, m.check.detail), (CheckStatus::Failed, Some(CheckCode::TimedOut), None));
+        // A source that never ran has no error to name.
         let missing = graphics(&Sources(&Raw::new()));
-        assert_eq!(missing.check.status, CheckStatus::Failed);
+        assert_eq!((missing.check.status, missing.check.code), (CheckStatus::Failed, None));
+    }
+
+    // Windows' error text stays on this PC: the report gets one of a few codes.
+    #[test]
+    fn errors_become_codes() {
+        let cases = [
+            ("timed out after 4000 ms", CheckCode::TimedOut),
+            ("still running from the last scan", CheckCode::TimedOut),
+            ("panicked: index out of bounds", CheckCode::Crashed),
+            (r"WMI ROOT\WMI: HRESULT Call failed with: 0x80041003", CheckCode::AccessDenied),
+            (r"open SOFTWARE\Microsoft\Windows NT\CurrentVersion: Access is denied. (os error 5)", CheckCode::AccessDenied),
+            ("open: Accesso negato. (0x80070005)", CheckCode::AccessDenied),
+            (r"WMI ROOT\WMI: HRESULT Call failed with: 0x80041010", CheckCode::NotAvailable),
+            (r"WMI ROOT\WMI: HRESULT Call failed with: 0x8004100C", CheckCode::NotAvailable),
+            (r"WMI ROOT\Microsoft\Windows\Storage: HRESULT Call failed with: 0x8004100e", CheckCode::NotAvailable),
+            ("CreateDXGIFactory1: Something on DESKTOP-ABC went wrong (0x887A0001)", CheckCode::Other),
+            ("", CheckCode::Other),
+        ];
+        for (error, code) in cases {
+            assert_eq!(error_code(error), code, "{error}");
+        }
     }
 }

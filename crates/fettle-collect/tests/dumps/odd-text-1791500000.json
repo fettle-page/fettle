@@ -15,6 +15,7 @@
     "dxgi_adapters": { "ok": true, "ms": 1, "data": [{ "description": "Made-up GPU 1000", "dedicated_video_memory": 4294967296, "software": false }] },
     "video_controllers": { "ok": true, "ms": 1, "data": [{ "Name": "Made-up GPU 1000", "DriverVersion": " 31.0.1.1 ", "DriverDate": "20260925000000.000000+060" }] },
     "startup_registry": { "ok": true, "ms": 1, "data": [] },
-    "battery_cimv2": { "ok": true, "ms": 1, "data": [] }
+    "battery_cimv2": { "ok": true, "ms": 1, "data": [] },
+    "physical_disks": { "ok": false, "ms": 4000, "data": null, "error": "timed out after 4000 ms" }
   }
 }

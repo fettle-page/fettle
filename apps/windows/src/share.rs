@@ -379,7 +379,7 @@ mod tests {
     /// A report with `n` startup apps of 100 characters and `n` disks with 128-character models, and
     /// the size of its upload once fitted to the limits (each list keeps at most 256 entries).
     fn with_apps_and_disks(n: usize) -> (Report, usize) {
-        let ok = || fettle_facts::Check { status: fettle_facts::CheckStatus::Ok, detail: None };
+        let ok = || fettle_facts::Check { status: fettle_facts::CheckStatus::Ok, code: None, detail: None };
         let item = fettle_facts::StartupItem { name: Some("x".repeat(100)), location: None, enabled: Some(true) };
         let startup = fettle_facts::Section { check: ok(), data: Some(fettle_facts::Startup { items: vec![item; n] }) };
         let disk = fettle_facts::Disk { model: Some("y".repeat(128)), ..Default::default() };

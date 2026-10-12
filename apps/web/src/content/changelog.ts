@@ -15,6 +15,7 @@ export const releases: Release[] = [
         "A share link's language is now read only from whole language codes, so a ?lang= value or a browser language that merely starts with “it” (such as “items”) no longer shows the page in Italian. The share server and the page itself now pick the language the same way.",
         "Share-link passwords are now hashed with a secret key the server keeps apart from the reports, so a copy of the stored reports isn't enough to start guessing a password. Links made before keep opening with their password.",
         "During a Deep check, Fettle now also checks that Windows created the report file exactly where Fettle asked for it, and otherwise deletes it with nothing written.",
+        "When part of the check can't be read, a report now notes only the kind of problem (no answer in time, no permission, not available on this PC), never Windows' own error message, so none of its text can end up in a shared report.",
       ],
       it: [
         "Il link per scaricare la nuova versione ora apre sempre e solo una pagina di fettle.page.",
@@ -22,6 +23,7 @@ export const releases: Release[] = [
         "La lingua di un link di condivisione ora si legge solo da codici di lingua interi: un valore ?lang= o una lingua del browser che comincia soltanto con “it” (come “items”) non mostra più la pagina in italiano. Il server di condivisione e la pagina stessa ora scelgono la lingua nello stesso modo.",
         "Le password dei link condivisi ora vengono trasformate in impronta (hash) con una chiave segreta che il server tiene separata dai report, così una copia dei report conservati non basta per provare a indovinare una password. I link creati prima continuano ad aprirsi con la loro password.",
         "Durante un Controllo approfondito, Fettle ora controlla anche che Windows abbia creato il file del report esattamente dove Fettle l'ha chiesto, e altrimenti lo elimina senza scriverci nulla.",
+        "Quando una parte del controllo non si può leggere, il report ora indica solo il tipo di problema (nessuna risposta in tempo, permesso negato, non disponibile su questo PC) e mai il messaggio di errore di Windows, così nessun suo testo può finire in un report condiviso.",
       ],
     },
   },

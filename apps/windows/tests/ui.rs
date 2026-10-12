@@ -1214,7 +1214,7 @@ fn a_deep_check_shows_the_users_own_startup_apps_in_the_same_window() {
     let mut admin = dump_report();
     admin.elevated = true;
     let items = ["AdminTool", "Backup Agent", "VPN Client", "Remote Desk", "Updater", "Sync"].iter().map(|n| StartupItem { name: Some(n.to_string()), enabled: Some(true), ..Default::default() }).collect();
-    admin.facts.startup = Some(Section { check: fettle_facts::Check { status: fettle_facts::CheckStatus::Ok, detail: None }, data: Some(Startup { items }) });
+    admin.facts.startup = Some(Section { check: fettle_facts::Check { status: fettle_facts::CheckStatus::Ok, code: None, detail: None }, data: Some(Startup { items }) });
     let a = admin.clone();
     let h = harness_with(Locale::En, temp_dir(), move |deps| deps.deep_scan = Arc::new(move |_owner| Ok((a.clone(), 0.4))));
     // Tall enough that the whole receipt is on screen (the testing API only finds that).

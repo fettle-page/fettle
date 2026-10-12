@@ -25,6 +25,17 @@ describe("parseReport", () => {
   it("rejects a wrong check status", () => {
     expect(parseReport({ ...base, facts: { battery: { check: { status: "maybe" } } } }).ok).toBe(false);
   });
+
+  it("takes why a check failed as one of a few codes, and nothing else there", () => {
+    const failed = (check: object) => parseReport({ ...base, facts: { battery: { check: { status: "failed", ...check } } } });
+    for (const code of ["timed_out", "access_denied", "not_available", "crashed", "other"]) expect(failed({ code }).ok, code).toBe(true);
+    expect(failed({ code: "Access is denied." }).ok).toBe(false);
+  });
+
+  it("still takes the error text reports from Fettle 1.0.3 and earlier carry", () => {
+    const r = parseReport({ ...base, facts: { battery: { check: { status: "failed", detail: "Access is denied." } } } });
+    expect(r.ok && r.report.facts.battery?.check.detail).toBe("Access is denied.");
+  });
 });
 
 describe("generated files", () => {

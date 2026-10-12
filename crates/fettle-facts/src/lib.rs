@@ -19,7 +19,7 @@ pub mod limits {
     pub const NAME: usize = 128;
     /// Versions, dates, editions and drive letters.
     pub const SHORT: usize = 64;
-    /// Why a section couldn't be read.
+    /// Error text, in reports from Fettle 1.0.3 and earlier (newer ones have a code instead).
     pub const DETAIL: usize = 256;
     /// Entries in any list (disks, startup apps…), as the upload check counts them.
     pub const ITEMS: usize = 256;
@@ -69,9 +69,30 @@ pub struct Section<T> {
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, PartialEq)]
 pub struct Check {
     pub status: CheckStatus,
+    /// Why the section couldn't be read (since 1.0.4).
     #[serde(default)]
+    pub code: Option<CheckCode>,
+    /// Windows' own error text, as reports from Fettle 1.0.3 and earlier carried it. Newer reports
+    /// leave it out (they have `code`); older ones keep it, cleaned by the privacy pass.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     #[schemars(length(max = limits::DETAIL))]
     pub detail: Option<String>,
+}
+
+/// Why a section couldn't be read: a code, so no text from Windows travels in a report.
+#[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, Copy, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum CheckCode {
+    /// Windows didn't answer in time.
+    TimedOut,
+    /// Windows refused to tell this account.
+    AccessDenied,
+    /// This PC or this version of Windows doesn't offer it.
+    NotAvailable,
+    /// Fettle's own code failed while reading it.
+    Crashed,
+    /// Any other error.
+    Other,
 }
 
 /// "Not present" (a desktop has no battery) and "needs admin" must stay different.
@@ -378,5 +399,30 @@ mod tests {
         let report: Report = serde_json::from_str(json).unwrap();
         assert_eq!(report.facts.battery.unwrap().check.status, CheckStatus::NotPresent);
         assert!(report.facts.storage.is_none());
+    }
+
+    // Why a section failed travels as a short code: no text from Windows can ride along.
+    #[test]
+    fn a_failed_check_says_why_with_a_code_and_no_text() {
+        let check = Check { status: CheckStatus::Failed, code: Some(CheckCode::TimedOut), detail: None };
+        let json = serde_json::to_value(&check).unwrap();
+        assert_eq!(json, serde_json::json!({ "status": "failed", "code": "timed_out" }));
+        assert_eq!(serde_json::from_value::<Check>(json).unwrap(), check);
+        let codes = ["timed_out", "access_denied", "not_available", "crashed", "other"];
+        for code in codes {
+            let check: Check = serde_json::from_value(serde_json::json!({ "status": "failed", "code": code })).unwrap();
+            assert_eq!(serde_json::to_value(check.code).unwrap(), code);
+        }
+        let schema = serde_json::to_string(&schemars::schema_for!(Report)).unwrap();
+        assert!(codes.iter().all(|c| schema.contains(&format!("\"{c}\""))), "the schema lists every code");
+    }
+
+    // Reports from Fettle 1.0.3 and earlier carry Windows' own error text: they still read, and keep it.
+    #[test]
+    fn an_older_report_s_error_text_still_reads() {
+        let json = serde_json::json!({ "status": "failed", "detail": "Access is denied." });
+        let check: Check = serde_json::from_value(json.clone()).unwrap();
+        assert_eq!((check.code, check.detail.as_deref()), (None, Some("Access is denied.")));
+        assert_eq!(serde_json::to_value(&check).unwrap(), serde_json::json!({ "status": "failed", "code": null, "detail": "Access is denied." }));
     }
 }

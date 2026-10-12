@@ -14,13 +14,12 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
-# The exact Rust version for every cargo command here (rust-toolchain.toml says "stable" for local builds).
-env:
-  RUSTUP_TOOLCHAIN: "1.99.0-x86_64-pc-windows-msvc"
-
 jobs:
   test:
     runs-on: windows-2025
+    # The exact Rust version for every cargo command here (rust-toolchain.toml says "stable" for local builds).
+    env:
+      RUSTUP_TOOLCHAIN: "1.99.0-x86_64-pc-windows-msvc"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -44,3 +43,30 @@ jobs:
       # The downloads, built as the release builds them (the installer script, the runtime DLLs and the
       # start checks), so a packaging problem shows on a push, not first on a release tag.
       - run: npm run package:windows
+
+  # Known vulnerabilities in the dependencies fail CI. This job installs and builds nothing: both tools
+  # read the lockfiles. Not in the release workflow: an advisory published between a push and its tag
+  # would fail a release run that can't be repeated, so the push to main is where it's caught.
+  audit:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # RustSec's cargo-audit, its prebuilt release checked against a pinned hash. It fails on any crate
+      # in Cargo.lock with a known vulnerability; unmaintained crates are only warnings.
+      - name: Audit the Rust dependencies
+        run: |
+          name=cargo-audit-x86_64-unknown-linux-gnu-v0.22.2
+          curl -fsSL -o "$RUNNER_TEMP/$name.tgz" "https://github.com/rustsec/rustsec/releases/download/cargo-audit%2Fv0.22.2/$name.tgz"
+          echo "ab28a1bdb54db4d5d8ad5981cf1f959410370b3d28250dbd35f6a44248620e39  $RUNNER_TEMP/$name.tgz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/$name.tgz" -C "$RUNNER_TEMP"
+          "$RUNNER_TEMP/$name/cargo-audit" audit
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+      # npm's advisories for package-lock.json. Anything in what the site, the share Worker and the
+      # receipts ship with fails; in the build and test tools, which only run here and on the build
+      # PC, high and critical ones do.
+      - run: npm audit --omit=dev
+      - run: npm audit --audit-level=high

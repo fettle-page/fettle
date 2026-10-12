@@ -120,6 +120,27 @@ describe("workflows", () => {
     assert.doesNotMatch(workflow("release.yml"), /cancel-in-progress/);
   });
 
+  // Known vulnerabilities in the dependencies fail CI, in a job of its own that installs and builds
+  // nothing. Not in the release: an advisory published between a push and its tag would fail a
+  // release run that can't be repeated.
+  it("ci.yml audits the Rust and npm dependencies, and release.yml doesn't", () => {
+    const audit = /^  audit:\n([\s\S]*?)(?=^  \w[\w-]*:\n|(?![\s\S]))/m.exec(workflow("ci.yml"))?.[1];
+    assert.ok(audit, "ci.yml has an audit job");
+    const at = (s) => {
+      const i = audit.indexOf(s);
+      assert.ok(i >= 0, `${s} missing`);
+      return i;
+    };
+    // cargo-audit 0.22.2 for Linux, RustSec's prebuilt release (matches GitHub's digest for it).
+    assert.ok(at("ab28a1bdb54db4d5d8ad5981cf1f959410370b3d28250dbd35f6a44248620e39") < at("/cargo-audit\" audit"), "the download is checked before it runs");
+    // Everything the site, the Worker and the receipts ship with, at any severity; the build tools
+    // too, which run on the build machine, from high.
+    at("run: npm audit --omit=dev\n");
+    at("run: npm audit --audit-level=high\n");
+    for (const forbidden of ["npm ci", "run: cargo ", "npm run "]) assert.ok(!audit.includes(forbidden), `the audit job runs ${forbidden}`);
+    for (const name of ["cargo-audit", "npm audit"]) assert.ok(!workflow("release.yml").includes(name), `release.yml runs ${name}`);
+  });
+
   // rust-toolchain.toml can't name both a version and the MSVC host (rustup refuses it, and a PC whose
   // default host is GNU can't build the app), so it says "stable" for local builds and the workflows
   // pin the exact version.

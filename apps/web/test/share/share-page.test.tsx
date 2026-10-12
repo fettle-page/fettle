@@ -210,6 +210,17 @@ describe("SharePage · locked", () => {
     expect(await screen.findByText("Something went wrong. Try again in a moment.")).toBeTruthy();
   });
 
+  it("asks to try again later while the server can't check passwords (503), in both languages", async () => {
+    render(<SharePage payload={locked} locale="en" fetcher={() => reply(503, { error: "unavailable" })} />);
+    submit("hunter22");
+    expect(await screen.findByText("Something went wrong. Try again in a moment.")).toBeTruthy();
+    cleanup();
+    render(<SharePage payload={{ ...locked, locale: "it" }} locale="it" fetcher={() => reply(503, { error: "unavailable" })} />);
+    fireEvent.change(screen.getByLabelText("Password"), { target: { value: "hunter22" } });
+    fireEvent.click(screen.getByRole("button", { name: "Apri lo scontrino" }));
+    expect(await screen.findByText("Qualcosa non ha funzionato. Riprova tra poco.")).toBeTruthy();
+  });
+
   it("asks people to wait after too many tries", async () => {
     render(<SharePage payload={locked} locale="en" fetcher={() => reply(429, { error: "rate_limited" })} />);
     submit("nope");

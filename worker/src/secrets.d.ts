@@ -4,4 +4,6 @@ interface Env {
   GITHUB_TOKEN?: string;
   /** Required for uploads: mixed into the daily upload budget's name (src/budget.ts). Set with `wrangler secret put`. */
   ADDRESS_PEPPER?: string;
+  /** Required for password-protected links made since 1.0.4: mixed into their password hashes (src/passwords.ts). Set with `wrangler secret put`. */
+  PASSWORD_PEPPER?: string;
 }

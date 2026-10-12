@@ -15,7 +15,7 @@ One Cloudflare Worker serves the share links:
 
 - **IDs** are one letter for the expiry (`w`, `m`, `y`) followed by 16 random characters.
 - **R2 keys** are `<expiry>/<id>`.
-- **Custom metadata** holds the expiry, a SHA-256 hash of the delete token and, for protected reports, a PBKDF2 hash of the password. Neither the token nor the password is stored.
+- **Custom metadata** holds the expiry, a SHA-256 hash of the delete token and, for protected reports, a hash of the password: PBKDF2 over an HMAC-SHA256 of it keyed with the `PASSWORD_PEPPER` secret, marked `pwV: "2"`. Links made before 1.0.4 keep their plain PBKDF2 hash, with no `pwV`, and still open with it; any other `pwV` opens nothing (404). Neither the token nor the password is stored.
 - **Expiry** is checked by the Worker on every read; R2 lifecycle rules only clean up afterwards.
 - **URLs** are built from the request's own origin, so the code has no domain in it.
 
@@ -33,7 +33,7 @@ The worker's tests stay on vitest 4.1 while the other workspaces use vitest 5. U
 
 R2 and the rate limiters are simulated locally; nothing touches a Cloudflare account.
 
-Uploads need the `ADDRESS_PEPPER` secret (see Deploy); without it they answer 503 `unavailable`. For `wrangler dev`, put a line `ADDRESS_PEPPER=<any long random text>` in `worker/.dev.vars` (git-ignored). The tests set their own.
+Uploads need the `ADDRESS_PEPPER` secret, and share passwords need `PASSWORD_PEPPER` (see Deploy); without them they answer 503 `unavailable`. For `wrangler dev`, put the lines `ADDRESS_PEPPER=<any long random text>` and `PASSWORD_PEPPER=<other long random text>` in `worker/.dev.vars` (git-ignored). The tests set their own.
 
 ## Cloudflare setup (done 2026-10-10)
 
@@ -50,4 +50,5 @@ Uploads need the `ADDRESS_PEPPER` secret (see Deploy); without it they answer 50
 
 Secrets, set once with `wrangler secret put <name>` (each put redeploys):
 - `ADDRESS_PEPPER` (required): long random text, mixed into the name of each address's daily upload budget so the name can't be worked back to an IP. Without it, uploads are refused (503) and a loud `address_pepper_missing` line is logged. Changing it only resets that day's upload counts.
+- `PASSWORD_PEPPER` (required for share passwords): other long random text, mixed into every new share password's hash, so a copy of the stored reports isn't enough to start guessing passwords. Without it, uploads with a password and password unlocks of links made since 1.0.4 are refused (503), without counting as a guess, and a loud `password_pepper_missing` line is logged; links without a password, older links and 24-hour passes keep working. Never change or lose it: links made with the old value could no longer be opened with their password.
 - `GITHUB_TOKEN` (optional): a read-only token for the download count. Deploy the site with each app release: `/app/latest.json` follows `published` in `apps/web/src/release.ts`.

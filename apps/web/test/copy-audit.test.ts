@@ -146,4 +146,18 @@ describe("the 1.0.4 changelog", () => {
     expect(notes("it")).toContain("solo da codici di lingua interi");
     expect(notes("it")).toContain("ora scelgono la lingua nello stesso modo");
   });
+
+  it("says share passwords are hashed with a secret key kept apart from the reports, and old links still open", () => {
+    expect(notes("en")).toContain("a secret key the server keeps apart from the reports");
+    expect(notes("en")).toContain("Links made before keep opening with their password");
+    expect(notes("it")).toContain("una chiave segreta che il server tiene separata dai report");
+    expect(notes("it")).toContain("I link creati prima continuano ad aprirsi con la loro password");
+  });
+});
+
+describe("the privacy page on share passwords", () => {
+  it("says the hash is made with a secret key kept apart from the reports", () => {
+    expect(privacy("en")).toContain("keeps only a scrambled hash of it, made with a secret key kept apart from the reports, never the password itself");
+    expect(privacy("it")).toContain("conserva solo un'impronta (hash), creata con una chiave segreta tenuta separata dai report, mai la password");
+  });
 });

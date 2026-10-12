@@ -1,7 +1,7 @@
 import { env } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 import { newId } from "../src/ids.ts";
-import { hashPassword } from "../src/passwords.ts";
+import { hashPasswordV1 } from "../src/passwords.ts";
 import { dayKey, rateKey, unlockReport } from "../src/reports.ts";
 import { call, freshIp, share, tiredReport, untilFreshWindow, upload } from "./helpers.ts";
 
@@ -97,7 +97,7 @@ describe("unlock cost", () => {
 
   it("still answers 404 for an expired locked report and removes it", async () => {
     const id = newId("30d");
-    const pw = await hashPassword("hunter22");
+    const pw = await hashPasswordV1("hunter22");
     await env.REPORTS.put(`30d/${id}`, JSON.stringify(tiredReport()), {
       customMetadata: { expiresAt: "2020-01-01T00:00:00.000Z", deleteHash: "0".repeat(64), pwSalt: pw.salt, pwHash: pw.hash },
     });

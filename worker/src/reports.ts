@@ -110,6 +110,8 @@ export async function createReport(request: Request, env: Env): Promise<Response
   if (!isRecord(envelope)) return apiError(400, "invalid_request");
   if (envelope.expires !== undefined && !isTtl(envelope.expires)) return apiError(400, "invalid_request");
   if (envelope.password !== undefined && !isPassword(envelope.password)) return apiError(400, "invalid_request");
+  // A new password hash needs the secret; refuse rather than store a weaker one. Before the day's budget.
+  if (envelope.password !== undefined && !env.PASSWORD_PEPPER) return passwordPepperMissing();
 
   const parsed = parseReport(envelope.report);
   if (!parsed.ok) return apiError(400, "invalid_report", { detail: parsed.error.slice(0, 1000) });
@@ -133,9 +135,10 @@ export async function createReport(request: Request, env: Env): Promise<Response
   const meta: Meta = { expiresAt, deleteHash: await hashToken(deleteToken) };
   const locked = envelope.password !== undefined;
   if (locked) {
-    const pw = await hashPassword(envelope.password as string);
+    const pw = await hashPassword(envelope.password as string, env.PASSWORD_PEPPER!);
     meta.pwSalt = pw.salt;
     meta.pwHash = pw.hash;
+    meta.pwV = pw.version;
   }
   await env.REPORTS.put(keyFor(id), stored, { httpMetadata: { contentType: "application/json" }, customMetadata: meta });
   console.log(JSON.stringify({ event: "report_created", ref: await logRef(id), ttl, locked, bytes: new TextEncoder().encode(stored).byteLength }));
@@ -145,6 +148,11 @@ export async function createReport(request: Request, env: Env): Promise<Response
 }
 
 type Meta = Record<string, string>;
+
+function passwordPepperMissing(): Response {
+  console.error(JSON.stringify({ event: "password_pepper_missing", message: "The PASSWORD_PEPPER secret isn't set, so new password-protected links and their passwords are refused." }));
+  return apiError(503, "unavailable");
+}
 
 /**
  * R2 lifecycle rules can take about a day to delete an expired object, so expiry is checked here.
@@ -221,6 +229,13 @@ export async function unlockReport(request: Request, id: string, env: Env): Prom
 
   let issued: { pass: string; expiresAt: number } | undefined;
   if (meta.pwHash !== undefined) {
+    // No version: a hash from before 1.0.4. Only the server writes this metadata, so anything else is
+    // damaged and opens nothing, not even with a pass.
+    const version = meta.pwV;
+    if (version !== undefined && version !== "2") {
+      console.error(JSON.stringify({ event: "password_version_unknown", ref: await logRef(id) }));
+      return apiError(404, "not_found");
+    }
     const guard = env.UNLOCK_GUARD.getByName(id);
     const visitor = dailyKey(request);
     if (typeof pass === "string") {
@@ -229,9 +244,12 @@ export async function unlockReport(request: Request, id: string, env: Env): Prom
       if (renewed === null) return apiError(403, "invalid_pass");
       issued = { pass, expiresAt: renewed };
     } else {
+      // Refused before the guard counts anything: no password is checked, so the reply tells a guesser
+      // nothing and there is nothing to cap. Counting it would only lock people out while the secret is missing.
+      if (version === "2" && !env.PASSWORD_PEPPER) return passwordPepperMissing();
       const wait = await guard.begin(visitor);
       if (wait > 0) return rateLimited(wait);
-      if (!(await passwordMatches(password as string, meta.pwSalt ?? "", meta.pwHash))) {
+      if (!(await passwordMatches(password as string, { salt: meta.pwSalt ?? "", hash: meta.pwHash, version }, env.PASSWORD_PEPPER))) {
         console.log(JSON.stringify({ event: "unlock_failed", ref: await logRef(id) }));
         return apiError(403, "wrong_password");
       }

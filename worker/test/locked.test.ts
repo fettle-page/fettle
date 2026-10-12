@@ -5,7 +5,7 @@ import { parseReport } from "@fettle/report-schema";
 import { describe, expect, it } from "vitest";
 import { GUESSES_PER_DAY } from "../src/guard.ts";
 import { newId } from "../src/ids.ts";
-import { hashPassword } from "../src/passwords.ts";
+import { hashPasswordV1 } from "../src/passwords.ts";
 import { call, DAY, freshIp, share, tiredReport, untilFreshWindow, upload } from "./helpers.ts";
 
 const unlock = (id: string, password: string, ip = freshIp(), locale?: unknown) =>
@@ -86,7 +86,7 @@ describe("password-protected reports", () => {
 
   it("a stored report the brain can't read is not found, never a 500", async () => {
     const id = newId("30d");
-    const pw = await hashPassword("hunter22");
+    const pw = await hashPasswordV1("hunter22");
     await env.REPORTS.put(`30d/${id}`, JSON.stringify({ ...tiredReport(), collected_at: "2026-13-45T25:61:61Z" }), {
       customMetadata: { expiresAt: new Date(Date.now() + 86_400_000).toISOString(), deleteHash: "0".repeat(64), pwSalt: pw.salt, pwHash: pw.hash },
     });
@@ -98,7 +98,7 @@ describe("password-protected reports", () => {
   it("answer 404 for unknown and expired reports", async () => {
     expect((await unlock(newId("30d"), "hunter22")).status).toBe(404);
     const id = newId("30d");
-    const pw = await hashPassword("hunter22");
+    const pw = await hashPasswordV1("hunter22");
     await env.REPORTS.put(`30d/${id}`, JSON.stringify(tiredReport()), {
       customMetadata: { expiresAt: "2020-01-01T00:00:00.000Z", deleteHash: "0".repeat(64), pwSalt: pw.salt, pwHash: pw.hash },
     });

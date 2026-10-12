@@ -1,10 +1,8 @@
-@import "tailwindcss";
+@import "@fettle/receipt-ui/reset.css";
 @import "@fettle/receipt-ui/theme.css";
 @import "@fettle/receipt-ui/receipt.css";
 @import "@fettle/receipt-ui/themes.css";
 @import "./fonts.css";
-@source "../";
-@source "../../../../packages/receipt-ui/src";
 
 /* ------------------------------------------------------------------------------------------
    Fettle website: a green self-healing cutting mat with paper laid on it.
@@ -43,9 +41,10 @@ a { color: inherit; }
 }
 .skip:focus { top: 12px; }
 
+/* Hidden from sight, still read by screen readers. */
 .sr-only {
   position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
-  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+  overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0;
 }
 
 /* The mat: 1 cm grid (38px), 5 cm major lines, a soft light falloff. */

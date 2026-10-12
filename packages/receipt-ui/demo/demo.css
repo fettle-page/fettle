@@ -1,8 +1,7 @@
-@import "tailwindcss";
+@import "../src/reset.css";
 @import "../src/theme.css";
 @import "../src/receipt.css";
 @import "../src/view.css";
-@source "../src";
 
 /* The test page sits on the cutting mat from concept 1: 1 cm grid, 5 cm major lines. */
 :root {
@@ -10,6 +9,11 @@
   --line-strong: rgb(232 244 236 / 0.28);
 }
 html, body { margin: 0; }
+/* Hidden from sight, still read by screen readers. */
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); clip-path: inset(50%); white-space: nowrap; border: 0;
+}
 body { background: var(--color-mat); color: var(--color-paper-warm); font-family: var(--font-display); }
 
 .mat {

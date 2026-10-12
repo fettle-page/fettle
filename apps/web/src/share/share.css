@@ -1,11 +1,9 @@
-@import "tailwindcss";
+@import "@fettle/receipt-ui/reset.css";
 @import "@fettle/receipt-ui/theme.css";
 @import "@fettle/receipt-ui/receipt.css";
 @import "@fettle/receipt-ui/view.css";
 @import "@fettle/receipt-ui/themes.css";
 @import "../styles/fonts.css";
-@source "./";
-@source "../../../../packages/receipt-ui/src";
 
 /* The share page sits on the cutting mat, like the site: 1 cm grid, 5 cm major lines. Colours: themes.css. */
 html, body { margin: 0; }

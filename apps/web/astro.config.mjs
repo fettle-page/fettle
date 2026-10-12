@@ -1,6 +1,5 @@
 import react from "@astrojs/react";
 import sitemap from "@astrojs/sitemap";
-import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "astro/config";
 
 // Static site served by our own Worker (worker/wrangler.jsonc points its assets here).
@@ -27,7 +26,6 @@ export default defineConfig({
     }),
   ],
   vite: {
-    plugins: [tailwindcss()],
     build: { assetsInlineLimit: 0 },
   },
 });

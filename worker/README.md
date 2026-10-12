@@ -29,6 +29,8 @@ node worker/scripts/seed.mjs --file target/scan.json   # a report saved by fettl
 npm test -w @fettle/worker        # runs in workerd with local R2 and rate limiting
 ```
 
+The worker's tests stay on vitest 4.1 while the other workspaces use vitest 5. Under vitest 5, `@cloudflare/vitest-plugin` 1.4.0 (the latest, even though it lists vitest 5 as supported) fails every test file with "File path must be a file: URL" (checked 2026-10-12 on Windows, which CI also uses). Move the worker to vitest 5 once a plugin release newer than 1.4.0 runs these tests.
+
 R2 and the rate limiters are simulated locally; nothing touches a Cloudflare account.
 
 Uploads need the `ADDRESS_PEPPER` secret (see Deploy); without it they answer 503 `unavailable`. For `wrangler dev`, put a line `ADDRESS_PEPPER=<any long random text>` in `worker/.dev.vars` (git-ignored). The tests set their own.

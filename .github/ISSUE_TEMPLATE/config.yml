@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Report a security problem
+    url: https://github.com/fettle-page/fettle/security/advisories/new
+    about: Please report security problems privately, not in a public issue. SECURITY.md has the details.
+  - name: A share link is being misused
+    url: https://github.com/fettle-page/fettle/blob/main/SECURITY.md
+    about: Someone shared another person's report, say. SECURITY.md says where to write.

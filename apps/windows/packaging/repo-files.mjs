@@ -5,10 +5,12 @@ const ALLOWED_HIDDEN = [
   /^(.+\/)?\.gitignore$/,
   /^\.github\/workflows\/[\w.-]+\.ya?ml$/,
   /^\.github\/actions\/windows-deps\/action\.yml$/,
+  /^\.github\/ISSUE_TEMPLATE\/(bug_report\.md|feature_request\.md|config\.yml)$/,
+  /^\.github\/pull_request_template\.md$/,
   /^apps\/web\/public\/\.well-known\/[\w.-]+$/,
   /^spike\/\.cargo\/config\.toml$/,
 ];
-const ALLOWED_MARKDOWN = /^((.+\/)?README|SECURITY)\.md$/;
+const ALLOWED_MARKDOWN = /^((.+\/)?README|SECURITY|CONTRIBUTING|\.github\/ISSUE_TEMPLATE\/(bug_report|feature_request)|\.github\/pull_request_template)\.md$/;
 
 /** Account SIDs in `text` that could be real: test data may only use ones whose numbers are each a
  * single repeated digit (S-1-5-21-111111111-2222222222-333333333-1001, S-1-5-21-1-2-3-1001, and

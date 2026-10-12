@@ -106,7 +106,7 @@ the website and the share Worker build their receipts with the same Rust code as
 rustup target add wasm32-unknown-unknown
 npm install
 npm test                      # every package: unit tests, type checks, site build checks
-npm run parity:goldens        # after changing a verdict rule or the copy: refresh the expected receipts
+npm run parity:goldens        # after changing a verdict rule, the copy or the scan's mapping: refresh the expected receipts
 npm run dev:share             # the website + share Worker on http://localhost:8787
 node worker/scripts/seed.mjs  # upload a sample report to the local Worker and print its links
 cargo test --workspace        # the Rust crates

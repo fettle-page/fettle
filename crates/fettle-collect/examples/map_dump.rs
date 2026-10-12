@@ -1,23 +1,21 @@
-//! Turns a spike dump into the report `fettle-collect` would build from the same raw data.
-//! For checking dumps from other PCs: `cargo run -p fettle-collect --example map_dump -- dump.json`
+//! Prints the reports `fettle-collect` would build from saved scans (test dumps), as a JSON array in
+//! the order given: `cargo run -q -p fettle-collect --example map_dump -- <dump.json>...`
+//! `npm run parity:goldens` uses it for the receipt corpus's dump cases.
 
-use fettle_collect::{Raw, build_report};
-use fettle_facts::redact::Redactor;
-use serde::Deserialize;
-use std::time::{Duration, UNIX_EPOCH};
-
-#[derive(Deserialize)]
-struct Dump {
-    collected_at_unix: u64,
-    elevated: bool,
-    sources: Raw,
-}
+use fettle_collect::dump::Dump;
 
 fn main() {
-    let path = std::env::args().nth(1).expect("usage: map_dump <dump.json>");
-    let dump: Dump = serde_json::from_str(&std::fs::read_to_string(&path).expect("readable dump")).expect("a spike dump");
-    let at = UNIX_EPOCH + Duration::from_secs(dump.collected_at_unix);
-    // The dump is already redacted by the spike; no names to add here.
-    let report = build_report(&dump.sources, at, dump.elevated, &Redactor::default(), "map-dump");
-    println!("{}", serde_json::to_string_pretty(&report).expect("a report serializes"));
+    let paths: Vec<String> = std::env::args().skip(1).collect();
+    if paths.is_empty() {
+        eprintln!("usage: map_dump <dump.json>...");
+        std::process::exit(2);
+    }
+    let reports: Vec<_> = paths
+        .iter()
+        .map(|path| {
+            let text = std::fs::read_to_string(path).unwrap_or_else(|e| panic!("{path}: {e}"));
+            Dump::from_json(&text).unwrap_or_else(|e| panic!("{path}: not a saved scan: {e}")).report()
+        })
+        .collect();
+    println!("{}", serde_json::to_string_pretty(&reports).expect("a report serializes"));
 }

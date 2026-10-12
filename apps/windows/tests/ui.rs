@@ -497,14 +497,20 @@ fn preview_pages(app: &Fettle) -> Vec<slint::Image> {
 
 #[test]
 fn the_preview_uses_the_paper_windows_is_set_up_for() {
-    // Letter is shorter than A4; this receipt comes to three pages on both.
     let h = harness_with(Locale::En, temp_dir(), |deps| deps.paper = Rc::new(|| PageSize::Letter));
     press(&h.app, "Check this PC");
     h.background.run_all(&h.app);
     press(&h.app, "Print");
-    assert_eq!(preview_pages(&h.app).len(), 3);
+    let n = printed_pages(PageSize::Letter);
+    assert_eq!(preview_pages(&h.app).len(), n);
     let label = h.app.window().get_preview_label().to_string();
-    assert!(label.starts_with("3 pages · ") && label.contains("Letter"), "{label}");
+    assert!(label.starts_with(&format!("{n} pages · ")) && label.contains("Letter"), "{label}");
+}
+
+/// How many pages the dump's receipt prints on, as the printer lays them out.
+fn printed_pages(paper: PageSize) -> usize {
+    let model = fettle_receipt::receipt_for(&dump_report(), Locale::En, fettle_receipt::Zone::Offset(120)).unwrap().1;
+    fettle_windows::print::layout::pages(&model, paper).len()
 }
 
 #[test]
@@ -514,13 +520,14 @@ fn the_preview_shows_the_pages_as_they_will_print() {
     h.background.run_all(&h.app);
     press(&h.app, "Print");
     let pages = preview_pages(&h.app);
-    // The footer shares the second page (the gaps between sections make room for it).
-    assert_eq!(pages.len(), 2, "the dump's receipt is two pages");
+    let n = printed_pages(PageSize::A4);
+    assert!(n >= 2, "the dump's receipt runs over a page");
+    assert_eq!(pages.len(), n);
     let size = pages[0].size();
     // Portrait paper (A4 or Letter), drawn with ink on it.
     assert!(size.width > 300 && size.height as f32 / size.width as f32 > 1.25, "{size:?}");
     let label = h.app.window().get_preview_label().to_string();
-    assert!(label.starts_with("2 pages · "), "{label}");
+    assert!(label.starts_with(&format!("{n} pages · ")), "{label}");
     key(&h.app, slint::platform::Key::Escape);
     assert!(has(&h.app, "Share a link"), "Esc goes back to the receipt");
     assert!(preview_pages(&h.app).is_empty(), "the pages aren't kept");
@@ -857,6 +864,8 @@ fn an_empty_password_never_makes_an_open_link() {
 #[test]
 fn an_open_fold_stays_open_when_something_else_happens() {
     let h = harness(Locale::En);
+    // Tall enough that the Storage fold is on screen: the testing backend finds only what's visible.
+    h.app.window().window().set_size(slint::LogicalSize::new(1240.0, 2000.0));
     press(&h.app, "Check this PC");
     h.background.run_all(&h.app);
     let expanded = || ElementHandle::find_by_accessible_label(h.app.window(), "details: Storage").next().and_then(|e| e.accessible_expanded());

@@ -1,6 +1,7 @@
 {
   "battery": {
     "check": {
+      "detail": null,
       "status": "ok"
     },
     "data": {
@@ -11,6 +12,7 @@
   },
   "graphics": {
     "check": {
+      "detail": null,
       "status": "ok"
     },
     "data": {
@@ -20,12 +22,15 @@
           "driver_version": "31.0.12024.0",
           "name": "AMD Radeon Graphics",
           "software": false,
+          "temperature_c": null,
           "vram_bytes": 521334784
         },
         {
           "driver_date": null,
+          "driver_version": null,
           "name": "Microsoft Basic Render Driver",
           "software": true,
+          "temperature_c": null,
           "vram_bytes": 0
         }
       ]
@@ -33,6 +38,7 @@
   },
   "memory": {
     "check": {
+      "detail": null,
       "status": "ok"
     },
     "data": {
@@ -43,6 +49,7 @@
           "configured_speed_mts": 2400,
           "configured_voltage_mv": 1200,
           "device_locator": "DIMM 0",
+          "form_factor": null,
           "kind": "ddr4",
           "manufacturer": "Micron Technology",
           "part_number": "4ATF51264HZ-2G6E!",
@@ -54,6 +61,7 @@
   },
   "startup": {
     "check": {
+      "detail": null,
       "status": "ok"
     },
     "data": {
@@ -69,14 +77,17 @@
           "name": "RemoteWebControl"
         },
         {
+          "enabled": null,
           "location": "run_key",
           "name": "GoogleDriveFS"
         },
         {
+          "enabled": null,
           "location": "run_key",
           "name": "MicrosoftEdgeAutoLaunch_0123456789ABCDEF0123456789ABCDEF"
         },
         {
+          "enabled": null,
           "location": "run_key",
           "name": "RiotClient"
         },
@@ -96,10 +107,12 @@
           "name": "Reflect UI"
         },
         {
+          "enabled": null,
           "location": "run_key",
           "name": "Autodesk Access Service"
         },
         {
+          "enabled": null,
           "location": "run_key",
           "name": "Autodesk Access"
         },
@@ -114,6 +127,7 @@
           "name": "WebPluginService"
         },
         {
+          "enabled": null,
           "location": "run_key",
           "name": "Autodesk Genuine Service "
         },
@@ -127,6 +141,7 @@
   },
   "storage": {
     "check": {
+      "detail": null,
       "status": "ok"
     },
     "data": {
@@ -144,13 +159,16 @@
             "power_on_hours": 366,
             "temperature_c": 36
           },
-          "size_bytes": 256060514304
+          "size_bytes": 256060514304,
+          "smart": null
         },
         {
           "bus": "usb",
           "media": "unknown",
           "model": "Kingston DataTraveler 3.0",
-          "size_bytes": 124117843968
+          "nvme": null,
+          "size_bytes": 124117843968,
+          "smart": null
         }
       ],
       "volumes": [
@@ -162,14 +180,38 @@
       ]
     }
   },
+  "system": {
+    "check": {
+      "detail": null,
+      "status": "ok"
+    },
+    "data": {
+      "bios_date": "2023-04-10",
+      "bios_version": "E8CN39WW",
+      "board": "LENOVO LNVNB161216",
+      "chassis": "laptop",
+      "cores": 2,
+      "cpu_name": "AMD Ryzen 3 3250U with Radeon Graphics",
+      "displays": [
+        {
+          "height_cm": 19,
+          "name": null,
+          "width_cm": 34
+        }
+      ],
+      "threads": 4
+    }
+  },
   "windows": {
     "check": {
+      "detail": null,
       "status": "ok"
     },
     "data": {
       "build": 19045,
       "display_version": "22H2",
       "edition_id": "ProfessionalEducation",
+      "esu": null,
       "installation_type": "Client",
       "last_update_installed": "2026-09-25",
       "product": "Windows 10 Pro Education",

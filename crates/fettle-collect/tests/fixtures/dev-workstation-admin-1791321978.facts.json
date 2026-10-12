@@ -1,11 +1,14 @@
 {
   "battery": {
     "check": {
+      "detail": null,
       "status": "not_present"
-    }
+    },
+    "data": null
   },
   "graphics": {
     "check": {
+      "detail": null,
       "status": "ok"
     },
     "data": {
@@ -15,12 +18,15 @@
           "driver_version": "32.0.21045.11001",
           "name": "AMD Radeon RX 6900 XT",
           "software": false,
+          "temperature_c": null,
           "vram_bytes": 17130815488
         },
         {
           "driver_date": null,
+          "driver_version": null,
           "name": "Microsoft Basic Render Driver",
           "software": true,
+          "temperature_c": null,
           "vram_bytes": 0
         }
       ]
@@ -28,6 +34,7 @@
   },
   "memory": {
     "check": {
+      "detail": null,
       "status": "ok"
     },
     "data": {
@@ -62,6 +69,7 @@
   },
   "startup": {
     "check": {
+      "detail": null,
       "status": "ok"
     },
     "data": {
@@ -92,6 +100,7 @@
           "name": "SecurityHealth"
         },
         {
+          "enabled": null,
           "location": "run_once",
           "name": "msedge_cleanup_{56EB18F8-B008-4CBD-B6D2-8C97FE7E9062}"
         },
@@ -105,6 +114,7 @@
   },
   "storage": {
     "check": {
+      "detail": null,
       "status": "ok"
     },
     "data": {
@@ -113,7 +123,9 @@
           "bus": "sata",
           "media": "ssd",
           "model": "CT1000MX500SSD1",
-          "size_bytes": 1000204886016
+          "nvme": null,
+          "size_bytes": 1000204886016,
+          "smart": null
         },
         {
           "bus": "nvme",
@@ -128,7 +140,8 @@
             "power_on_hours": 426,
             "temperature_c": 45
           },
-          "size_bytes": 1000204886016
+          "size_bytes": 1000204886016,
+          "smart": null
         },
         {
           "bus": "nvme",
@@ -143,13 +156,16 @@
             "power_on_hours": 3607,
             "temperature_c": 45
           },
-          "size_bytes": 1024209543168
+          "size_bytes": 1024209543168,
+          "smart": null
         },
         {
           "bus": "sata",
           "media": "ssd",
           "model": "Samsung SSD 860 EVO 1TB",
-          "size_bytes": 1000204886016
+          "nvme": null,
+          "size_bytes": 1000204886016,
+          "smart": null
         },
         {
           "bus": "nvme",
@@ -164,7 +180,8 @@
             "power_on_hours": 1490,
             "temperature_c": 42
           },
-          "size_bytes": 1000204886016
+          "size_bytes": 1000204886016,
+          "smart": null
         }
       ],
       "volumes": [
@@ -201,14 +218,38 @@
       ]
     }
   },
+  "system": {
+    "check": {
+      "detail": null,
+      "status": "ok"
+    },
+    "data": {
+      "bios_date": "2026-09-23",
+      "bios_version": "F8a",
+      "board": "Gigabyte Technology Co., Ltd. X870E AORUS MASTER X3D",
+      "chassis": "desktop",
+      "cores": 8,
+      "cpu_name": "AMD Ryzen 7 9800X3D 8-Core Processor",
+      "displays": [
+        {
+          "height_cm": 34,
+          "name": "Odyssey G80SH",
+          "width_cm": 60
+        }
+      ],
+      "threads": 16
+    }
+  },
   "windows": {
     "check": {
+      "detail": null,
       "status": "ok"
     },
     "data": {
       "build": 26300,
       "display_version": "26H2",
       "edition_id": "ProfessionalWorkstation",
+      "esu": null,
       "installation_type": "Client",
       "last_update_installed": "2026-09-29",
       "product": "Windows 11 Pro for Workstations",

@@ -3,6 +3,7 @@
 //! Sources (Windows only) return raw JSON in the same shape as a spike dump entry, all in parallel.
 //! The mapping turns that raw data into typed facts on any OS, and the privacy pass runs last.
 
+pub mod dump;
 pub mod map;
 pub mod names;
 pub mod private;

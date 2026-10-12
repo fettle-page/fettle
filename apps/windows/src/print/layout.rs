@@ -885,12 +885,16 @@ pub(crate) mod tests {
     }
 
     #[test]
-    fn the_dump_receipt_prints_on_two_a4_pages_with_the_footer_on_the_second() {
-        // Its "Next step: run a Deep check" made it just long enough to push the footer alone onto a
-        // third page; the gaps between sections now make room for it.
+    fn the_dump_receipt_prints_on_three_a4_pages_with_the_footer_on_the_last() {
+        // Its "Next step: run a Deep check" once made it just long enough to push the footer alone onto
+        // a page of its own; the gaps between sections now make room for it beside the last section.
         let pages = pages(&dump_model(Locale::En), PageSize::A4);
-        assert_eq!(pages.len(), 2);
-        assert!(pages[1].iter().any(|op| matches!(op, Op::Rotate { .. })), "the stamp is on page 2");
+        assert_eq!(pages.len(), 3);
+        let last = &pages[2];
+        assert!(last.iter().any(|op| matches!(op, Op::Rotate { .. })), "the stamp is on the last page");
+        // More than the page's header (three ops) and the footer: a section shares the page.
+        let footer_ops = footer(&Col { x0: MARGIN, w: 595.0 - 2.0 * MARGIN }, &dump_model(Locale::En)).ops.len();
+        assert!(last.len() > 3 + footer_ops, "the footer is alone on the last page");
     }
 
     /// A block of `h` points with something on it (an empty one is space between sections).

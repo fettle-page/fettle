@@ -164,7 +164,8 @@ mod tests {
 
     #[test]
     fn an_impossible_scan_time_is_an_error() {
-        let bad = report().replace("2026-10-06T21:26:18.000Z", "2026-13-40T99:00:00Z");
-        assert!(out(run(bad.as_bytes(), 0, 0, 0, false))["error"].is_string());
+        let mut bad: Value = serde_json::from_str(&report()).unwrap();
+        bad["collected_at"] = "2026-13-40T99:00:00Z".into();
+        assert!(out(run(bad.to_string().as_bytes(), 0, 0, 0, false))["error"].is_string());
     }
 }

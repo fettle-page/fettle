@@ -1,5 +1,6 @@
-//! Raw sources to typed facts: a port of `crates/fettle-receipt/parity/from-spike.mjs`, kept
-//! function by function so the two stay easy to compare (tests/parity.rs holds them together).
+//! Raw sources to typed facts. The only mapping there is: the app's scans, the test dumps' reports
+//! in the receipt corpus and the website demo all come from here. tests/mapping.rs pins what it
+//! makes of each tracked dump.
 
 use crate::{Raw, SourceResult};
 use fettle_facts::*;
@@ -139,7 +140,7 @@ fn hotfix_day(s: &str) -> Option<String> {
     real_day(n(y)?, n(m)?, n(d)?).then(|| format!("{y}-{m:0>2}-{d:0>2}"))
 }
 
-// ---------- system (new: the JS converter has no system section) ----------
+// ---------- system ----------
 
 /// Read if any of its sources worked; failed (with the CPU query's error) only when none did.
 fn system(s: &Sources) -> Section<System> {

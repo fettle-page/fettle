@@ -1,11 +1,14 @@
 {
   "battery": {
     "check": {
+      "detail": null,
       "status": "not_present"
-    }
+    },
+    "data": null
   },
   "graphics": {
     "check": {
+      "detail": null,
       "status": "ok"
     },
     "data": {
@@ -15,6 +18,7 @@
           "driver_version": "31.0.1.1",
           "name": "Made-up GPU 1000",
           "software": false,
+          "temperature_c": null,
           "vram_bytes": 4294967296
         }
       ]
@@ -22,17 +26,21 @@
   },
   "memory": {
     "check": {
+      "detail": null,
       "status": "ok"
     },
     "data": {
       "modules": [
         {
+          "bank_label": null,
           "capacity_bytes": 8589934592,
           "configured_speed_mts": 3200,
           "configured_voltage_mv": 1200,
           "device_locator": "DIMM 1",
           "form_factor": "dimm",
           "kind": "ddr4",
+          "manufacturer": null,
+          "part_number": null,
           "speed_mts": 3200
         }
       ],
@@ -41,6 +49,7 @@
   },
   "startup": {
     "check": {
+      "detail": null,
       "status": "ok"
     },
     "data": {
@@ -49,22 +58,35 @@
   },
   "storage": {
     "check": {
+      "detail": null,
       "status": "failed"
-    }
+    },
+    "data": null
+  },
+  "system": {
+    "check": {
+      "detail": null,
+      "status": "failed"
+    },
+    "data": null
   },
   "windows": {
     "check": {
+      "detail": null,
       "status": "ok"
     },
     "data": {
       "build": 19045,
       "display_version": "2009",
       "edition_id": "Professional",
+      "esu": null,
       "installation_type": "Client",
       "last_update_installed": "2026-09-25",
       "product": "Windows 10 Pro",
+      "secure_boot": null,
       "tpm": {
-        "present": true
+        "present": true,
+        "spec_version": null
       },
       "ubr": 6466,
       "uptime_seconds": 46400

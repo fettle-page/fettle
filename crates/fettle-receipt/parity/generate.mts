@@ -1,17 +1,18 @@
-// The parity corpus (tests/parity/cases): the real spike dumps plus seeded reports covering every enum
-// value, nulls and zeros, each threshold and its neighbours, long and markdown-special names,
-// impossible dates. Same seed, same reports.
+// The parity corpus (tests/parity/cases): the reports the Rust scan makes of the tracked dumps, plus
+// seeded reports covering every enum value, nulls and zeros, each threshold and its neighbours, long
+// and markdown-special names, impossible dates. Same seed, same reports.
 //
 // `npm run parity:goldens` runs this: it writes each case's report, keeping the expected receipt of
 // any report that didn't change, then has the Rust receipt fill in what's new or changed
 // (FETTLE_REGEN_GOLDENS=1, tests/parity.rs). Since 2026-10-10 the Rust receipt is the only one.
+// The dump cases come from crates/fettle-collect (examples/map_dump.rs), whose own pinned facts
+// (tests/mapping.rs) are rewritten in the same run.
 import { spawnSync } from "node:child_process";
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { delimiter, join } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { parseReport, type Report } from "../../../packages/report-schema/src/index.ts";
-import { convertDump } from "./from-spike.mjs";
 
 /** mulberry32: small, fast, and identical on every machine. */
 function prng(seed: number) {
@@ -198,16 +199,27 @@ const DUMPS = here("../../../spike/dumps");
 const SEED = 20261009;
 const GENERATED = 400;
 
-/** Every case's name and report: the tracked spike dumps first, then the seeded ones. */
+const ROOT = here("../../../");
+// rustup's bin folder isn't always on PATH for Node.
+const CARGO_ENV = { ...process.env, PATH: `${join(homedir(), ".cargo", "bin")}${delimiter}${process.env.PATH}` };
+
+/** What the Rust scan makes of each dump (crates/fettle-collect/examples/map_dump.rs), in order. */
+function mapDumps(files: string[]): unknown[] {
+  const args = ["run", "-q", "-p", "fettle-collect", "--example", "map_dump", "--", ...files];
+  const run = spawnSync("cargo", args, { cwd: ROOT, env: CARGO_ENV, encoding: "utf8", stdio: ["ignore", "pipe", "inherit"], maxBuffer: 64 * 2 ** 20 });
+  if (run.status !== 0) throw new Error(`map_dump failed (${run.status})`);
+  return JSON.parse(run.stdout);
+}
+
+/** Every case's name and report: the tracked dumps first, then the seeded ones. */
 export function corpus(): [string, Report][] {
-  const dumps = readdirSync(DUMPS)
-    .filter((f) => f.endsWith(".json"))
-    .sort()
-    .map((f): [string, Report] => {
-      const parsed = parseReport(convertDump(JSON.parse(readFileSync(join(DUMPS, f), "utf8"))));
-      if (!parsed.ok) throw new Error(`${f}: ${parsed.error}`);
-      return [`dump-${f.replace(/\.json$/, "")}`, parsed.report];
-    });
+  const files = readdirSync(DUMPS).filter((f) => f.endsWith(".json")).sort();
+  const reports = mapDumps(files.map((f) => join(DUMPS, f)));
+  const dumps = files.map((f, i): [string, Report] => {
+    const parsed = parseReport(reports[i]);
+    if (!parsed.ok) throw new Error(`${f}: ${parsed.error}`);
+    return [`dump-${f.replace(/\.json$/, "")}`, parsed.report];
+  });
   const generated = generateReports(SEED, GENERATED).map((r, i): [string, Report] => [`gen-${String(i).padStart(3, "0")}`, r]);
   return [...dumps, ...generated];
 }
@@ -235,9 +247,10 @@ export function writeReports(): { written: number; kept: number } {
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const { written, kept } = writeReports();
   console.log(`parity: ${written} report(s) written, ${kept} unchanged`);
-  // rustup's bin folder isn't always on PATH for Node.
-  const env = { ...process.env, FETTLE_REGEN_GOLDENS: "1", PATH: `${join(homedir(), ".cargo", "bin")}${delimiter}${process.env.PATH}` };
-  const args = ["test", "-q", "-p", "fettle-receipt", "--test", "parity", "regenerate_goldens", "--", "--nocapture"];
-  const run = spawnSync("cargo", args, { cwd: here("../../../"), env, stdio: "inherit" });
-  process.exit(run.status ?? 1);
+  const env = { ...CARGO_ENV, FETTLE_REGEN_GOLDENS: "1" };
+  const cargo = (args: string[]) => spawnSync("cargo", args, { cwd: ROOT, env, stdio: "inherit" }).status ?? 1;
+  // The mapping's pinned facts, then the receipts.
+  const mapping = cargo(["test", "-q", "-p", "fettle-collect", "--test", "mapping"]);
+  if (mapping !== 0) process.exit(mapping);
+  process.exit(cargo(["test", "-q", "-p", "fettle-receipt", "--test", "parity", "regenerate_goldens", "--", "--nocapture"]));
 }

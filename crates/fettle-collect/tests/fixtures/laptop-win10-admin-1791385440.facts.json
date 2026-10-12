@@ -18,7 +18,7 @@
     "data": {
       "adapters": [
         {
-          "driver_date": "2022-08-16",
+          "driver_date": "2022-05-03",
           "driver_version": "31.0.101.2111",
           "name": "Intel UHD Graphics 620",
           "software": false,
@@ -143,9 +143,9 @@
       ],
       "volumes": [
         {
-          "free_bytes": 45042167808,
+          "free_bytes": 61204889600,
           "letter": "C:",
-          "size_bytes": 254721126400
+          "size_bytes": 255378018304
         }
       ]
     }
@@ -156,7 +156,7 @@
       "status": "ok"
     },
     "data": {
-      "bios_date": "2023-04-10",
+      "bios_date": "2023-11-21",
       "bios_version": "TEST1.07W",
       "board": "Example Laptops EXL-14 TEST",
       "chassis": "laptop",
@@ -188,7 +188,7 @@
       "secure_boot": false,
       "tpm": {
         "present": true,
-        "spec_version": "2.0, 0, 1.38"
+        "spec_version": "2.0, 0, 1.16"
       },
       "ubr": 6456,
       "uptime_seconds": 264840

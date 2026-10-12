@@ -251,7 +251,7 @@
       "secure_boot": true,
       "tpm": {
         "present": true,
-        "spec_version": "2.0, 0, 1.59"
+        "spec_version": "2.0, 0, 1.16"
       },
       "ubr": 6584,
       "uptime_seconds": 37534

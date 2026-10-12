@@ -12,7 +12,7 @@ rem fltmc only works as administrator and needs no service (net session fails wh
 fltmc >nul 2>&1 && (set "MODE=admin") || (set "MODE=user")
 if not exist "%~dp0dumps" mkdir "%~dp0dumps"
 echo.
-echo Fettle report / Rapporto di Fettle (%MODE%)...
+echo Fettle report / Report di Fettle (%MODE%)...
 "%~dp0fettle-collect.exe" --out "%~dp0dumps\%LABEL%-%MODE%-report.json"
 echo.
 echo Done. Send everything in the "dumps" folder next to this file.

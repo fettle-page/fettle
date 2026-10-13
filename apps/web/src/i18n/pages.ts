@@ -34,7 +34,7 @@ const en: Pages = {
     kicker: "Privacy",
     h1: "Privacy, in plain words.",
     intro: "Fettle is built to know as little about you as it can. Here is exactly what happens, and what doesn't.",
-    updated: "Last updated: 12 October 2026",
+    updated: "Last updated: 13 October 2026",
     sections: [
       {
         h: "The app",
@@ -180,7 +180,7 @@ const it: Pages = {
     kicker: "Privacy",
     h1: "La privacy, in parole semplici.",
     intro: "Fettle è fatto per sapere di te il meno possibile. Ecco esattamente cosa succede, e cosa no.",
-    updated: "Ultimo aggiornamento: 12 ottobre 2026",
+    updated: "Ultimo aggiornamento: 13 ottobre 2026",
     sections: [
       {
         h: "L'app",

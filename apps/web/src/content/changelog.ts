@@ -7,7 +7,7 @@ export type Release = { version: string; date: string | null; notes: Record<Loca
 export const releases: Release[] = [
   {
     version: "1.0.4",
-    date: "2026-10-12",
+    date: "2026-10-13",
     notes: {
       en: [
         "The “new version” note's download link now only ever opens a page on fettle.page.",

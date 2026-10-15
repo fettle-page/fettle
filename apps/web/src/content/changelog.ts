@@ -73,7 +73,7 @@ export const releases: Release[] = [
         "The round “Free · open source” seal on the home page no longer overlaps its own words in Firefox, and in Italian it's no longer squashed.",
         "On a phone, the stamp at the bottom of a receipt on the site and on share links no longer lands on the barcode.",
         "The download page's lists and the changelog's notes have their bullets back.",
-        "Short things now stay together at the end of a line: a temperature and its °C, the privacy page's date, the download page's extra links, the dots in the home page's and footer's small print, and a value and its ?? tag on the home page's browser receipt.",
+        "A dot, an arrow or a unit no longer ends up alone at the start or end of a line: the °C stays with its temperature, the privacy page's date stays whole, the download page's extra links break as a whole, the dots in the home page's and footer's small print stay with the word before them, a link's “→” stays with its last word, and on the home page's browser receipt “can't see” stays on one line with its “??” mark.",
         "On the home page, “Read the source on GitHub” now looks like the link it is.",
       ],
       it: [
@@ -128,7 +128,7 @@ export const releases: Release[] = [
         "Il timbro rotondo “Gratis · open source” nella home non sovrappone più le parole in Firefox, e in italiano non è più schiacciato.",
         "Sul telefono, il timbro in fondo allo scontrino, sul sito e nei link condivisi, non finisce più sopra il codice a barre.",
         "Gli elenchi della pagina di download e le note delle versioni hanno di nuovo i loro punti elenco.",
-        "Le cose brevi ora restano unite a fine riga: una temperatura e il suo °C, la data della pagina sulla privacy, i link in più della pagina di download, i puntini nelle scritte piccole della home e del piè di pagina, e un valore con il suo ?? nello scontrino del browser in home.",
+        "Un puntino, una freccia o un'unità di misura non finiscono più da soli all'inizio o alla fine di una riga: il °C resta con la sua temperatura, la data della pagina sulla privacy resta intera, i link in più della pagina di download vanno a capo interi, i puntini nelle scritte piccole della home e del piè di pagina restano con la parola che li precede, la freccia “→” di un link resta attaccata alla sua ultima parola, e nello scontrino del browser in home “non visibile” resta su una riga con il suo “??”.",
         "Nella home, “Leggi il codice sorgente su GitHub” ora ha l'aspetto del link che è.",
       ],
     },

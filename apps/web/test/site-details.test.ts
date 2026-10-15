@@ -122,7 +122,7 @@ describe("the free / open source seal", () => {
 });
 
 describe("the top bar on phones and tablets", () => {
-  // Measured in Playwright (target/polish/navtry.mjs): the logo, theme, language and Download tapes need
+  // Measured in a browser at phone and tablet widths: the logo, theme, language and Download tapes need
   // about 100 px more than a 360 px phone has, and "How it works" broke onto two lines up to 849 px.
   const css = () => src("src/styles/site.css").replace(/\/\*[\s\S]*?\*\//g, "");
   const media = (query: string) => {
@@ -194,8 +194,8 @@ describe("the share page's cards and footer", () => {
 describe("the seal's link to the source", () => {
   // It read as plain text beside "Read the privacy page →", which has the link style and arrow.
   it("looks like the other text links on the home page", () => {
-    expect(page("index.html")).toMatch(/<a class="text-link" href="https:\/\/github\.com\/fettle-page\/fettle">Read the source on GitHub →<\/a>/);
-    expect(page("it.html")).toMatch(/<a class="text-link" href="https:\/\/github\.com\/fettle-page\/fettle">Leggi il codice sorgente su GitHub →<\/a>/);
+    expect(page("index.html")).toMatch(/<a class="text-link" href="https:\/\/github\.com\/fettle-page\/fettle">Read the source on GitHub(&nbsp;| )→<\/a>/);
+    expect(page("it.html")).toMatch(/<a class="text-link" href="https:\/\/github\.com\/fettle-page\/fettle">Leggi il codice sorgente su GitHub(&nbsp;| )→<\/a>/);
   });
 });
 
@@ -214,6 +214,21 @@ describe("no word or dot left alone on a line", () => {
     for (const locale of ["en", "it"] as const) {
       expect(home(locale).fine, locale).not.toMatch(/ ·/);
       expect(home(locale).endFine, locale).not.toMatch(/ ·/);
+    }
+  });
+  it("keeps every link's arrow with the word before it", () => {
+    // In Italian at 320 and 360 px, "Leggi il codice sorgente su GitHub →" left the arrow alone on a line.
+    for (const [file, html] of pages()) {
+      const shown = html.replace(/<(script|style)[\s\S]*?<\/\1>/g, "").replace(/<[^>]+>/g, "");
+      // A plain space or line break, not a no-break space (which \s would also match).
+      expect(shown, file).not.toMatch(/[ \t\r\n]→/);
+    }
+  });
+  it("keeps the footer's copyright dot with the word before it", () => {
+    for (const file of ["index.html", "it.html", "it/faq.html"]) {
+      const small = [...page(file).matchAll(/<p class="foot-small">([\s\S]*?)<\/p>/g)].map(([, p]) => p!);
+      expect(small.length, file).toBe(2);
+      for (const p of small) expect(p, file).not.toMatch(/[ \t\r\n]·/);
     }
   });
   it("wraps the technicians' list and the footer tagline prettily", () => {

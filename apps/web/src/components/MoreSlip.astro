@@ -22,5 +22,5 @@ const rest = faqs(locale).filter((f) => !PRINTED_QUESTIONS.includes(f.id));
       <li><a href={`${faq}#${f.id}`}>{f.q}</a></li>
     ))}
   </ul>
-  <a class="more-all" href={faq}>{h.faqMore} →</a>
+  <a class="more-all" href={faq}>{h.faqMore}&nbsp;→</a>
 </nav>

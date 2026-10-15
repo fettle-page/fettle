@@ -239,7 +239,28 @@ function forgetPass(id: string) {
   }
 }
 
-type LockedState = { status: "idle" | "busy" | "wrong" | "limited" | "limited_today" | "offline" | "failed" } | { status: "open"; model: ReceiptModel; expiresAt: string } | { status: "missing" };
+type LockedState =
+  | { status: "idle" | "busy" | "wrong" | "limited" | "offline" | "failed" }
+  | { status: "limited_today"; seconds: number }
+  | { status: "open"; model: ReceiptModel; expiresAt: string }
+  | { status: "missing" };
+
+/**
+ * How long until the day's tries come back. They reset at midnight UTC, which isn't "tomorrow" in every
+ * time zone, so the message gives the wait itself, from the server's retry-after.
+ */
+const LOCKED_MESSAGE: Partial<Record<LockedState["status"], ShareKey>> = {
+  wrong: "locked.wrong",
+  limited: "locked.limited",
+  offline: "offline",
+  failed: "failed",
+};
+
+function dayUsedUp(seconds: number, locale: Locale): string {
+  if (seconds < 3600) return shareText("locked.limited_today_soon", locale);
+  const hours = Math.round(seconds / 3600);
+  return hours === 1 ? shareText("locked.limited_today_hour", locale) : shareText("locked.limited_today_hours", locale, { n: String(hours) });
+}
 
 function Locked({ id, locale, fetcher }: { id: string; locale: Locale; fetcher: Fetcher }) {
   // "idle" first, as the server drew it (it can't see the browser's saved pass), so hydration matches.
@@ -295,7 +316,8 @@ function Locked({ id, locale, fetcher }: { id: string; locale: Locale; fetcher: 
         field.current?.focus();
       } else if (res.status === 429) {
         // A wait past the minute means the report's tries for the day are used up.
-        setState({ status: Number(res.headers.get("retry-after")) > 60 ? "limited_today" : "limited" });
+        const seconds = Number(res.headers.get("retry-after"));
+        setState(seconds > 60 ? { status: "limited_today", seconds } : { status: "limited" });
       } else if (res.status === 404) {
         setState({ status: "missing" });
       } else {
@@ -306,18 +328,8 @@ function Locked({ id, locale, fetcher }: { id: string; locale: Locale; fetcher: 
     }
   }
 
-  const message: ShareKey | undefined =
-    state.status === "wrong"
-      ? "locked.wrong"
-      : state.status === "limited"
-        ? "locked.limited"
-        : state.status === "limited_today"
-          ? "locked.limited_today"
-        : state.status === "offline"
-          ? "offline"
-          : state.status === "failed"
-            ? "failed"
-            : undefined;
+  const key = LOCKED_MESSAGE[state.status];
+  const message = state.status === "limited_today" ? dayUsedUp(state.seconds, locale) : key ? t(key) : null;
   return (
     <Card title={t("locked.title")}>
       <form className="unlock" onSubmit={open}>
@@ -339,7 +351,7 @@ function Locked({ id, locale, fetcher }: { id: string; locale: Locale; fetcher: 
         </button>
         {/* Always there, so a screen reader announces the message when it appears. */}
         <p id="unlock-message" role="status">
-          {message ? t(message) : null}
+          {message}
         </p>
       </form>
     </Card>

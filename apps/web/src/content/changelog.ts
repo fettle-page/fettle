@@ -31,6 +31,7 @@ export const releases: Release[] = [
         "A share link that picked up a slash at the end (pasted on a forum, say) now opens the receipt instead of saying it isn't there.",
         "While a password-protected share link checks the browser's saved 24-hour pass, its Open receipt button now really waits, and a password typed meanwhile can no longer be undone by an old pass.",
         "Screen readers now read out a share link's messages, such as “Couldn't reach Fettle”, as soon as they appear.",
+        "When a share link's wrong-password tries for the day are used up, the page now says how long until they come back (“Try again in about 10 hours”) instead of “tomorrow”: they reset at midnight UTC, which isn't tomorrow everywhere.",
       ],
       it: [
         "Il numero di download nella home e nella pagina di download ora compare anche alla prima visita, non solo dopo aver ricaricato: il sito lo chiede a GitHub una volta l'ora e conserva la risposta, invece di chiederlo quando qualcuno apre la pagina.",
@@ -42,6 +43,7 @@ export const releases: Release[] = [
         "Un link condiviso che ha preso una barra in fondo (incollato su un forum, per esempio) ora apre lo scontrino invece di dire che non c'è.",
         "Mentre un link condiviso protetto da password controlla il permesso di 24 ore salvato nel browser, il pulsante Apri lo scontrino ora aspetta davvero, e una password inserita nel frattempo non può più essere annullata da un permesso vecchio.",
         "I lettori di schermo ora leggono i messaggi di un link condiviso, come “Impossibile raggiungere Fettle”, appena compaiono.",
+        "Quando i tentativi di password sbagliata di un link condiviso per oggi sono finiti, la pagina ora dice tra quanto tornano disponibili (“Riprova tra circa 10 ore”) invece di “domani”: si azzerano a mezzanotte UTC, che non è domani dappertutto.",
       ],
     },
   },

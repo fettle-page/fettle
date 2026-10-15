@@ -272,11 +272,22 @@ describe("SharePage · locked", () => {
     expect(await screen.findByText("Too many tries. Wait a minute and try again.")).toBeTruthy();
   });
 
-  it("says to come back tomorrow once the day's tries are used up", async () => {
-    const tomorrow = () => Promise.resolve(new Response(JSON.stringify({ error: "rate_limited" }), { status: 429, headers: { "content-type": "application/json", "retry-after": "36000" } }));
-    render(<SharePage payload={locked} locale="en" fetcher={tomorrow} />);
-    submit("nope");
-    expect(await screen.findByText("Too many tries for today. Try again tomorrow.")).toBeTruthy();
+  // The day's tries reset at midnight UTC, which isn't "tomorrow" everywhere: say how long, from retry-after.
+  const dayUsedUp = (seconds: number) => () =>
+    Promise.resolve(new Response(JSON.stringify({ error: "rate_limited" }), { status: 429, headers: { "content-type": "application/json", "retry-after": String(seconds) } }));
+  it.each([
+    [36_000, "en", "Too many tries for today. Try again in about 10 hours."],
+    [5_400, "en", "Too many tries for today. Try again in about 2 hours."],
+    [4_000, "en", "Too many tries for today. Try again in about an hour."],
+    [1_800, "en", "Too many tries for today. Try again in less than an hour."],
+    [7_200, "it", "Troppi tentativi per oggi. Riprova tra circa 2 ore."],
+    [3_600, "it", "Troppi tentativi per oggi. Riprova tra circa un'ora."],
+    [900, "it", "Troppi tentativi per oggi. Riprova tra meno di un'ora."],
+  ] as const)("says how long until the day's tries come back (%i s, %s)", async (seconds, locale, text) => {
+    render(<SharePage payload={locked} locale={locale} fetcher={dayUsedUp(seconds)} />);
+    fireEvent.change(screen.getByLabelText("Password"), { target: { value: "nope" } });
+    fireEvent.submit(screen.getByLabelText("Password").closest("form")!);
+    expect(await screen.findByText(text)).toBeTruthy();
   });
 
   it("says when Fettle can't be reached", async () => {

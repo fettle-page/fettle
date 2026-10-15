@@ -545,6 +545,8 @@ section.hero {
 .doc-sheet .faq { margin-top: 0; }
 .doc-sheet .faq-item { box-shadow: none; border-bottom: 1px dashed color-mix(in srgb, var(--color-paper) 72%, var(--color-ink)); border-radius: 0; }
 .doc-sheet .faq-item summary { padding-inline: 0; }
+/* No side padding here, so the ring goes just outside the question rather than across its first letter. */
+.doc-sheet .faq-item summary:focus-visible { outline-offset: 4px; }
 .doc-sheet .faq-answer { padding-inline: 0; }
 
 /* ---------- 404: the heading, and a misprinted receipt with the ways on ---------- */

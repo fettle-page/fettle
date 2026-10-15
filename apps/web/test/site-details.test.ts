@@ -67,3 +67,12 @@ describe("the privacy slip", () => {
     for (const [label, word] of rows("index.html")) expect(word, label).toBe("hidden");
   });
 });
+
+describe("keyboard focus on the FAQ page's questions", () => {
+  // There the questions have no side padding, so a ring drawn inside them would cross the first letter.
+  it("draws the ring outside the question, clear of its text", () => {
+    const css = src("src/styles/site.css").replace(/\/\*[\s\S]*?\*\//g, "");
+    const rule = /\.doc-sheet \.faq-item summary:focus-visible\s*\{([^}]*)\}/.exec(css)?.[1] ?? "";
+    expect(rule).toMatch(/outline-offset:\s*[1-9]\d*px/);
+  });
+});

@@ -59,7 +59,7 @@ const en = {
   tech1: "Print or save as PDF",
   tech2: "Share links that expire in 7 days, 30 days or 1 year",
   tech3: "Deep check for disk health when you need it",
-  tech4: "Copy for Discord or Reddit, or save the full report as JSON",
+  tech4: "Copy as text for Discord or Reddit, or save the full report as JSON",
   techSoon: "Technician mode, with your logo, customer notes and before/after comparisons, is coming in v1.1.",
 
   privKicker: "Privacy",
@@ -150,7 +150,7 @@ const it: Record<HomeKey, string> = {
   tech1: "Stampa o salva in PDF",
   tech2: "Link condivisi che scadono dopo 7 giorni, 30 giorni o 1 anno",
   tech3: "Controllo approfondito della salute dei dischi, quando serve",
-  tech4: "Copia per Discord o Reddit, o salva il report completo in JSON",
+  tech4: "Copia come testo per Discord o Reddit, o salva il report completo in JSON",
   techSoon: "La modalità tecnico, con il tuo logo, le note per il cliente e il confronto prima/dopo, arriva con la v1.1.",
 
   privKicker: "Privacy",

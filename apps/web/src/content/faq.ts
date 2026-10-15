@@ -60,7 +60,7 @@ const en: Faq[] = [
     id: "forum",
     q: "Can I post my receipt on a forum or Discord?",
     a: [
-      "Yes. \"Copy for Discord or Reddit\" puts the receipt on your clipboard as text, ready to paste. Like everything Fettle makes, it leaves out serial numbers, the PC's name, your name, username and email address, and network addresses.",
+      "Yes. Press Copy and the receipt goes on your clipboard as text, ready to paste into Discord, Reddit or a forum. Like everything Fettle makes, it leaves out serial numbers, the PC's name, your name, username and email address, and network addresses.",
       "If someone who knows PCs asks for the details, you can also save the full report as JSON and send them the file: press Save and choose \"Report for experts (JSON)\" as the file type.",
     ],
   },
@@ -142,7 +142,7 @@ const it: Faq[] = [
     id: "forum",
     q: "Posso pubblicare lo scontrino su un forum o su Discord?",
     a: [
-      "Sì. \"Copia per Discord o Reddit\" copia lo scontrino come testo negli appunti, pronto da incollare. Come tutto ciò che crea Fettle, non include numeri di serie, nome del PC, il tuo nome, nome utente, indirizzo email né indirizzi di rete.",
+      "Sì. Premi Copia e lo scontrino finisce negli appunti come testo, pronto da incollare su Discord, Reddit o un forum. Come tutto ciò che crea Fettle, non include numeri di serie, nome del PC, il tuo nome, nome utente, indirizzo email né indirizzi di rete.",
       "Se qualcuno esperto di PC ti chiede i dettagli, puoi anche salvare il report completo in JSON e mandargli il file: premi Salva e scegli \"Report per esperti (JSON)\" come tipo di file.",
     ],
   },

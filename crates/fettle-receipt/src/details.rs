@@ -229,7 +229,8 @@ fn windows(d: &Windows, locale: Locale) -> Vec<DetailGroup> {
             return ui("d.not_found", locale, &[]);
         }
         let first = t.spec_version.as_deref().unwrap_or("").split(',').next().unwrap_or("").trim();
-        if first.is_empty() { ui("d.yes", locale, &[]) } else { first.to_string() }
+        // No version: switched off or not ready in the firmware, or just not reported. Only "found".
+        if first.is_empty() { ui("d.present", locale, &[]) } else { first.to_string() }
     });
     groups(vec![DetailGroup {
         title: None,

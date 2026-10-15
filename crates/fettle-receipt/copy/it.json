@@ -67,6 +67,7 @@
   "d.secure_boot": "Secure Boot",
   "d.tpm": "TPM",
   "d.not_found": "non trovato",
+  "d.present": "presente",
   "d.enabled": "attiva",
   "d.disabled": "disattivata",
   "d.unnamed_startup": "App all'avvio senza nome",

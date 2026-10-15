@@ -67,6 +67,7 @@
   "d.secure_boot": "Secure Boot",
   "d.tpm": "TPM",
   "d.not_found": "not found",
+  "d.present": "found",
   "d.enabled": "on",
   "d.disabled": "off",
   "d.unnamed_startup": "Unnamed startup item",

@@ -61,3 +61,24 @@ fn a_volume_of_unknown_size_is_never_taken_for_a_small_one() {
     let r = judge(json!([{ "letter": "D:", "free_bytes": 10 * MB }, { "letter": "E:", "size_bytes": 500 * GB, "free_bytes": 5 * GB }]));
     assert_eq!(low_space(&r), ["volume-1"]);
 }
+
+#[test]
+fn a_volume_on_a_usb_drive_gets_no_almost_full_warning() {
+    // A backup drive kept full on purpose: Fettle only judges the drives inside the PC.
+    let r = judge(json!([{ "letter": "E:", "size_bytes": 2000 * GB, "free_bytes": 20 * GB, "bus": "usb" }]));
+    assert!(low_space(&r).is_empty(), "{:?}", low_space(&r));
+    let inside = judge(json!([{ "letter": "E:", "size_bytes": 2000 * GB, "free_bytes": 20 * GB, "bus": "sata" }]));
+    assert_eq!(low_space(&inside), ["volume-0"]);
+}
+
+#[test]
+fn a_big_data_drive_with_plenty_left_is_not_almost_full() {
+    // 8 TB with 700 GB free is under 10%, but nowhere near full. The system drive still goes by
+    // percentage: Windows needs room there for its updates.
+    let big = judge(json!([{ "letter": "D:", "size_bytes": 8000 * GB, "free_bytes": 700 * GB }]));
+    assert!(low_space(&big).is_empty(), "{:?}", low_space(&big));
+    let tight = judge(json!([{ "letter": "D:", "size_bytes": 8000 * GB, "free_bytes": 40 * GB }]));
+    assert_eq!(low_space(&tight), ["volume-0"]);
+    let system = judge(json!([{ "letter": "C:", "size_bytes": 8000 * GB, "free_bytes": 700 * GB }]));
+    assert_eq!(low_space(&system), ["volume-0"]);
+}

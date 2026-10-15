@@ -371,9 +371,19 @@ fn storage(s: &Sources) -> Section<Storage> {
         .collect();
     let volumes = s
         .rows("logical_disks")
-        .map(|rows| rows.iter().map(|v| Volume { letter: text_of(v, "DeviceID"), size_bytes: u64_of(v, "Size"), free_bytes: u64_of(v, "FreeSpace") }).collect())
+        .map(|rows| rows.iter().map(|v| Volume { letter: text_of(v, "DeviceID"), size_bytes: u64_of(v, "Size"), free_bytes: u64_of(v, "FreeSpace"), bus: volume_bus(s, str_of(v, "DeviceID")) }).collect())
         .unwrap_or_default();
     ok(Storage { disks, volumes })
+}
+
+/// How the disk holding drive `letter` ("E:") is connected: its partition names the disk number,
+/// which is the physical disk's DeviceId.
+fn volume_bus(s: &Sources, letter: Option<&str>) -> Option<Bus> {
+    let letter = letter?.chars().next().filter(char::is_ascii_alphabetic)?;
+    let partition = s.rows("partitions")?.iter().find(|p| str_of(p, "DriveLetter").and_then(|l| l.chars().next()).is_some_and(|l| l.eq_ignore_ascii_case(&letter)))?;
+    let number = partition.get("DiskNumber").map(value_key)?;
+    let disk = s.rows("physical_disks")?.iter().find(|d| d.get("DeviceId").map(value_key).as_deref() == Some(number.as_str()))?;
+    Some(bus(u64_of(disk, "BusType")))
 }
 
 // ---------- battery ----------
@@ -575,6 +585,21 @@ mod tests {
         let mut swapped = r.clone();
         swapped.get_mut("battery_static").unwrap().data.as_mut().unwrap().as_array_mut().unwrap().reverse();
         assert_eq!(battery(&Sources(&swapped)).data.unwrap(), b);
+    }
+
+    #[test]
+    fn each_volume_knows_how_its_disk_is_connected() {
+        // MSFT_Partition gives each partition's disk number and letter (a NUL character when none).
+        let r = raw(&[
+            ("physical_disks", rows(json!([{ "DeviceId": "0", "FriendlyName": "Inside", "BusType": 17 }, { "DeviceId": "3", "FriendlyName": "Backup", "BusType": 7 }]))),
+            ("partitions", rows(json!([{ "DiskNumber": 0, "DriveLetter": "\u{0}" }, { "DiskNumber": 0, "DriveLetter": "C" }, { "DiskNumber": 3, "DriveLetter": "E" }]))),
+            ("logical_disks", rows(json!([{ "DeviceID": "C:", "Size": 1, "FreeSpace": 1 }, { "DeviceID": "E:", "Size": 1, "FreeSpace": 1 }, { "DeviceID": "Z:", "Size": 1, "FreeSpace": 1 }]))),
+        ]);
+        let volumes = storage(&Sources(&r)).data.unwrap().volumes;
+        assert_eq!(volumes.iter().map(|v| v.bus).collect::<Vec<_>>(), [Some(Bus::Nvme), Some(Bus::Usb), None]);
+        // Without the partitions, nothing is guessed.
+        let r = raw(&[("physical_disks", rows(json!([]))), ("logical_disks", rows(json!([{ "DeviceID": "E:", "Size": 1, "FreeSpace": 1 }])))]);
+        assert_eq!(storage(&Sources(&r)).data.unwrap().volumes[0].bus, None);
     }
 
     #[test]

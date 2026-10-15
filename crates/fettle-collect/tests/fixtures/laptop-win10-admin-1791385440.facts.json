@@ -143,6 +143,7 @@
       ],
       "volumes": [
         {
+          "bus": null,
           "free_bytes": 61204889600,
           "letter": "C:",
           "size_bytes": 255378018304

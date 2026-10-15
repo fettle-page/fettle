@@ -43,6 +43,8 @@ pub const WMI_SOURCES: &[(&str, &str, &str)] = &[
     ("monitor_params", WMI, "SELECT InstanceName, MaxHorizontalImageSize, MaxVerticalImageSize FROM WmiMonitorBasicDisplayParams"),
     ("logical_disks", CIMV2, "SELECT DeviceID, Size, FreeSpace FROM Win32_LogicalDisk WHERE DriveType = 3"),
     ("physical_disks", STORAGE, "SELECT DeviceId, FriendlyName, BusType, MediaType, Size FROM MSFT_PhysicalDisk"),
+    // Which disk each drive letter is on, so a USB drive's volumes can be told apart.
+    ("partitions", STORAGE, "SELECT DiskNumber, DriveLetter FROM MSFT_Partition"),
     // Only whether a battery exists: Win32_Battery.DeviceID is usually serial + maker + name.
     ("battery_cimv2", CIMV2, "SELECT Name FROM Win32_Battery"),
     // The raw ATA SMART attribute table (reallocated and pending sectors live here).

@@ -180,16 +180,19 @@
         ],
         "volumes": [
           {
+            "bus": null,
             "free_bytes": 612345597952,
             "letter": "C:",
             "size_bytes": 999456043008
           },
           {
+            "bus": null,
             "free_bytes": 210987654144,
             "letter": "D:",
             "size_bytes": 500105216000
           },
           {
+            "bus": null,
             "free_bytes": 1203456789504,
             "letter": "E:",
             "size_bytes": 2000396800000

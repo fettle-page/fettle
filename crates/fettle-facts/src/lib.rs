@@ -177,6 +177,9 @@ pub struct Volume {
     pub letter: Option<String>,
     pub size_bytes: Option<u64>,
     pub free_bytes: Option<u64>,
+    /// How the disk this volume is on is connected, so a USB drive's volumes can be told apart.
+    /// Missing in reports from before 1.0.5.
+    pub bus: Option<Bus>,
 }
 
 // ---------- battery (provisional: confirm on the laptop test PC) ----------

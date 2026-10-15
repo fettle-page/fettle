@@ -905,6 +905,21 @@
                   "items": {
                     "type": "object",
                     "properties": {
+                      "bus": {
+                        "description": "How the disk this volume is on is connected, so a USB drive's volumes can be told apart.\nMissing in reports from before 1.0.5.",
+                        "type": [
+                          "string",
+                          "null"
+                        ],
+                        "default": null,
+                        "enum": [
+                          "nvme",
+                          "sata",
+                          "usb",
+                          "other",
+                          null
+                        ]
+                      },
                       "free_bytes": {
                         "type": [
                           "integer",

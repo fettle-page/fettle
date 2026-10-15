@@ -38,6 +38,10 @@ export function generateReports(seed: number, count: number): Report[] {
   const int = (lo: number, hi: number) => lo + Math.floor(rnd() * (hi - lo + 1));
   /** A field that is sometimes missing: undefined drops it from the JSON. */
   const opt = <T,>(v: T, p = 0.85): T | undefined => (chance(p) ? v : undefined);
+  // Fields added after the corpus was first seeded draw from their own stream, so adding one leaves
+  // every earlier field of every case as it was.
+  const later = prng(seed ^ 0x105);
+  const laterOpt = <T,>(xs: readonly T[]): T | undefined => (later() < 0.85 ? xs[Math.floor(later() * xs.length)] : undefined);
 
   const section = <T,>(data: () => T, statuses = ["ok", "ok", "ok", "ok", "ok", "ok", "ok", "ok", "needs_admin", "failed", "not_present"]) => {
     const status = pick(statuses);
@@ -115,7 +119,9 @@ export function generateReports(seed: number, count: number): Report[] {
     const volume = () => {
       const size = pick([0, 499_000_000_000, 1_000_000_000_000, 64_000_000]);
       const ratio = pick([0, 0.05, 0.0999, 0.1, 0.11, 0.5, 1]);
-      return { letter: opt(pick(["C:", "D:", "E:"])), size_bytes: opt(size), free_bytes: opt(Math.floor(size * ratio)) };
+      const v = { letter: opt(pick(["C:", "D:", "E:"])), size_bytes: opt(size), free_bytes: opt(Math.floor(size * ratio)), bus: laterOpt(["nvme", "sata", "usb", "other"]) };
+      // 8 TB with 49 or 51 GiB free sits either side of the big-drive floor (10% would be 800 GB).
+      return later() < 0.15 ? { ...v, size_bytes: 8_001_563_222_016, free_bytes: (later() < 0.5 ? 49 : 51) * GIB } : v;
     };
     const stick = () => ({
       capacity_bytes: opt(pick([8 * GIB, 16 * GIB, 32 * GIB, 512 * 2 ** 20, 0])),

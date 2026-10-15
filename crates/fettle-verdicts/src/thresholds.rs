@@ -6,6 +6,9 @@ pub const DISK_TEMP_KEEP_AN_EYE_C: i32 = 70;
 /// Hard drives are rated to about 60 °C (WD Blue, Seagate Barracuda), so they warn sooner.
 pub const HDD_TEMP_KEEP_AN_EYE_C: i32 = 55;
 pub const FREE_SPACE_KEEP_AN_EYE: f64 = 0.1;
+/// A drive other than the system drive with at least this much free (50 GiB) isn't almost full,
+/// however big it is: 700 GB left on an 8 TB drive is under 10%.
+pub const FREE_SPACE_ENOUGH_BYTES: u64 = 50 * 1024 * 1024 * 1024;
 /// Volumes smaller than this (2 GiB) get no free-space warning: a recovery or system partition that
 /// has a drive letter is meant to be nearly full. The system drive is checked whatever its size.
 pub const SMALL_VOLUME_BYTES: u64 = 2 * 1024 * 1024 * 1024;

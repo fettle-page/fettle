@@ -1,5 +1,5 @@
 use super::common::{Action, couldnt_check, int, line, plural, section_problem};
-use crate::thresholds::{DISK_TEMP_KEEP_AN_EYE_C, FREE_SPACE_KEEP_AN_EYE, HDD_TEMP_KEEP_AN_EYE_C, SMALL_VOLUME_BYTES, SSD_WEAR_ACT_SOON, SSD_WEAR_KEEP_AN_EYE};
+use crate::thresholds::{DISK_TEMP_KEEP_AN_EYE_C, FREE_SPACE_ENOUGH_BYTES, FREE_SPACE_KEEP_AN_EYE, HDD_TEMP_KEEP_AN_EYE_C, SMALL_VOLUME_BYTES, SSD_WEAR_ACT_SOON, SSD_WEAR_KEEP_AN_EYE};
 use crate::{Level, Line, Param, SectionId, SectionVerdict};
 use fettle_facts::{Bus, Disk, Media, NvmeHealth, Section, SmartSummary, Storage};
 
@@ -17,9 +17,12 @@ pub fn storage_rules(s: Option<&Section<Storage>>, elevated: bool) -> SectionVer
     for (i, vol) in data.volumes.iter().enumerate() {
         let size = vol.size_bytes.unwrap_or(0);
         let Some(free) = vol.free_bytes else { continue };
+        let system = is_system_drive(vol.letter.as_deref());
         // No size, no percentage to judge. A small partition with a letter (recovery, system) is
-        // meant to be nearly full; the system drive is judged whatever its size.
-        if size == 0 || (size < SMALL_VOLUME_BYTES && !is_system_drive(vol.letter.as_deref())) {
+        // meant to be nearly full; the system drive is judged whatever its size. A USB drive isn't
+        // judged at all (Fettle only checks the drives inside the PC), and a big data drive with
+        // plenty left isn't almost full whatever the percentage.
+        if size == 0 || (size < SMALL_VOLUME_BYTES && !system) || vol.bus == Some(Bus::Usb) || (!system && free >= FREE_SPACE_ENOUGH_BYTES) {
             continue;
         }
         let ratio = free as f64 / size as f64;

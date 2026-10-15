@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { appVersion } from "../src/app-version.ts";
-import { releases, type Release as ChangelogEntry } from "../src/content/changelog.ts";
+import { checkChangelog, releases, type Release as ChangelogEntry } from "../src/content/changelog.ts";
 import { checkRelease, downloads, latestVersion, links, release, type Release } from "../src/release.ts";
 import { DIST, page, pages, text } from "./dist-helpers.ts";
 
@@ -104,6 +104,26 @@ describe("the changelog", () => {
       expect(shown, r.version).toBe(r.date !== null);
     }
     if (releases.every((r) => r.date === null)) expect(text(html)).toContain("No releases yet");
+  });
+});
+
+describe("the changelog's dates", () => {
+  const entry = (date: string | null): ChangelogEntry => ({ version: "1.0.5", date, notes: { en: [], it: [] } });
+
+  it("are all real days written YYYY-MM-DD (the site build checks this too)", () => {
+    expect(() => checkChangelog(releases)).not.toThrow();
+    expect(() => checkChangelog([entry(null), entry("2026-10-15"), entry("2028-02-29")])).not.toThrow();
+  });
+
+  it("fail with a plain message naming the version and the bad value", () => {
+    for (const bad of ["2026-13-01", "2026-02-30", "2026-10-1", "15/10/2026", "2026-10-15T00:00:00Z", ""]) {
+      expect(() => checkChangelog([entry(bad)]), bad).toThrow(`changelog: 1.0.5 has date ${JSON.stringify(bad)}, expected a real day as YYYY-MM-DD`);
+    }
+  });
+
+  it("are checked when the changelog page is built, before any date is formatted", () => {
+    const view = readFileSync(new URL("../src/views/Changelog.astro", import.meta.url), "utf8");
+    expect(view).toMatch(/checkChangelog\(releases\);[\s\S]*new Date\(r\.date\)/);
   });
 });
 

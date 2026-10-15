@@ -1,6 +1,6 @@
 ---
 import Doc from "../components/Doc.astro";
-import { releases } from "../content/changelog.ts";
+import { checkChangelog, releases } from "../content/changelog.ts";
 import { pages } from "../i18n/pages.ts";
 import type { Locale } from "../i18n/paths.ts";
 import Base from "../layouts/Base.astro";
@@ -10,6 +10,8 @@ interface Props {
 }
 const { locale } = Astro.props;
 const c = pages(locale).changelog;
+// A mistyped date fails the build with a plain message, not Date's bare "Invalid time value".
+checkChangelog(releases);
 // Only dated entries are out; the next one's notes can wait here undated.
 const out = releases.filter((r): r is typeof r & { date: string } => r.date !== null);
 const day = new Intl.DateTimeFormat(locale === "it" ? "it-IT" : "en-GB", { dateStyle: "long", timeZone: "UTC" });

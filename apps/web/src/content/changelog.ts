@@ -4,6 +4,18 @@ import type { Locale } from "../i18n/paths.ts";
 
 export type Release = { version: string; date: string | null; notes: Record<Locale, string[]> };
 
+/** Throws a plain message for a date that isn't a real day written YYYY-MM-DD (the changelog page runs this at build time). */
+export function checkChangelog(entries: Release[]): void {
+  for (const { version, date } of entries) {
+    if (date === null) continue;
+    // Read back, so a day that doesn't exist (2026-02-30, which Date rolls over into March) fails too.
+    const day = /^\d{4}-\d{2}-\d{2}$/.test(date) ? new Date(`${date}T00:00:00Z`) : null;
+    if (!day || Number.isNaN(day.getTime()) || day.toISOString().slice(0, 10) !== date) {
+      throw new Error(`changelog: ${version} has date ${JSON.stringify(date)}, expected a real day as YYYY-MM-DD`);
+    }
+  }
+}
+
 export const releases: Release[] = [
   {
     version: "1.0.5",

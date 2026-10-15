@@ -74,7 +74,7 @@
   "windows.esu_stale": "{product} non ha ricevuto gli aggiornamenti di sicurezza usciti da novembre 2025.",
   "windows.esu_stale.action": "Iscriviti agli Extended Security Updates da Windows Update e installa ciò che propone, oppure passa a Windows 11.",
   "windows.esu_stale_enrolled.action": "Apri Windows Update e installa ciò che propone.",
-  "windows.esu_commercial.action": "Chiedi a chi gestisce questo PC degli Extended Security Updates, oppure passa a Windows 11.",
+  "windows.esu_commercial.action": "Chiedi a chi gestisce questo PC informazioni sugli Extended Security Updates, oppure passa a Windows 11.",
   "windows.unknown_version": "Fettle non conosce ancora le date di supporto di questa versione di {product}.",
   "windows.restart_nudge": "Il PC non viene riavviato da {days} giorni. Un riavvio permette di completare gli aggiornamenti.",
   "windows.cpu_ready": "Questo processore è nell'elenco di Microsoft per Windows 11.",

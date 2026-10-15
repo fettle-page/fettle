@@ -165,6 +165,10 @@ fn enterprise_and_education_are_sent_to_whoever_manages_the_pc() {
     let unknown = find(&judge(json!({ "windows": w("unknown", None) }), "2026-10-01T10:00:00Z", false), "windows-support").clone();
     assert_eq!(unknown.headline.key, "windows.esu_unknown");
     assert_eq!(unknown.action.as_ref().map(|a| a.key.as_str()), Some("windows.esu_commercial.action"));
+    assert_eq!(
+        fettle_verdicts::template("windows.esu_commercial.action", fettle_verdicts::Locale::It),
+        "Chiedi a chi gestisce questo PC informazioni sugli Extended Security Updates, oppure passa a Windows 11."
+    );
     // Home and Pro keep Windows Update's own enrolment.
     let mut home = win10_home(None, None);
     home["data"]["esu"] = json!("not_enrolled");

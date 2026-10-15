@@ -1,9 +1,9 @@
-// The short rule files (battery.ts, memory.ts, startup.ts, graphics.ts), side by side.
+// The short rule files: battery, memory, startup and graphics, side by side.
 
 use super::common::{Action, couldnt_check, line, plural, section_problem};
 use crate::thresholds::{BATTERY_ACT_SOON, BATTERY_KEEP_AN_EYE, DRIVER_AGE_INFO_MONTHS, STARTUP_ITEMS_KEEP_AN_EYE};
 use crate::{Level, Param, SectionId, SectionVerdict, fmt};
-use fettle_facts::{Battery, CheckStatus, Graphics, Memory, Section, Startup};
+use fettle_facts::{Battery, CheckStatus, Graphics, Memory, MemoryKind, Section, Startup};
 
 /// `None` when there's no battery (desktops), so the receipt has no battery section at all.
 pub fn battery_rules(s: Option<&Section<Battery>>) -> Option<SectionVerdict> {
@@ -44,7 +44,9 @@ pub fn memory_rules(s: Option<&Section<Memory>>) -> SectionVerdict {
     let bytes: f64 = modules.iter().map(|m| m.capacity_bytes.unwrap_or(0) as f64).sum();
     let gb = (bytes / 2f64.powi(30)).round() as i64;
     let mut lines = vec![line("memory", Level::Fine, "memory.fine", &[("gb", Param::Int(gb)), ("sticks", Param::Int(modules.len() as i64))], Action::Default)];
-    if modules.len() == 1 && data.and_then(|d| d.slots_total).unwrap_or(0) >= 2 {
+    // LPDDR is soldered to the board: there's no second stick to add.
+    let soldered = modules.iter().any(|m| matches!(m.kind, Some(MemoryKind::Lpddr3 | MemoryKind::Lpddr4 | MemoryKind::Lpddr5)));
+    if modules.len() == 1 && !soldered && data.and_then(|d| d.slots_total).unwrap_or(0) >= 2 {
         lines.push(line("memory-channels", Level::Info, "memory.single_channel", &[], Action::Default));
     }
     SectionVerdict { section: SectionId::Memory, lines }

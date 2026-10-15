@@ -161,6 +161,10 @@ fn enterprise_and_education_are_sent_to_whoever_manages_the_pc() {
     let not = find(&judge(json!({ "windows": w("not_enrolled", None) }), "2026-10-01T10:00:00Z", false), "windows-support").clone();
     assert_eq!(not.headline.key, "windows.unsupported_esu");
     assert_eq!(not.action.as_ref().map(|a| a.key.as_str()), Some("windows.esu_commercial.action"));
+    // Not knowing whether it's enrolled: Windows Update doesn't show commercial enrolment either.
+    let unknown = find(&judge(json!({ "windows": w("unknown", None) }), "2026-10-01T10:00:00Z", false), "windows-support").clone();
+    assert_eq!(unknown.headline.key, "windows.esu_unknown");
+    assert_eq!(unknown.action.as_ref().map(|a| a.key.as_str()), Some("windows.esu_commercial.action"));
     // Home and Pro keep Windows Update's own enrolment.
     let mut home = win10_home(None, None);
     home["data"]["esu"] = json!("not_enrolled");

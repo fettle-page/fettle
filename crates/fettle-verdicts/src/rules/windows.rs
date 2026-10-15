@@ -83,7 +83,7 @@ fn support_line(w: &Windows, build: u32, now: i64) -> Line {
             }
         }
         Some(EsuState::NotEnrolled) => line("windows-support", Level::ActSoon, "windows.unsupported_esu", &[product()], esu_action(&info, Action::Default)),
-        _ => line("windows-support", Level::KeepAnEye, "windows.esu_unknown", &[product()], Action::Default),
+        _ => line("windows-support", Level::KeepAnEye, "windows.esu_unknown", &[product()], esu_action(&info, Action::Default)),
     }
 }
 

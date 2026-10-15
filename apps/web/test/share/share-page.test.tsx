@@ -134,8 +134,13 @@ describe("SharePage · delete", () => {
   it("says when Fettle can't be reached", async () => {
     window.location.hash = "#tok123";
     render(<SharePage payload={{ kind: "delete", id: ID }} locale="en" fetcher={() => Promise.reject(new TypeError("offline"))} />);
+    // The live region is there, empty, before anything happens: screen readers announce a change to it,
+    // not a region that appears already filled.
+    const status = screen.getByRole("status");
+    expect(status.textContent).toBe("");
     fireEvent.click(screen.getByRole("button", { name: "Delete this receipt" }));
-    expect(await screen.findByText("Couldn't reach Fettle. Try again.")).toBeTruthy();
+    await waitFor(() => expect(status.textContent).toBe("Couldn't reach Fettle. Try again."));
+    expect(screen.getByRole("status")).toBe(status);
   });
 });
 
@@ -276,7 +281,13 @@ describe("SharePage · locked", () => {
 
   it("says when Fettle can't be reached", async () => {
     render(<SharePage payload={locked} locale="en" fetcher={() => Promise.reject(new TypeError("offline"))} />);
+    const status = screen.getByRole("status");
+    expect(status.textContent).toBe("");
+    expect(screen.getByLabelText("Password").getAttribute("aria-describedby")).toBeNull();
     submit("hunter22");
+    await waitFor(() => expect(status.textContent).toBe("Couldn't reach Fettle. Try again."));
+    expect(screen.getByRole("status")).toBe(status);
+    expect(screen.getByLabelText("Password").getAttribute("aria-describedby")).toBe(status.id);
     expect(await screen.findByText("Couldn't reach Fettle. Try again.")).toBeTruthy();
   });
 

@@ -67,6 +67,8 @@ body { background: var(--t-page); color: var(--on-mat); font-family: var(--font-
 .card h1 { margin: 0 0 12px; font: 800 clamp(24px, 4vw, 30px)/1.1 var(--font-display); letter-spacing: -0.02em; }
 .card p { margin: 0 0 16px; color: var(--color-ink-soft); }
 .card [role="status"] { color: var(--color-ink); font-weight: 600; }
+/* Empty, it takes no room but stays a live region (display: none would take it out of the accessibility tree). */
+.card [role="status"]:empty { position: absolute; margin: 0; }
 .unlock { display: grid; gap: 10px; justify-items: start; }
 .unlock label { font-weight: 600; }
 .unlock input {

@@ -196,7 +196,8 @@ function Delete({ id, locale, fetcher }: { id: string; locale: Locale; fetcher: 
   return (
     <Card title={t("delete.title")}>
       <p>{t("delete.body")}</p>
-      {message && <p role="status">{t(message)}</p>}
+      {/* Always there, so a screen reader announces the message when it appears. */}
+      <p role="status">{message ? t(message) : null}</p>
       <button className="tape" type="button" disabled={state === "busy"} onClick={remove}>
         {t("delete.button")}
       </button>
@@ -336,11 +337,10 @@ function Locked({ id, locale, fetcher }: { id: string; locale: Locale; fetcher: 
         <button className="tape" type="submit" disabled={state.status === "busy"}>
           {t("locked.button")}
         </button>
-        {message && (
-          <p id="unlock-message" role="status">
-            {t(message)}
-          </p>
-        )}
+        {/* Always there, so a screen reader announces the message when it appears. */}
+        <p id="unlock-message" role="status">
+          {message ? t(message) : null}
+        </p>
       </form>
     </Card>
   );

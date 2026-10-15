@@ -14,16 +14,16 @@ describe("stamp", () => {
     for (const c of cases) {
       for (const locale of ["en", "it"]) {
         const { meta } = c[locale];
-        expect(stamp(meta.collectedAt, locale, "UTC"), `${c.name} ${locale}`).toBe(meta.when);
+        expect(stamp(meta.collectedAt, "UTC"), `${c.name} ${locale}`).toBe(meta.when);
       }
     }
   });
 
   it("shows a viewer's own zone without a label", () => {
-    expect(stamp("2026-10-07T20:29:30Z", "en", "Europe/Rome")).toBe("07/10/2026 22:29");
+    expect(stamp("2026-10-07T20:29:30Z", "Europe/Rome")).toBe("07/10/2026 22:29");
   });
 
   it("leaves a time it can't read as it is", () => {
-    expect(stamp("not a time", "en", "UTC")).toBe("not a time");
+    expect(stamp("not a time", "UTC")).toBe("not a time");
   });
 });

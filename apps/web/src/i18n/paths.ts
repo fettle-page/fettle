@@ -11,12 +11,3 @@ export function alternates(path: string): Record<Locale, string> {
   return { en: localePath("en", path), it: localePath("it", path) };
 }
 
-export function localeFromPath(pathname: string): Locale {
-  return pathname === "/it" || pathname.startsWith("/it/") ? "it" : "en";
-}
-
-/** The page path without its language prefix: "/it/faq" → "/faq", "/it" → "/". */
-export function basePath(pathname: string): string {
-  if (pathname === "/it") return "/";
-  return pathname.startsWith("/it/") ? pathname.slice(3) : pathname;
-}

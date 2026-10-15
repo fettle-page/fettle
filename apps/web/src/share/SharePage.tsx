@@ -117,7 +117,7 @@ function Shared({ model, expiresAt, locale, opened = false }: SharedProps) {
   const [localTime, setLocalTime] = useState(false);
   useEffect(() => setLocalTime(true), []);
   const shown = useMemo(
-    () => (localTime ? { ...model, meta: { ...model.meta, when: stamp(model.meta.collectedAt, model.locale) } } : model),
+    () => (localTime ? { ...model, meta: { ...model.meta, when: stamp(model.meta.collectedAt) } } : model),
     [model, localTime],
   );
   // No line-by-line print here: lines starting hidden would delay the largest paint. share.css feeds

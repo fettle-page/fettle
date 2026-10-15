@@ -360,7 +360,7 @@ describe("SharePage · scan time in local time", () => {
   it("shows the scan time in the visitor's own time zone once mounted", async () => {
     const r = tired;
     const model = tiredModel();
-    const local = stamp(r.collected_at, "en");
+    const local = stamp(r.collected_at);
     expect(local, "this test needs a time zone other than UTC").not.toBe(model.meta.when);
     const { container } = render(<SharePage payload={{ kind: "report", id: ID, model, expiresAt: "2026-11-06T12:00:00.000Z" }} locale="en" />);
     await waitFor(() => expect(container.querySelector(".when")!.textContent).toBe(local));

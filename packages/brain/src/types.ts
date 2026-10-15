@@ -11,4 +11,3 @@ export type DetailGroup = ModelSection["details"][number];
 export type DetailRow = DetailGroup["rows"][number];
 export type Level = ModelLine["level"];
 export type Tone = ReceiptModel["tone"];
-export type SectionId = ModelSection["id"];

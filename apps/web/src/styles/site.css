@@ -239,7 +239,6 @@ section.hero {
   border-left: 1px solid color-mix(in srgb, currentColor 22%, transparent);
   font: 600 14px/1 var(--font-mono); letter-spacing: 0.02em; opacity: 0.86;
 }
-.dl-count[hidden] { display: none; }
 .dl-count svg { width: 14px; height: 14px; flex: none; }
 
 /* The desk: knife, live receipt, stamp */

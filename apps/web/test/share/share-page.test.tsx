@@ -310,6 +310,9 @@ describe("SharePage · locked", () => {
       const view = render(<SharePage payload={locked} locale="en" fetcher={dayUsedUp(36_000)} />);
       submit("nope");
       expect(await screen.findByText("Too many tries for today. Try again in about 10 hours.")).toBeTruthy();
+      // React can draw the message a moment before it runs the effect that sets the page's timer; on a
+      // slow machine (CI) the test would then move the clock before the timer exists. Wait for it.
+      await vi.waitFor(() => expect(vi.getTimerCount()).toBeGreaterThan(0));
       return view;
     };
     const button = () => screen.getByRole("button", { name: "Open receipt" }) as HTMLButtonElement;

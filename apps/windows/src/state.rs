@@ -498,7 +498,12 @@ impl State {
             // Shown like any check, in this window.
             Event::DeepFinished(Ok(report), seconds) => {
                 self.clear_for_a_new_check();
-                self.update(Event::Finished(Ok(report), seconds))
+                let mut effects = self.update(Event::Finished(Ok(report), seconds));
+                // The print preview open meanwhile shows the quick receipt: Print would print the new one.
+                if self.panel == Panel::Preview {
+                    effects.push(Effect::RenderPreview);
+                }
+                effects
             }
             Event::DeepFinished(Err(error), _) => self.update(Event::DeepRefused(error)),
             Event::DeepRefused(error) => {
@@ -940,6 +945,19 @@ mod tests {
         s.update(Event::DeepAsked);
         s.update(Event::DeepFinished(Err(DeepError::Cancelled), 0.0));
         assert_eq!(s.deep, Deep::Problem("deep.cancelled"));
+    }
+
+    #[test]
+    fn a_deep_check_finishing_under_the_print_preview_redraws_it() {
+        // The preview must show what Print will print: the Deep receipt, once it's in.
+        let mut s = checked_state();
+        s.update(Event::DeepAsked);
+        s.update(Event::PrintAsked);
+        let mut deep = report("2026-10-09T11:00:00Z");
+        deep.elevated = true;
+        let effects = s.update(Event::DeepFinished(Ok(deep), 1.4));
+        assert_eq!(s.panel, Panel::Preview);
+        assert!(effects.contains(&Effect::RenderPreview), "{effects:?}");
     }
 
     #[test]

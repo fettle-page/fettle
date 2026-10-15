@@ -46,6 +46,7 @@ export const releases: Release[] = [
         "Laptops with soldered memory (LPDDR) no longer get the tip to add a second memory stick.",
         "A receipt copied with Copy now keeps an “@everyone” or “<@…>” in a disk or app name as plain text, so pasting it into Discord can't ping anyone.",
         "A nearly full USB drive, such as a backup drive, no longer gets an “almost full” warning: Fettle only judges the drives inside the PC. A big drive other than C: with 50 GB or more free isn't called almost full any more, whatever the percentage.",
+        "If a Deep check finishes while the print preview is open, the preview now shows the Deep check's receipt, which is the one Print prints.",
       ],
       it: [
         "Il numero di download nella home e nella pagina di download ora compare anche alla prima visita, non solo dopo aver ricaricato: il sito lo chiede a GitHub una volta l'ora e conserva la risposta, invece di chiederlo quando qualcuno apre la pagina.",
@@ -72,6 +73,7 @@ export const releases: Release[] = [
         "I portatili con memoria saldata (LPDDR) non ricevono più il consiglio di aggiungere un secondo banco di memoria.",
         "Uno scontrino copiato con Copia ora lascia come testo normale un “@everyone” o “<@…>” nel nome di un disco o di un'app, così incollarlo su Discord non può notificare nessuno.",
         "Un'unità USB quasi piena, come un disco di backup, non riceve più l'avviso “quasi pieno”: Fettle valuta solo le unità interne del PC. E un'unità grande diversa da C: con almeno 50 GB liberi non viene più detta quasi piena, qualunque sia la percentuale.",
+        "Se un controllo approfondito finisce mentre l'anteprima di stampa è aperta, l'anteprima ora mostra lo scontrino del controllo approfondito, cioè quello che viene stampato.",
       ],
     },
   },

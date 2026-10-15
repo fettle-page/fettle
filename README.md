@@ -42,7 +42,7 @@ and sends nothing on its own except the update check, which you can turn off.
 | | |
 |---|---|
 | **Storage** | Wear, errors, temperature and free space, on NVMe and SATA. The optional Deep check reads disk health that needs administrator rights. |
-| **Battery** | How much charge it still holds compared with new, and how many cycles it has done. |
+| **Battery** | How much it holds compared with new, and how many cycles it has done. |
 | **Memory** | Sticks, slots, speed, and whether a second stick would help. |
 | **Windows** | Edition, security updates, Windows 11 readiness, restarts. |
 | **Startup** | The apps that start with Windows. |

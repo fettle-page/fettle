@@ -61,6 +61,12 @@ describe("the app's extra features on the site", () => {
     expect(home("it").trayStartup).toBe("Le app che partono insieme a Windows.");
   });
 
+  it("describes battery health as the app does: capacity compared with new, not charge", () => {
+    for (const locale of ["en", "it"] as const) expect(home(locale).trayBattery, locale).toBe(`${appCopy(locale)["blank.battery"]}.`);
+    const readme = readFileSync(new URL("../../../README.md", import.meta.url), "utf8");
+    expect(readme).toContain("| **Battery** | How much it holds compared with new, and how many cycles it has done. |");
+  });
+
   it("the share answer says the app keeps a list of your links", () => {
     expect(faqs("en").find((f) => f.id === "share")!.a.join(" ")).toContain("My shared links");
     expect(faqs("it").find((f) => f.id === "share")!.a.join(" ")).toContain("I miei link condivisi");

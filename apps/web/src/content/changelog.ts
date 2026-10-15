@@ -62,6 +62,7 @@ export const releases: Release[] = [
         "In Safari, the footer's theme choices now sit beside their label, as in other browsers, and on a phone they wrap neatly under each other.",
         "The round “Free · open source” seal on the home page no longer overlaps its own words in Firefox, and in Italian it's no longer squashed.",
         "On phones, the top bar keeps the Fettle logo at full size instead of shrinking it to a dot; the theme choice is at the bottom of the page there. On tablets, “How it works” no longer breaks onto two lines.",
+        "The home page now describes battery health as the app does: how much the battery holds compared with new.",
       ],
       it: [
         "Il numero di download nella home e nella pagina di download ora compare anche alla prima visita, non solo dopo aver ricaricato: il sito lo chiede a GitHub una volta l'ora e conserva la risposta, invece di chiederlo quando qualcuno apre la pagina.",
@@ -104,6 +105,7 @@ export const releases: Release[] = [
         "In Safari, le scelte del tema nel piè di pagina ora stanno accanto alla loro etichetta, come negli altri browser, e sul telefono vanno a capo in ordine una sotto l'altra.",
         "Il timbro rotondo “Gratis · open source” nella home non sovrappone più le parole in Firefox, e in italiano non è più schiacciato.",
         "Sul telefono, la barra in alto mostra il logo di Fettle a grandezza piena invece di ridurlo a un puntino; lì la scelta del tema è in fondo alla pagina. Sul tablet, “Come funziona” non va più a capo su due righe.",
+        "La home ora descrive lo stato della batteria come l'app: la capacità rispetto a quando era nuova.",
       ],
     },
   },

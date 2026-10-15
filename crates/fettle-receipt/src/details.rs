@@ -317,7 +317,9 @@ pub fn machine_rows(facts: &Facts, locale: Locale) -> Vec<DetailRow> {
         .flatten()
         .collect::<Vec<_>>()
         .join(" · ");
-    rows_of(locale, vec![("d.cpu", s.cpu_name.clone()), ("d.board", s.board.clone()), ("d.bios", Some(bios))])
+    // Reports from 1.0.4 and earlier can carry a name the maker never filled in ("Default string").
+    let board = s.board.as_deref().and_then(fettle_facts::placeholders::without_placeholders);
+    rows_of(locale, vec![("d.cpu", s.cpu_name.clone()), ("d.board", board), ("d.bios", Some(bios))])
 }
 
 #[cfg(test)]

@@ -6,6 +6,7 @@
 //! fact is optional. The report envelope and each section's `check` are required.
 
 pub mod fit;
+pub mod placeholders;
 pub mod redact;
 pub mod startup_names;
 

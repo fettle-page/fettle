@@ -30,13 +30,10 @@ pub enum PrivateKind {
     Disk,
 }
 
-/// What firmware writes when nobody filled the serial in. Compared without case.
-const PLACEHOLDERS: &[&str] = &["to be filled by o.e.m.", "default string", "system serial number", "none", "n/a", "not specified"];
-
-/// A real serial: trimmed, not blank, not all zeros, not a placeholder.
+/// A real serial: trimmed, not blank, not all zeros, not what firmware writes when nobody filled it in.
 fn serial(v: Option<&Value>) -> Option<String> {
     let s = v?.as_str()?.trim();
-    let fake = s.is_empty() || s.chars().all(|c| c == '0') || PLACEHOLDERS.contains(&s.to_ascii_lowercase().as_str());
+    let fake = s.is_empty() || s.chars().all(|c| c == '0') || fettle_facts::placeholders::is_placeholder(s);
     (!fake).then(|| s.to_string())
 }
 

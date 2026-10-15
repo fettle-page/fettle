@@ -198,3 +198,11 @@ describe("the seal's link to the source", () => {
     expect(page("it.html")).toMatch(/<a class="text-link" href="https:\/\/github\.com\/fettle-page\/fettle">Leggi il codice sorgente su GitHub →<\/a>/);
   });
 });
+
+describe("the home page's browser receipt", () => {
+  // In Italian at 360 px, "non visibile" and its ?? tag split over two lines; the label wraps instead.
+  it("keeps each value and its tag on one line", () => {
+    const css = src("src/styles/site.css").replace(/\/\*[\s\S]*?\*\//g, "");
+    expect(/(?:^|\n)\.live-row dd\s*\{([^}]*)\}/.exec(css)?.[1]).toMatch(/white-space:\s*nowrap/);
+  });
+});

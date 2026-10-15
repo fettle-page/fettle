@@ -284,7 +284,7 @@ section.hero {
 .live-row { display: flex; justify-content: space-between; gap: 14px; margin: 0; }
 .live-row dt, .live-title { text-transform: uppercase; letter-spacing: 0.04em; }
 .live-title { margin-top: 14px; font-weight: 600; }
-.live-row dd { margin: 0; font-weight: 600; text-align: right; }
+.live-row dd { margin: 0; font-weight: 600; text-align: right; white-space: nowrap; } /* a long label wraps instead */
 .live-row dd.na { font-weight: 400; color: var(--color-ink-soft); }
 .live-end { display: block; margin-top: 4px; font-weight: 600; }
 .live-end a { position: relative; isolation: isolate; color: var(--color-mat); text-decoration: none; }

@@ -484,9 +484,15 @@ fn windows(s: &Sources, now: i64) -> Section<Windows> {
 
 // ---------- startup ----------
 
+/// The places the scan reads startup apps from (sources/startup.rs): six Run and RunOnce keys
+/// and two Startup folders, the user's and everyone's.
+pub const STARTUP_RUN_KEYS: usize = 6;
+pub const STARTUP_FOLDERS: usize = 2;
+
 fn startup(s: &Sources) -> Section<Startup> {
     let Some(reg) = s.rows("startup_registry") else { return status(CheckStatus::Failed, s.code("startup_registry")) };
-    let folders = s.rows("startup_folders").map(Vec::as_slice).unwrap_or_default();
+    let folders_read = s.rows("startup_folders");
+    let folders = folders_read.map(Vec::as_slice).unwrap_or_default();
     // A place Windows wouldn't let Fettle read (access denied) could hold any number of apps:
     // counting the rest would pass a partial list off as the whole. Any other trouble (a Start Menu
     // redirected to an office network that can't be reached, a drive that isn't ready, a damaged
@@ -494,6 +500,22 @@ fn startup(s: &Sources) -> Section<Startup> {
     let refused = reg.iter().chain(folders).filter_map(|r| r.get("error").and_then(Value::as_str)).any(|e| error_code(e) == CheckCode::AccessDenied);
     if refused {
         return status(CheckStatus::Failed, Some(CheckCode::AccessDenied));
+    }
+    // But when every place failed, nothing was read, and an empty list would say the PC starts no
+    // apps. The rows can't show a place read fine but empty (a missing key leaves no row either),
+    // so "every place failed" means no entry rows at all and an error row for each place the scan
+    // reads (a folders part that didn't answer counts as both folders failed).
+    let failed_places = |rows: &[Value], place: &dyn Fn(&Value) -> String| {
+        let mut places: Vec<String> = rows.iter().filter(|r| r.get("error").is_some_and(|e| !e.is_null())).map(place).collect();
+        places.sort();
+        places.dedup();
+        places.len()
+    };
+    let read_any = reg.iter().chain(folders).any(|r| r.get("error").is_none_or(Value::is_null));
+    let failed_keys = failed_places(reg, &|r| format!("{}\\{}", str_of(r, "hive").unwrap_or(""), str_of(r, "key").unwrap_or("").to_ascii_lowercase()));
+    let failed_folders = if folders_read.is_some() { failed_places(folders, &|r| str_of(r, "folder").unwrap_or("").to_string()) } else { STARTUP_FOLDERS };
+    if !read_any && failed_keys >= STARTUP_RUN_KEYS && failed_folders >= STARTUP_FOLDERS {
+        return status(CheckStatus::Failed, Some(CheckCode::Other));
     }
     let approved = s.rows("startup_approved").cloned().unwrap_or_default();
     let enabled = |hive: &str, key: &str, name: &str| {
@@ -658,6 +680,36 @@ mod tests {
         // Nothing there at all is a real answer.
         let r = raw(&[("startup_registry", rows(json!([]))), ("startup_folders", rows(json!([])))]);
         assert_eq!(startup(&Sources(&r)).data.unwrap().items.len(), 0);
+    }
+
+    #[test]
+    fn startup_fails_when_every_place_failed() {
+        let keys = [r"Software\Microsoft\Windows\CurrentVersion\Run", r"Software\Microsoft\Windows\CurrentVersion\RunOnce"];
+        let wow = [r"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Run", r"SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\RunOnce"];
+        let broken = |hive: &str, key: &str| json!({ "hive": hive, "key": key, "error": "The configuration registry key is invalid. (os error 1010)" });
+        let all_keys: Vec<Value> = keys.iter().map(|k| broken("HKCU", k)).chain(keys.iter().chain(&wow).map(|k| broken("HKLM", k))).collect();
+        let unreachable = |folder: &str| json!({ "folder": folder, "error": "The network path was not found. (os error 53)" });
+
+        // Nothing was read: an empty list would claim the PC starts no apps.
+        let r = raw(&[("startup_registry", rows(json!(all_keys))), ("startup_folders", rows(json!([unreachable("user"), unreachable("common")])))]);
+        let s = startup(&Sources(&r));
+        assert_eq!((s.check.status, s.check.code, s.data), (CheckStatus::Failed, Some(CheckCode::Other), None));
+        // The same when the folders' part of the scan didn't answer at all.
+        let r = raw(&[("startup_registry", rows(json!(all_keys))), ("startup_folders", err("timed out after 10000 ms"))]);
+        assert_eq!(startup(&Sources(&r)).check.code, Some(CheckCode::Other));
+
+        // One place read is enough: the failed ones are skipped as before.
+        let r = raw(&[("startup_registry", rows(json!(all_keys))), ("startup_folders", rows(json!([unreachable("user"), { "folder": "common", "file": "Notes.lnk" }])))]);
+        let s = startup(&Sources(&r));
+        assert_eq!(s.check.status, CheckStatus::Ok);
+        assert_eq!(s.data.unwrap().items.iter().map(|i| i.name.clone().unwrap()).collect::<Vec<_>>(), ["Notes.lnk"]);
+        // A folder read fine but empty leaves no row, so it can't be told from one never tried:
+        // with only some places failing, the list (empty here) still counts.
+        let r = raw(&[("startup_registry", rows(json!(all_keys))), ("startup_folders", rows(json!([unreachable("user")])))]);
+        let s = startup(&Sources(&r));
+        assert_eq!((s.check.status, s.data.unwrap().items.len()), (CheckStatus::Ok, 0));
+        let r = raw(&[("startup_registry", rows(json!(all_keys[..5]))), ("startup_folders", rows(json!([unreachable("user"), unreachable("common")])))]);
+        assert_eq!(startup(&Sources(&r)).check.status, CheckStatus::Ok);
     }
 
     #[test]

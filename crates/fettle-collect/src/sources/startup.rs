@@ -45,14 +45,17 @@ pub fn startup_registry() -> Result<Value, String> {
     Ok(Value::Array(out))
 }
 
+/// The Startup folders: label, the environment variable of the folder they sit in, and the path below it.
+const STARTUP_FOLDERS: &[(&str, &str, &str)] = &[
+    ("user", "APPDATA", r"Microsoft\Windows\Start Menu\Programs\Startup"),
+    ("common", "ProgramData", r"Microsoft\Windows\Start Menu\Programs\StartUp"),
+];
+
 pub fn startup_folders() -> Result<Value, String> {
-    let folders = [
-        ("user", std::env::var("APPDATA").map(|p| PathBuf::from(p).join(r"Microsoft\Windows\Start Menu\Programs\Startup"))),
-        ("common", std::env::var("ProgramData").map(|p| PathBuf::from(p).join(r"Microsoft\Windows\Start Menu\Programs\StartUp"))),
-    ];
     let mut out = Vec::new();
-    for (label, dir) in folders {
-        let Ok(dir) = dir else { continue };
+    for &(label, base, path) in STARTUP_FOLDERS {
+        let Ok(base) = std::env::var(base) else { continue };
+        let dir = PathBuf::from(base).join(path);
         match startup_files(&dir) {
             Ok(files) => out.extend(files.into_iter().map(|file| json!({"folder": label, "file": file}))),
             Err(e) => out.extend(open_error(&e).map(|error| json!({"folder": label, "error": error}))),
@@ -134,6 +137,13 @@ mod tests {
         std::fs::write(dir.0.join("Notes.lnk"), b"").unwrap();
         std::fs::write(dir.0.join("desktop.ini"), b"").unwrap();
         assert_eq!(startup_files(&dir.0).unwrap(), ["Notes.lnk"]);
+    }
+
+    #[test]
+    fn the_mapping_knows_how_many_places_are_read() {
+        // map.rs tells "every place failed" by counting them.
+        assert_eq!(RUN_KEYS.len(), crate::map::STARTUP_RUN_KEYS);
+        assert_eq!(STARTUP_FOLDERS.len(), crate::map::STARTUP_FOLDERS);
     }
 
     #[test]

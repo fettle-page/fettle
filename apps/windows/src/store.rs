@@ -248,12 +248,18 @@ pub(crate) mod tests {
 
     impl Drop for ScratchDir {
         fn drop(&mut self) {
-            // remove_dir_all removes a junction inside without following it.
-            let _ = std::fs::remove_dir_all(&self.0);
-            // The run's folder too, once the last test's is gone (it stays while others still run).
-            if let Some(root) = self.0.parent() {
-                let _ = std::fs::remove_dir(root);
-            }
+            remove_scratch(&self.0);
+        }
+    }
+
+    /// Removes a test's folder, or the file a test put in its place. remove_dir_all removes a
+    /// junction inside without following it. The shared folder above stays: removing it while
+    /// another test is creating its own inside would fail that test.
+    pub(crate) fn remove_scratch(path: &Path) {
+        match std::fs::symlink_metadata(path) {
+            Ok(m) if m.is_dir() => drop(std::fs::remove_dir_all(path)),
+            Ok(_) => drop(std::fs::remove_file(path)),
+            Err(_) => {}
         }
     }
 
@@ -278,8 +284,23 @@ pub(crate) mod tests {
 
     /// A scratch folder at `path`, emptied first (a run killed before its clean-up leaves one).
     pub(crate) fn scratch_at(path: PathBuf) -> Scratch {
-        let _ = std::fs::remove_dir_all(&path);
+        remove_scratch(&path);
         Scratch(std::sync::Arc::new(ScratchDir(path)))
+    }
+
+    #[test]
+    fn a_scratch_path_a_test_made_into_a_file_goes_too() {
+        // Some tests put a file where the data folder should be (a folder that can't be written).
+        let dir = temp_dir();
+        let path = dir.to_path_buf();
+        std::fs::create_dir_all(path.parent().unwrap()).unwrap();
+        std::fs::write(&path, "not a folder").unwrap();
+        drop(dir);
+        assert!(!path.exists(), "{path:?} was left behind");
+        // And a new scratch folder at a path a killed run left as a file starts empty.
+        std::fs::write(&path, "left from a killed run").unwrap();
+        let again = scratch_at(path.clone());
+        assert!(!again.exists());
     }
 
     #[test]

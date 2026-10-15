@@ -76,11 +76,18 @@ struct ScratchDir(PathBuf);
 
 impl Drop for ScratchDir {
     fn drop(&mut self) {
-        let _ = std::fs::remove_dir_all(&self.0);
-        // The run's folder too, once the last test's is gone.
-        if let Some(root) = self.0.parent() {
-            let _ = std::fs::remove_dir(root);
-        }
+        remove_scratch(&self.0);
+    }
+}
+
+/// Removes a test's folder, or the file a test put in its place (a data folder that can't be
+/// written). The shared fettle-ui folder stays: removing it while another test creates its own
+/// inside would fail that test.
+fn remove_scratch(path: &std::path::Path) {
+    match std::fs::symlink_metadata(path) {
+        Ok(m) if m.is_dir() => drop(std::fs::remove_dir_all(path)),
+        Ok(_) => drop(std::fs::remove_file(path)),
+        Err(_) => {}
     }
 }
 
@@ -109,7 +116,7 @@ impl AsRef<std::path::Path> for Scratch {
 fn temp_dir() -> Scratch {
     static N: AtomicUsize = AtomicUsize::new(0);
     let dir = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("fettle-ui").join(N.fetch_add(1, Ordering::Relaxed).to_string());
-    let _ = std::fs::remove_dir_all(&dir);
+    remove_scratch(&dir);
     Scratch(Arc::new(ScratchDir(dir)))
 }
 
@@ -1138,7 +1145,6 @@ fn a_data_folder_that_cant_be_written_still_asks_once_a_day() {
     h.app.dispatch(fettle_windows::state::Event::UpdateTick);
     h.background.run_all(&h.app);
     assert_eq!(site.1.lock().unwrap().len(), 1, "not every ten minutes");
-    let _ = std::fs::remove_file(&dir);
 }
 
 fn seeded_update(hours_ago: i64, settings: &str) -> Scratch {
@@ -1204,7 +1210,6 @@ fn opening_the_json_fold_moves_nothing_above_it() {
     assert_eq!(before, after, "the view kept its spacing above the fold");
 }
 
-/// A tired laptop with three next steps (the website's sample report).
 /// The report of a parity case whose name starts with `prefix`.
 fn case_report(prefix: &str) -> Report {
     let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../crates/fettle-receipt/tests/parity/cases");
@@ -1213,6 +1218,7 @@ fn case_report(prefix: &str) -> Report {
     serde_json::from_value(case["report"].clone()).unwrap()
 }
 
+/// A tired laptop with three next steps (the website's sample report).
 fn tired_report() -> Report {
     let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../worker/test/fixtures/tired.json");
     serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap()

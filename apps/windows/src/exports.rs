@@ -205,7 +205,7 @@ mod tests {
 
     #[test]
     fn a_name_without_pdf_gets_it_added_and_never_replaces_another_file() {
-        let dir = crate::store::tests::scratch_at(std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/tmp/fettle-pdf-name"));
+        let dir = crate::store::tests::temp_dir();
         std::fs::create_dir_all(&*dir).unwrap();
         // The name chosen in the dialog (Windows already asked before replacing that one).
         assert_eq!(pdf_path(dir.join("receipt.pdf")), dir.join("receipt.pdf"));

@@ -5,7 +5,9 @@
 //!
 //! `--dev-check` starts a check at launch; `--dev-data` keeps settings and the last check in
 //! another folder than %LOCALAPPDATA%\Fettle; `--dev-report <json>` makes that check read a saved
-//! report instead of this PC (screenshots of a sample PC, never the one it runs on).
+//! report instead of this PC (screenshots of a sample PC, never the one it runs on);
+//! `--dev-size <width>x<height>` sizes the window (logical pixels). With `--dev-report`,
+//! `--dev-open deep` shows a Deep check under way: it never asks Windows and never finishes.
 //!
 //!   fettle --dev-fps <txt> [--dev-check] [--dev-data <dir>]
 //!   fettle --dev-fps-live - [--dev-check] [--dev-data <dir>]   (on screen; see measure_live)
@@ -26,6 +28,8 @@ pub struct DevArgs {
     pub open: Option<String>,
     /// A saved report the check reads instead of this PC.
     pub report: Option<String>,
+    /// The window's size in logical pixels.
+    pub size: Option<(f32, f32)>,
     /// Where to write the frame times of a scrolling run.
     pub fps: Option<String>,
     /// An on-screen scrolling run, never focused; Slint's
@@ -45,6 +49,7 @@ impl DevArgs {
                 "--dev-data" => out.data = args.next(),
                 "--dev-open" => out.open = args.next(),
                 "--dev-report" => out.report = args.next(),
+                "--dev-size" => out.size = args.next().and_then(|v| v.split_once('x').and_then(|(w, h)| Some((w.parse().ok()?, h.parse().ok()?)))),
                 "--dev-fps" => out.fps = args.next(),
                 "--dev-fps-live" => out.fps_live = args.next(),
                 _ => {}
@@ -170,6 +175,13 @@ mod tests {
         assert_eq!(a.report.as_deref(), Some("sample.json"));
         assert!(a.check && a.hidden());
         assert_eq!(args(&[]).report, None);
+    }
+
+    #[test]
+    fn dev_size_sizes_the_window() {
+        assert_eq!(args(&["--dev-size", "960x600"]).size, Some((960.0, 600.0)));
+        assert_eq!(args(&["--dev-size", "wide"]).size, None);
+        assert_eq!(args(&[]).size, None);
     }
 
     #[test]

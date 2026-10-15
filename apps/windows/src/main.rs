@@ -95,8 +95,17 @@ fn run() -> Result<(), Stop> {
     }
     if let Some(path) = &dev.report {
         deps.scanner = std::sync::Arc::new(dev_report(path)?);
+        // A Deep check that's under way for good: no Windows prompt, never a result.
+        if dev.open.as_deref() == Some("deep") {
+            deps.deep_scan = std::sync::Arc::new(|_| loop {
+                std::thread::sleep(Duration::from_secs(3600));
+            });
+        }
     }
     let app = Fettle::new(deps)?;
+    if let Some((width, height)) = dev.size {
+        app.window().window().set_size(slint::LogicalSize::new(width, height));
+    }
     tint_title_bar_when_ready(&app);
     // A development check: check straight away.
     if dev.check {
@@ -109,6 +118,7 @@ fn run() -> Result<(), Stop> {
             "share" => Event::Open(Panel::Share),
             "links" => Event::Open(Panel::Links),
             "preview" => Event::PrintAsked,
+            "deep" if dev.report.is_some() => Event::DeepAsked,
             _ => Event::Open(Panel::Settings),
         };
         // After a development check, once its receipt is in.

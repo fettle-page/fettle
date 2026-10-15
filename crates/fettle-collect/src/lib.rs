@@ -44,8 +44,11 @@ pub fn collect(opts: &Options) -> Report {
 pub fn collect_with(opts: &Options, on_done: impl Fn(&str, &SourceResult)) -> Report {
     let elevated = sources::is_elevated();
     let collected_at = SystemTime::now();
+    // The names can take a few seconds on a domain PC away from its network: gather them meanwhile.
+    let redactor = std::thread::spawn(names::redactor);
     let raw = run_all_with(sources::sources(elevated), opts.timeout, on_done);
-    build_report(&raw, collected_at, elevated, &names::redactor(), &opts.app_version)
+    let redactor = redactor.join().unwrap_or_else(|_| names::redactor());
+    build_report(&raw, collected_at, elevated, &redactor, &opts.app_version)
 }
 
 /// The privacy pass again, with the names of the account running this: a Deep check's elevated scan

@@ -427,7 +427,8 @@ export component ResultPanel inherits VerticalLayout {
     in property <string> answer;
     in property <bool> deep;
     in property <string> deep-problem;
-    // Windows' prompt is open: asking again would do nothing.
+    // Windows' prompt is open, or the Deep check is running: asking again, or checking again,
+    // would do nothing.
     in property <bool> deep-asking;
     in property <[Section]> numbers;
     // The privacy switch's card: empty when the switch is off.
@@ -452,6 +453,8 @@ export component ResultPanel inherits VerticalLayout {
             Button {
                 text: Copy.tr("scan.again", Copy.lang);
                 icon: "M20 11 A8 8 0 1 0 17.7 16.7 M20 4 L20 11 L13 11";
+                // A Deep check is under way: its receipt replaces this one when it's done.
+                enabled: !root.deep-asking;
                 clicked => {
                     root.again();
                 }
@@ -486,7 +489,7 @@ export component ResultPanel inherits VerticalLayout {
                 VerticalLayout {
                     padding-top: 6px;
                     Button {
-                        text: Copy.tr("deep.button", Copy.lang);
+                        text: root.deep-asking ? Copy.tr("deep.waiting", Copy.lang) : Copy.tr("deep.button", Copy.lang);
                         enabled: !root.deep-asking;
                         clicked => {
                             root.run-deep();

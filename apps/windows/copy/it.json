@@ -22,6 +22,7 @@
   "export.print_off": "Al momento Windows non può stampare su questo PC. Con Salva ottieni lo stesso scontrino in PDF.",
   "export.print_off_saved": "Al momento Windows non può stampare su questo PC, quindi Fettle ha salvato lo scontrino in PDF.",
   "deep.button": "Esegui un controllo approfondito",
+  "deep.waiting": "In attesa del controllo approfondito…",
   "deep.why": "Windows chiederà l'accesso da amministratore. Fettle ne ha bisogno per leggere lo stato dei dischi e il chip di sicurezza, e continua solo a leggere.",
   "deep.cancelled": "Il controllo approfondito è stato annullato. Questo resta il controllo rapido.",
   "deep.failed": "Non è stato possibile avviare il controllo approfondito. Riprova.",

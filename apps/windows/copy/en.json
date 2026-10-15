@@ -22,6 +22,7 @@
   "export.print_off": "Windows can't print on this PC right now. Save makes the same receipt as a PDF.",
   "export.print_off_saved": "Windows can't print on this PC right now, so Fettle saved the receipt as a PDF instead.",
   "deep.button": "Run a Deep check",
+  "deep.waiting": "Waiting for the Deep check…",
   "deep.why": "Windows will ask for administrator access. Fettle needs it to read disk health and the security chip, and it still only reads.",
   "deep.cancelled": "The Deep check was cancelled. This is still the quick check.",
   "deep.failed": "The Deep check couldn't start. Try again.",

@@ -660,13 +660,18 @@ fn a_declined_deep_check_keeps_the_quick_receipt_and_says_so() {
     press(&h.app, "Check this PC");
     h.background.run_all(&h.app);
     press(&h.app, "Run a Deep check");
-    // Windows' prompt waits off the window's thread; meanwhile the button can't ask twice.
+    // Windows' prompt waits off the window's thread; meanwhile the button says so and can't ask
+    // twice, and Check again (which would do nothing until it's over) is off too.
     assert_eq!(asked.load(Ordering::Relaxed), 0);
-    let button = ElementHandle::find_by_accessible_label(h.app.window(), "Run a Deep check").next().unwrap();
+    let button = ElementHandle::find_by_accessible_label(h.app.window(), "Waiting for the Deep check…").next().expect("the button says it's waiting");
     assert_eq!(button.accessible_enabled(), Some(false));
+    let again = ElementHandle::find_by_accessible_label(h.app.window(), "Check again").next().unwrap();
+    assert_eq!(again.accessible_enabled(), Some(false));
     h.background.run_all(&h.app);
     assert_eq!(asked.load(Ordering::Relaxed), 1);
+    let button = ElementHandle::find_by_accessible_label(h.app.window(), "Run a Deep check").next().unwrap();
     assert_eq!(button.accessible_enabled(), Some(true));
+    assert_eq!(again.accessible_enabled(), Some(true));
     assert!(has(&h.app, "The Deep check was cancelled. This is still the quick check."));
     assert!(has(&h.app, "Fine so far, but Fettle couldn't read the disks' health."), "the quick receipt stays");
 }

@@ -25,7 +25,7 @@
   "deep.waiting": "In attesa del controllo approfondito…",
   "deep.why": "Windows chiederà l'accesso da amministratore. Fettle ne ha bisogno per leggere lo stato dei dischi e il chip di sicurezza, e anche così si limita a leggere.",
   "deep.cancelled": "Il controllo approfondito è stato annullato. Questo resta il controllo rapido.",
-  "deep.failed": "Il controllo approfondito non è riuscito a finire. Riprova.",
+  "deep.failed": "Il controllo approfondito non ha funzionato. Riprova.",
   "deep.folder": "Il controllo approfondito non può funzionare dalla cartella in cui Fettle tiene i suoi dati (per esempio una cartella di rete). Per usarlo, avvia Fettle da una cartella di questo PC.",
   "share.button": "Condividi con un link",
   "share.title": "Condividi questo scontrino",

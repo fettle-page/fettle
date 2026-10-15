@@ -25,7 +25,7 @@
   "deep.waiting": "Waiting for the Deep check…",
   "deep.why": "Windows will ask for administrator access. Fettle needs it to read disk health and the security chip, and it still only reads.",
   "deep.cancelled": "The Deep check was cancelled. This is still the quick check.",
-  "deep.failed": "The Deep check didn't finish. Try again.",
+  "deep.failed": "The Deep check didn't work. Try again.",
   "deep.folder": "The Deep check can't run from where Fettle keeps its data here (a network folder, say). Run Fettle from a folder on this PC to use it.",
   "share.button": "Share a link",
   "share.title": "Share this receipt",

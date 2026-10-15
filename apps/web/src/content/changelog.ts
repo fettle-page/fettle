@@ -53,7 +53,7 @@ export const releases: Release[] = [
         "The “new version” note's download link is now checked again when Fettle reads its saved copy, so it can only ever open a page on fettle.page.",
         "Uninstalling Fettle for all users now removes only the uninstalling account's own Fettle data, and lists the other accounts' Fettle folders for them (or you) to delete: an administrator deleting files in other people's folders could be tricked into deleting files elsewhere.",
         "Accessibility: the arrow keys now move between the choices in Settings and when sharing a link (theme, language, update interval, link expiry), each Delete in My shared links tells a screen reader which link it deletes, and the faded last receipt on the first screen is easier to read.",
-        "A Deep check that stops partway now says it didn't finish, instead of that it couldn't start.",
+        "When a Deep check doesn't work, the app now says just that, instead of that it couldn't start (it may have started and then stopped).",
       ],
       it: [
         "Il numero di download nella home e nella pagina di download ora compare anche alla prima visita, non solo dopo aver ricaricato: il sito lo chiede a GitHub una volta l'ora e conserva la risposta, invece di chiederlo quando qualcuno apre la pagina.",
@@ -87,7 +87,7 @@ export const releases: Release[] = [
         "Il link per scaricare la nuova versione ora viene ricontrollato anche quando Fettle rilegge la sua copia salvata, così può aprire sempre e solo una pagina di fettle.page.",
         "Disinstallare Fettle per tutti gli utenti ora rimuove solo i dati di Fettle dell'account che disinstalla, ed elenca le cartelle di Fettle degli altri account perché le eliminino loro (o tu): un amministratore che elimina file nelle cartelle di altri potrebbe essere indotto a eliminare file altrove.",
         "Accessibilità: i tasti freccia ora passano da una scelta all'altra in Impostazioni e quando si condivide un link (tema, lingua, frequenza del controllo, scadenza del link), ogni Elimina in I miei link condivisi dice a un lettore di schermo quale link elimina, e l'ultimo scontrino sbiadito nella prima schermata si legge meglio.",
-        "Un controllo approfondito che si ferma a metà ora dice che non è riuscito a finire, invece che non è stato possibile avviarlo; e alcuni testi in italiano sono più chiari.",
+        "Quando un controllo approfondito non funziona, l'app ora dice proprio questo, invece che non è stato possibile avviarlo (potrebbe essere partito e poi essersi fermato); e alcuni testi in italiano sono più chiari.",
       ],
     },
   },

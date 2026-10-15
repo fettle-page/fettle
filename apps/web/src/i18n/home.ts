@@ -74,6 +74,7 @@ const en = {
   slipNet: "MAC and IP",
   slipKey: "Product key",
   slipHidden: "hidden",
+  slipHiddenMany: "hidden",
   slipNever: "never collected",
 
   sealH: "Free, open source, no tracking.",
@@ -165,6 +166,7 @@ const it: Record<HomeKey, string> = {
   slipNet: "MAC e IP",
   slipKey: "Product Key",
   slipHidden: "nascosto",
+  slipHiddenMany: "nascosti",
   slipNever: "mai raccolto",
 
   sealH: "Gratis, open source, nessun tracciamento.",

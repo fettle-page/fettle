@@ -52,3 +52,18 @@ describe("keyboard focus on label-maker tapes", () => {
     expect(rule).toMatch(/outline:\s*2px solid/);
   });
 });
+
+describe("the privacy slip", () => {
+  // Each row's word agrees with its label in Italian: "MAC e IP" are plural.
+  const rows = (file: string) => {
+    const slip = /<figure class="slip privacy-slip"[^>]*>([\s\S]*?)<\/figure>/.exec(page(file))![1]!;
+    return [...slip.matchAll(/<dt>([^<]*)<\/dt>\s*<dd>[\s\S]*?<span>([^<]*)<\/span>\s*<\/dd>/g)].map(([, label, word]) => [label!, word!]);
+  };
+  it("says hidden in the right number, in each language", () => {
+    const it_ = rows("it.html");
+    expect(it_.find(([label]) => label === "MAC e IP")?.[1]).toBe("nascosti");
+    for (const [label, word] of it_.filter(([label]) => label !== "MAC e IP")) expect(word, label).toBe("nascosto");
+    expect(rows("it.html").length).toBe(4);
+    for (const [label, word] of rows("index.html")) expect(word, label).toBe("hidden");
+  });
+});

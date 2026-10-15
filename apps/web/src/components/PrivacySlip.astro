@@ -9,19 +9,25 @@ interface Props {
 
 const { locale } = Astro.props;
 const h = home(locale);
-const hidden = [h.slipSerial, h.slipPc, h.slipUser, h.slipNet];
+// Each row's word agrees with its label (in Italian, "MAC e IP" are plural).
+const hidden = [
+  [h.slipSerial, h.slipHidden],
+  [h.slipPc, h.slipHidden],
+  [h.slipUser, h.slipHidden],
+  [h.slipNet, h.slipHiddenMany],
+];
 ---
 
 <div class="slip-feed"><span class="slip-slot" aria-hidden="true"></span><figure class="slip privacy-slip">
   <figcaption class="slip-head">{h.slipHead}</figcaption>
   <dl>
     {
-      hidden.map((label) => (
+      hidden.map(([label, word]) => (
         <div class="slip-row">
           <dt>{label}</dt>
           <dd>
             <span class="redact" aria-hidden="true" />
-            <span>{h.slipHidden}</span>
+            <span>{word}</span>
           </dd>
         </div>
       ))

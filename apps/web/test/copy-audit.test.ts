@@ -67,7 +67,7 @@ describe("the privacy page", () => {
     expect(privacy("en")).toMatch(/EU data centres/);
     expect(privacy("it")).toMatch(/data center nell'UE/);
     expect(privacy("en")).toMatch(/24 hours after it was last used/);
-    expect(privacy("it")).toMatch(/24 ore dall'ultimo utilizzo/);
+    expect(privacy("it")).toMatch(/24 ore dopo l'ultimo utilizzo/);
   });
 });
 

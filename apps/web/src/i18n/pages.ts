@@ -84,7 +84,7 @@ const en: Pages = {
   },
   download: {
     title: "Download — Fettle",
-    description: "Download Fettle, the free check-up for Windows 10 and 11: an installer (about 12 MB) or a portable zip (about 14 MB), no administrator rights needed.",
+    description: "Download Fettle, the free check-up for Windows 10 and 11: an installer (about 12 MB) or a portable zip (about 15 MB), no administrator rights needed.",
     kicker: "Download",
     h1: "Fettle for Windows.",
     intro: "Fettle isn't released yet. The first version is being built and tested on real PCs; when it's ready, it will be right here.",
@@ -95,9 +95,9 @@ const en: Pages = {
     checksums: "SHA-256 checksums",
     allReleases: "All releases on GitHub",
     needsH: "What you'll need",
-    needs: ["Windows 10 or 11, 64-bit", "About 35 MB of disk space", "No administrator rights (the Deep check asks only if you want it)"],
+    needs: ["Windows 10 or 11, 64-bit", "About 40 MB of disk space", "No administrator rights (the Deep check asks only if you want it)"],
     formatsH: "Two ways to run it",
-    formats: ["Installer, about 12 MB, with an update check you can turn off. To remove it: Windows Settings > Apps, then Fettle > Uninstall.", "Portable zip, about 14 MB: nothing to install, it keeps its settings in its own folder, and it has the same update check you can turn off. To remove it, delete its folder."],
+    formats: ["Installer, about 12 MB, with an update check you can turn off. To remove it: Windows Settings > Apps, then Fettle > Uninstall.", "Portable zip, about 15 MB: nothing to install, it keeps its settings in its own folder, and it has the same update check you can turn off. To remove it, delete its folder."],
     warningH: "About the Windows warning",
     warning: [
       "New apps without a code-signing certificate get a SmartScreen warning the first time they run, and Fettle's downloads aren't signed yet, so you may see \"Windows protected your PC\".",
@@ -144,7 +144,7 @@ const en: Pages = {
       {
         h: "Privacy",
         p: [
-          "Fettle sends nothing on its own, except the update check: it asks this website for the newest version number, sending nothing about your PC, and you can turn it off in Settings. A receipt is uploaded only when you ask for a share link.",
+          "Fettle sends nothing on its own, except the update check: it asks this website for the newest version number, sending nothing about your PC, and you can turn it off in Settings. The report behind the receipt is uploaded only when you ask for a share link.",
         ],
       },
     ],
@@ -193,7 +193,7 @@ const it: Pages = {
         h: "Link condivisi",
         p: [
           "Solo quando scegli di condividere, Fettle carica il report da cui nasce lo scontrino che vedi, con i dati personali tolti, e nient'altro. Il nostro server lo ricontrolla prima di conservarlo e toglie ogni indirizzo email, indirizzo IP, ID di account, nome di server o nome di cartella del profilo che trova, anche se arriva da un'app più vecchia. Viene conservato su Cloudflare, solo nei suoi data center nell'UE, per il tempo che scegli (7 giorni, 30 giorni o 1 anno) e poi eliminato. Un link privato di eliminazione ti permette di toglierlo prima.",
-          "Se aggiungi una password, il nostro server conserva solo un'impronta (hash), creata con una chiave segreta tenuta separata dai report, mai la password. Dopo una password corretta conserva anche l'impronta di un permesso, così lo stesso browser può riaprire lo scontrino; il permesso scade 24 ore dall'ultimo utilizzo. Chiunque abbia il link, e la password se l'hai impostata, può aprire lo scontrino.",
+          "Se aggiungi una password, il nostro server conserva solo un'impronta (hash), creata con una chiave segreta tenuta separata dai report, mai la password. Dopo una password corretta conserva anche l'impronta di un permesso, così lo stesso browser può riaprire lo scontrino; il permesso scade 24 ore dopo l'ultimo utilizzo. Chiunque abbia il link, e la password se l'hai impostata, può aprire lo scontrino.",
         ],
       },
       {
@@ -230,7 +230,7 @@ const it: Pages = {
   },
   download: {
     title: "Scarica — Fettle",
-    description: "Scarica Fettle, il controllo gratuito per Windows 10 e 11: un installer (circa 12 MB) o uno zip portatile (circa 14 MB), senza diritti di amministratore.",
+    description: "Scarica Fettle, il controllo gratuito per Windows 10 e 11: un installer (circa 12 MB) o uno zip portatile (circa 15 MB), senza diritti di amministratore.",
     kicker: "Scarica",
     h1: "Fettle per Windows.",
     intro: "Fettle non è ancora disponibile. La prima versione è in costruzione e in prova su PC veri; quando sarà pronta, la trovi proprio qui.",
@@ -241,9 +241,9 @@ const it: Pages = {
     checksums: "Checksum SHA-256",
     allReleases: "Tutte le versioni su GitHub",
     needsH: "Cosa serve",
-    needs: ["Windows 10 o 11, 64 bit", "Circa 35 MB di spazio su disco", "Nessun diritto di amministratore (il Controllo approfondito lo chiede solo se vuoi)"],
+    needs: ["Windows 10 o 11, 64 bit", "Circa 40 MB di spazio su disco", "Nessun diritto di amministratore (il Controllo approfondito lo chiede solo se vuoi)"],
     formatsH: "Due modi per avviarlo",
-    formats: ["Installer, circa 12 MB, con un controllo degli aggiornamenti che puoi disattivare. Per rimuoverlo: Impostazioni di Windows > App, poi Fettle > Disinstalla.", "Zip portatile, circa 14 MB: niente da installare, tiene le impostazioni nella sua cartella e ha lo stesso controllo degli aggiornamenti che puoi disattivare. Per rimuoverlo, elimina la sua cartella."],
+    formats: ["Installer, circa 12 MB, con un controllo degli aggiornamenti che puoi disattivare. Per rimuoverlo: Impostazioni di Windows > App, poi Fettle > Disinstalla.", "Zip portatile, circa 15 MB: niente da installare, tiene le impostazioni nella sua cartella e ha lo stesso controllo degli aggiornamenti che puoi disattivare. Per rimuoverlo, elimina la sua cartella."],
     warningH: "Sull'avviso di Windows",
     warning: [
       "Le app nuove senza certificato di firma del codice ricevono un avviso di SmartScreen al primo avvio, e i download di Fettle non sono ancora firmati, quindi potresti vedere \"Windows ha protetto il PC\".",
@@ -290,7 +290,7 @@ const it: Pages = {
       {
         h: "Privacy",
         p: [
-          "Fettle non invia nulla da solo, tranne il controllo degli aggiornamenti: chiede a questo sito il numero dell'ultima versione, senza inviare alcuna informazione sul tuo PC, e puoi disattivarlo nelle Impostazioni. Lo scontrino viene caricato online solo quando chiedi un link di condivisione.",
+          "Fettle non invia nulla da solo, tranne il controllo degli aggiornamenti: chiede a questo sito il numero dell'ultima versione, senza inviare alcuna informazione sul tuo PC, e puoi disattivarlo nelle Impostazioni. Il report da cui nasce lo scontrino viene caricato solo quando chiedi un link di condivisione.",
         ],
       },
     ],

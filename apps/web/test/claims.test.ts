@@ -40,18 +40,40 @@ describe("claims about the Windows app", () => {
     expect(pages("it").privacy.sections[0]!.p.join(" ")).toContain("non compaiono mai negli scontrini, nei file salvati o nei link condivisi");
   });
 
-  // The real packages (1.0.0): installer 11.9 MB, portable zip 14.4 MB, the app 34 MB installed.
-  it("the downloads are their real sizes: about 12 MB installer, 14 MB portable zip, 35 MB on disk", () => {
+  // The real packages (1.0.4): installer 12.5 MB, portable zip 15.4 MB (14.6 MiB), unpacked 37.7 MB plus the uninstaller once installed.
+  it("the downloads are their real sizes: about 12 MB installer, 15 MB portable zip, 40 MB on disk", () => {
     const [installer, portable] = pages("en").download.formats;
     expect(installer).toContain("about 12 MB");
-    expect(portable).toContain("Portable zip, about 14 MB");
-    expect(pages("en").download.needs).toContain("About 35 MB of disk space");
+    expect(portable).toContain("Portable zip, about 15 MB");
+    expect(pages("en").download.needs).toContain("About 40 MB of disk space");
     const [installerIt, portableIt] = pages("it").download.formats;
     expect(installerIt).toContain("circa 12 MB");
-    expect(portableIt).toContain("Zip portatile, circa 14 MB");
-    expect(pages("it").download.needs).toContain("Circa 35 MB di spazio su disco");
-    expect(pages("en").download.description).toContain("an installer (about 12 MB) or a portable zip (about 14 MB)");
-    expect(pages("it").download.description).toContain("un installer (circa 12 MB) o uno zip portatile (circa 14 MB)");
+    expect(portableIt).toContain("Zip portatile, circa 15 MB");
+    expect(pages("it").download.needs).toContain("Circa 40 MB di spazio su disco");
+    expect(pages("en").download.description).toContain("an installer (about 12 MB) or a portable zip (about 15 MB)");
+    expect(pages("it").download.description).toContain("un installer (circa 12 MB) o uno zip portatile (circa 15 MB)");
+  });
+
+  it("says the report behind the receipt is what's uploaded for a share link", () => {
+    for (const [locale, line] of [
+      ["en", "The report behind the receipt is uploaded only when you ask for a share link."],
+      ["it", "Il report da cui nasce lo scontrino viene caricato solo quando chiedi un link di condivisione."],
+    ] as const) {
+      expect(all(locale).join(" "), locale).toContain(line);
+      expect(all(locale).join(" "), locale).not.toMatch(/A receipt is uploaded|Lo scontrino viene caricato/);
+    }
+  });
+
+  it("calls the everyday check by the app's name for it, the Quick check", () => {
+    expect(faqs("en").find((f) => f.id === "admin")!.a[0]).toBe("No. The Quick check runs as a regular user.");
+    expect(faqs("it").find((f) => f.id === "admin")!.a[0]).toBe("No. Il Controllo rapido funziona come utente standard.");
+    for (const locale of ["en", "it"] as const) expect(all(locale).join(" "), locale).not.toMatch(/normal check|controllo normale/i);
+  });
+
+  it("says when the 24-hour pass runs out in plain Italian", () => {
+    const privacy = pages("it").privacy.sections.flatMap((s) => s.p).join(" ");
+    expect(privacy).toContain("il permesso scade 24 ore dopo l'ultimo utilizzo");
+    expect(privacy).not.toContain("24 ore dall'ultimo");
   });
 
   it("doesn't call itself light: the app draws with the graphics card and uses about 215 MB doing it (user's choice)", () => {
@@ -66,7 +88,8 @@ describe("claims about the Windows app", () => {
   it("there's an update check, not automatic updates, and no single portable .exe", () => {
     for (const locale of ["en", "it"] as const) {
       const text = all(locale).join(" ");
-      expect(text, locale).not.toContain("15 MB");
+      // 15 MB is the portable zip now (see the sizes above); a single portable .exe is what must never be offered.
+      expect(text, locale).not.toMatch(/\.exe[^.]*15 MB/);
       expect(text, locale).not.toMatch(/automatic updates|aggiornamenti automatici/);
       expect(text, locale).not.toMatch(/Portable \.exe|Exe portatile/);
     }

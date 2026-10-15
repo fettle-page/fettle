@@ -149,3 +149,21 @@ fn an_enrolled_pc_stuck_on_the_november_2025_build_still_acts_soon() {
     // Already enrolled: the updates just need installing.
     assert_eq!(l.action.as_ref().map(|a| a.key.as_str()), Some("windows.esu_stale_enrolled.action"));
 }
+
+// Organisations buy Extended Security Updates through volume licensing: Windows Update doesn't offer
+// them to Enterprise or Education, so the way out is whoever manages the PC.
+#[test]
+fn enterprise_and_education_are_sent_to_whoever_manages_the_pc() {
+    let w = |esu: &str, ubr: Option<u32>| ok(json!({ "product": "Windows 10 Enterprise", "edition_id": "Enterprise", "build": 19045, "display_version": "22H2", "ubr": ubr, "esu": esu }));
+    let stale = find(&judge(json!({ "windows": w("unknown", Some(6466)) }), "2026-10-01T10:00:00Z", false), "windows-support").clone();
+    assert_eq!(stale.headline.key, "windows.esu_stale");
+    assert_eq!(stale.action.as_ref().map(|a| a.key.as_str()), Some("windows.esu_commercial.action"));
+    let not = find(&judge(json!({ "windows": w("not_enrolled", None) }), "2026-10-01T10:00:00Z", false), "windows-support").clone();
+    assert_eq!(not.headline.key, "windows.unsupported_esu");
+    assert_eq!(not.action.as_ref().map(|a| a.key.as_str()), Some("windows.esu_commercial.action"));
+    // Home and Pro keep Windows Update's own enrolment.
+    let mut home = win10_home(None, None);
+    home["data"]["esu"] = json!("not_enrolled");
+    let home = find(&judge(json!({ "windows": home }), "2026-10-01T10:00:00Z", false), "windows-support").clone();
+    assert_eq!(home.action.as_ref().map(|a| a.key.as_str()), Some("windows.unsupported_esu.action"));
+}

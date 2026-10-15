@@ -1,5 +1,5 @@
 use super::common::{Action, couldnt_check, line, section_problem};
-use crate::lifecycle::{Esu, LAST_WIN10_UBR_WITHOUT_ESU, last_day, support_end, win10_updates_missed_after};
+use crate::lifecycle::{Esu, LAST_WIN10_UBR_WITHOUT_ESU, SupportInfo, last_day, support_end, win10_updates_missed_after};
 use crate::thresholds::{SUPPORT_END_KEEP_AN_EYE_DAYS, UPTIME_NUDGE_DAYS};
 use crate::{Level, Line, MessageRef, Param, SectionId, SectionVerdict};
 use fettle_facts::{EsuState, Section, Windows};
@@ -52,7 +52,8 @@ fn support_line(w: &Windows, build: u32, now: i64) -> Line {
         } else {
             "windows.ending"
         };
-        return line("windows-support", Level::KeepAnEye, key, &[product(), until()], Action::Default);
+        let action = if key == "windows.ending_esu" { esu_action(&info, Action::Default) } else { Action::Default };
+        return line("windows-support", Level::KeepAnEye, key, &[product(), until()], action);
     }
     // Out of support, and ESU can't help: not 22H2, LTSC, or ESU itself has ended.
     let esu_over = info.esu_end.is_some_and(|end| now > end);
@@ -67,8 +68,8 @@ fn support_line(w: &Windows, build: u32, now: i64) -> Line {
     let state = esu_state(w, build);
     if stale {
         // Enrolled already: the updates only need installing.
-        let action = if state == Some(EsuState::Enrolled) { "windows.esu_stale_enrolled.action" } else { "windows.esu_stale.action" };
-        return line("windows-support", Level::ActSoon, "windows.esu_stale", &[product()], Action::Key(action));
+        let action = if state == Some(EsuState::Enrolled) { Action::Key("windows.esu_stale_enrolled.action") } else { esu_action(&info, Action::Key("windows.esu_stale.action")) };
+        return line("windows-support", Level::ActSoon, "windows.esu_stale", &[product()], action);
     }
     match state {
         Some(EsuState::Enrolled) => {
@@ -81,9 +82,15 @@ fn support_line(w: &Windows, build: u32, now: i64) -> Line {
                 (None, None) => line("windows-support", Level::Fine, "windows.esu_enrolled", &[product()], Action::Default),
             }
         }
-        Some(EsuState::NotEnrolled) => line("windows-support", Level::ActSoon, "windows.unsupported_esu", &[product()], Action::Default),
+        Some(EsuState::NotEnrolled) => line("windows-support", Level::ActSoon, "windows.unsupported_esu", &[product()], esu_action(&info, Action::Default)),
         _ => line("windows-support", Level::KeepAnEye, "windows.esu_unknown", &[product()], Action::Default),
     }
+}
+
+/// How to get ESU: Home and Pro enrol from Windows Update (`home`); organisations buy it through
+/// volume licensing, which Windows Update doesn't offer, so whoever manages the PC does.
+fn esu_action<'a>(info: &SupportInfo, home: Action<'a>) -> Action<'a> {
+    if info.esu == Esu::Commercial { Action::Key("windows.esu_commercial.action") } else { home }
 }
 
 /// Whether ESU is delivering updates. An explicit answer wins; otherwise the build shows it, because

@@ -38,8 +38,8 @@ export function generateReports(seed: number, count: number): Report[] {
   const int = (lo: number, hi: number) => lo + Math.floor(rnd() * (hi - lo + 1));
   /** A field that is sometimes missing: undefined drops it from the JSON. */
   const opt = <T,>(v: T, p = 0.85): T | undefined => (chance(p) ? v : undefined);
-  // Fields added after the corpus was first seeded draw from their own stream, so adding one leaves
-  // every earlier field of every case as it was.
+  // Fields and cases added after the corpus was first seeded draw from their own stream, so the
+  // main stream's picks stay as they were (a later case may still override one, as the 8 TB volumes do).
   const later = prng(seed ^ 0x105);
   const laterOpt = <T,>(xs: readonly T[]): T | undefined => (later() < 0.85 ? xs[Math.floor(later() * xs.length)] : undefined);
 

@@ -26,15 +26,21 @@ describe("SharePage · report", () => {
     expect(container.querySelector(".fettle-receipt")).not.toBeNull();
     // No line-by-line print: hidden lines would delay the largest paint (share.css feeds it in instead).
     expect(container.querySelector(".fettle-receipt[data-printing]")).toBeNull();
-    expect(screen.getByText("Shared receipt")).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 1, name: "Shared receipt" })).toBeTruthy();
     expect(screen.getByText("This link expires on 6 November 2026.")).toBeTruthy();
     expect(screen.getByRole("link", { name: "Check your own PC with Fettle" }).getAttribute("href")).toBe("/");
+  });
+
+  it("has a page heading for screen readers, without moving focus on load", () => {
+    render(<SharePage payload={{ kind: "report", id: ID, model: tiredModel(), expiresAt }} locale="en" />);
+    expect(screen.getByRole("heading", { level: 1, name: "Shared receipt" })).toBeTruthy();
+    expect(document.activeElement).toBe(document.body);
   });
 
   it("speaks Italian", () => {
     render(<SharePage payload={{ kind: "report", id: ID, model: tiredModel("it"), expiresAt }} locale="it" />);
     expect(screen.getByText("Questo link scade il 6 novembre 2026.")).toBeTruthy();
-    expect(screen.getByText("Scontrino condiviso")).toBeTruthy();
+    expect(screen.getByRole("heading", { level: 1, name: "Scontrino condiviso" })).toBeTruthy();
   });
 
   it("sends Italian visitors to the Italian home page", () => {
@@ -95,6 +101,8 @@ describe("SharePage · delete", () => {
     resolve(new Response(null, { status: 204 }));
     expect(await screen.findByRole("heading", { name: "Deleted. The link no longer works." })).toBeTruthy();
     expect(screen.queryByRole("heading", { name: "Delete this receipt?" })).toBeNull();
+    // The button that had focus is gone: focus moves to the outcome, so a screen reader reads it.
+    expect(document.activeElement).toBe(screen.getByRole("heading", { name: "Deleted. The link no longer works." }));
   });
 
   it("titles an already-deleted receipt as gone", async () => {
@@ -103,6 +111,7 @@ describe("SharePage · delete", () => {
     fireEvent.click(screen.getByRole("button", { name: "Delete this receipt" }));
     expect(await screen.findByRole("heading", { name: "This receipt is already gone." })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Delete this receipt" })).toBeNull();
+    expect(document.activeElement).toBe(screen.getByRole("heading", { name: "This receipt is already gone." }));
   });
 
   it("doesn't blame the connection for a server problem", async () => {
@@ -154,6 +163,17 @@ describe("SharePage · locked", () => {
     await waitFor(() => expect(container.querySelector(".fettle-receipt")).not.toBeNull());
     // Drawn from the server's model, as sent.
     expect(container.querySelector(".fettle-receipt")!.textContent).toContain(tiredModel().summary);
+    // The form that had focus is gone: focus moves to the page heading, and the tab title follows.
+    expect(document.activeElement).toBe(screen.getByRole("heading", { level: 1, name: "Shared receipt" }));
+    expect(document.title).toBe(`Fettle receipt: ${tiredModel().summary}`);
+  });
+
+  it("titles the tab in Italian once opened", async () => {
+    render(<SharePage payload={locked} locale="it" fetcher={() => reply(200, { model: tiredModel("it"), expiresAt })} />);
+    fireEvent.change(screen.getByLabelText("Password"), { target: { value: "hunter22" } });
+    fireEvent.click(screen.getByRole("button", { name: "Apri lo scontrino" }));
+    await waitFor(() => expect(document.title).toBe(`Scontrino Fettle: ${tiredModel("it").summary}`));
+    expect(document.activeElement).toBe(screen.getByRole("heading", { level: 1, name: "Scontrino condiviso" }));
   });
 
   const passKey = `fettle-pass:${ID}`;

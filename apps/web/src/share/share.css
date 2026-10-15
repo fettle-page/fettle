@@ -47,6 +47,7 @@ body { background: var(--t-page); color: var(--on-mat); font-family: var(--font-
 .tape.light { background: var(--t-tape-light); color: var(--t-tape-light-ink); text-shadow: none; box-shadow: inset 0 0 0 1px var(--t-tape-light-ring); }
 .tape:disabled { cursor: progress; opacity: 0.6; }
 /* The torn edges (clip-path) would also cut off the ring, so a focused tape is cut straight. */
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0; }
 .tape:focus-visible { outline: 2px solid var(--t-accent); outline-offset: 3px; clip-path: none; }
 
 .stage { flex: 1; padding: 48px 16px 64px; }

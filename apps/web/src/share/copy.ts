@@ -3,6 +3,7 @@ import type { Locale } from "@fettle/brain";
 
 const en = {
   label: "Shared receipt",
+  page_title: "Fettle receipt",
   expires: "This link expires on {date}.",
   "missing.title": "This receipt isn't here.",
   "missing.body": "It may have expired, or its owner deleted it.",
@@ -34,6 +35,7 @@ export type ShareKey = keyof typeof en;
 
 const it: Record<ShareKey, string> = {
   label: "Scontrino condiviso",
+  page_title: "Scontrino Fettle",
   expires: "Questo link scade {il_date}.",
   "missing.title": "Questo scontrino non c'è.",
   "missing.body": "Potrebbe essere scaduto, oppure chi l'ha condiviso l'ha eliminato.",

@@ -20,7 +20,10 @@ export function SharePage({ payload, locale, fetcher = browserFetch }: Props) {
         <a className="home" href={home}>
           <Wordmark className="brand" />
         </a>
-        <span className="tape quiet">{t("label")}</span>
+        {/* A label for the eye: every page has its own h1 for screen readers (the report's says the same). */}
+        <span className="tape quiet" aria-hidden="true">
+          {t("label")}
+        </span>
         <ThemeButton locale={locale} />
       </header>
       <main className="stage">
@@ -96,10 +99,19 @@ function ThemeButton({ locale }: { locale: Locale }) {
   );
 }
 
-type SharedProps = { model: ReceiptModel; expiresAt: string; locale: Locale };
+type SharedProps = { model: ReceiptModel; expiresAt: string; locale: Locale; opened?: boolean };
 
-/** The server's finished receipt, drawn as is (hosts build the model once; the browser never does). */
-function Shared({ model, expiresAt, locale }: SharedProps) {
+/**
+ * The server's finished receipt, drawn as is (hosts build the model once; the browser never does).
+ * `opened`: it just replaced the password form, so focus and the tab title move to it.
+ */
+function Shared({ model, expiresAt, locale, opened = false }: SharedProps) {
+  const heading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (!opened) return;
+    heading.current?.focus();
+    document.title = `${shareText("page_title", locale)}: ${model.summary}`;
+  }, [opened, model, locale]);
   // The server can only format the scan time and the expiry in UTC; once mounted, show the
   // visitor's own (the first client render must match the server's HTML).
   const [localTime, setLocalTime] = useState(false);
@@ -112,16 +124,26 @@ function Shared({ model, expiresAt, locale }: SharedProps) {
   // the whole receipt in with a transform instead.
   return (
     <>
+      <h1 className="sr-only" tabIndex={-1} ref={heading}>
+        {shareText("label", locale)}
+      </h1>
       <ReceiptView model={shown} />
       <p className="note">{shareText("expires", locale, dateParams(longDate(expiresAt, locale, localTime ? null : "UTC")))}</p>
     </>
   );
 }
 
-function Card({ title, children }: { title: string; children?: ReactNode }) {
+/** `focus`: the card replaced what had focus (a button that's gone), so focus moves to its title. */
+function Card({ title, focus = false, children }: { title: string; focus?: boolean; children?: ReactNode }) {
+  const heading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (focus) heading.current?.focus();
+  }, [focus]);
   return (
     <section className="card" aria-labelledby="card-title">
-      <h1 id="card-title">{title}</h1>
+      <h1 id="card-title" ref={heading} tabIndex={focus ? -1 : undefined}>
+        {title}
+      </h1>
       {children}
     </section>
   );
@@ -167,8 +189,8 @@ function Delete({ id, locale, fetcher }: { id: string; locale: Locale; fetcher: 
   }
 
   // Once it's gone, the outcome is the whole page.
-  if (state === "done") return <Card title={t("delete.done")} />;
-  if (state === "gone") return <Card title={t("delete.gone")} />;
+  if (state === "done") return <Card title={t("delete.done")} focus />;
+  if (state === "gone") return <Card title={t("delete.gone")} focus />;
 
   const message = DELETE_MESSAGE[state];
   return (
@@ -250,7 +272,7 @@ function Locked({ id, locale, fetcher }: { id: string; locale: Locale; fetcher: 
       .catch(() => setState({ status: "idle" }));
   });
 
-  if (state.status === "open") return <Shared model={state.model} expiresAt={state.expiresAt} locale={locale} />;
+  if (state.status === "open") return <Shared model={state.model} expiresAt={state.expiresAt} locale={locale} opened />;
   if (state.status === "missing") return <Missing locale={locale} />;
 
   async function open(e: FormEvent) {

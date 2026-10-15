@@ -50,7 +50,7 @@
   "battery.unknown": "La batteria non ha indicato la sua capacità originale.",
   "memory.couldnt_check": "Fettle non è riuscito a controllare la memoria.",
   "memory.fine": "{gb} GB di memoria installati.",
-  "memory.single_channel": "C'è un solo banco di memoria, quindi lavora in single channel. Un secondo banco uguale potrebbe aiutare nei giochi.",
+  "memory.single_channel": "C'è un solo banco di memoria, quindi lavora in canale singolo. Un secondo banco uguale potrebbe aiutare nei giochi.",
   "windows.couldnt_check": "Fettle non è riuscito a controllare Windows.",
   "windows.supported": "{product} riceve aggiornamenti di sicurezza. Fine del supporto: {until}.",
   "windows.ending_feature_update": "Questa versione di {product} sta per perdere gli aggiornamenti di sicurezza. Fine del supporto: {until}.",

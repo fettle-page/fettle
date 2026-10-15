@@ -85,7 +85,7 @@
   "panel.back": "Back",
   "blank.label": "A blank receipt: what Fettle will check",
   "blank.storage": "Each drive's health, wear and space",
-  "blank.battery": "How much charge it still holds",
+  "blank.battery": "How much it holds compared with new",
   "blank.memory": "How much, how fast, which slots",
   "blank.windows": "Version and security updates",
   "blank.startup": "Apps that start with Windows",

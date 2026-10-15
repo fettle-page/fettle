@@ -46,7 +46,8 @@ function pageHeaders(hashes: InlineHashes): Headers {
 
 async function pageFor(env: Env, path: string, locale: Locale): Promise<Page> {
   const MISSING: Page = { status: 404, payload: { kind: "missing", locale } };
-  const m = /^\/r\/([^/]+)(\/delete)?$/.exec(path);
+  // One trailing slash is fine: forums and hand-typed copies add one, and the link should still open.
+  const m = /^\/r\/([^/]+)(\/delete)?\/?$/.exec(path);
   if (!m || !isValidId(m[1]!)) return MISSING;
   const id = m[1]!;
   if (m[2]) return { status: 200, payload: { kind: "delete", id, locale } };
@@ -143,6 +144,8 @@ export async function sharePage(request: Request, env: Env): Promise<Response> {
   }
   if (page.og) {
     const og = page.og;
+    // The link's own address, without any trailing slash the visitor's copy picked up.
+    const link = url.origin + ("id" in page.payload ? `/r/${page.payload.id}` : url.pathname);
     rewriter = rewriter
       .on("title", {
         element(el) {
@@ -151,7 +154,7 @@ export async function sharePage(request: Request, env: Env): Promise<Response> {
       })
       .on("head", {
         element(el) {
-          el.append(ogTags(og, url.origin, url.origin + url.pathname), { html: true });
+          el.append(ogTags(og, url.origin, link), { html: true });
         },
       });
   }

@@ -180,6 +180,19 @@ describe("GET /r/:id", () => {
     expect(payloadOf(await res.text())).toEqual({ kind: "missing", locale: "en" });
   });
 
+  it("opens a link that gained a trailing slash (a forum or a hand-typed copy)", async () => {
+    const { id } = await share();
+    const res = await call(`/r/${id}/`);
+    expect(res.status).toBe(200);
+    const html = await res.text();
+    expect(payloadOf(html)).toMatchObject({ kind: "report", id });
+    // Previews name the link's own address, without the slash.
+    expect(meta(html, "og:url")).toBe(`${ORIGIN}/r/${id}`);
+    const del = await call(`/r/${id}/delete/`);
+    expect(del.status).toBe(200);
+    expect(payloadOf(await del.text())).toMatchObject({ kind: "delete", id });
+  });
+
   it("answers 404 for other paths and 405 for other methods", async () => {
     for (const path of ["/r/", "/r", `/r/${newId("30d")}/extra`, "/r/NOT-AN-ID"]) {
       const res = await call(path);

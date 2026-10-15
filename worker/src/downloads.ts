@@ -2,8 +2,11 @@
 // of every published release, written into the page's empty line, so visitors' browsers never contact GitHub and nothing about who
 // downloaded is kept.
 // The Worker asks GitHub once an hour on a schedule (wrangler.jsonc's Cron Trigger) and keeps the answer in one small R2 object, which
-// every isolate in every data centre can read. A page reads the count from its isolate's memory, or else from that object, and never
-// waits on GitHub: Cloudflare starts fresh isolates all the time, and GitHub often takes longer to answer than a page should wait.
+// every isolate in every data centre can read. A page reads the count from its isolate's memory, or else from its data centre's cache
+// (a copy kept for five minutes, which every isolate there shares), or else from that object, and never waits on GitHub: Cloudflare
+// starts fresh isolates all the time, and GitHub often takes longer to answer than a page should wait. The bucket is in the EU, so far
+// from Europe reading it can take longer than a page should wait too: the cache answers in milliseconds, and when the count isn't
+// there either, the page waits a moment at most and the read carries on in the background to fill memory and the cache.
 // Before the first hourly run (or if someone deletes it) the object is missing; then the first page that finds nothing asks GitHub in
 // the background (only one request at a time per isolate: Workers can't share one request's promise with another) and stores the answer.
 import { release } from "@fettle/web/release";
@@ -14,10 +17,15 @@ export const DOWNLOAD_PAGES = new Set(["/", "/it", "/download", "/it/download"])
 /** The stored count, in the reports bucket but outside the 7d/, 30d/ and 1y/ prefixes, which reports and lifecycle rules use. */
 export const COUNT_KEY = "site/download-count.json";
 
+/** Where the count sits in each data centre's cache (caches.default), on the site's own address. No page has this path. */
+export const CACHE_KEY = "https://fettle.page/__download-count";
+
 /** How long an isolate uses the count it read before reading the stored one again (in the background). */
 const FRESH = 10 * 60_000;
-/** The longest a page waits for the stored count, when the isolate has none yet. */
-const READ_WAIT = 1000;
+/** How long a data centre's cache keeps the count, in seconds: a few minutes, so each hour's new count soon reaches everywhere. */
+const CACHE_TTL = 300;
+/** The longest a page waits for the cached or stored count, when the isolate has none yet. */
+const READ_WAIT = 300;
 /** After a failed ask, try again in five minutes rather than on the next visit. */
 const RETRY = 5 * 60_000;
 /** The longest GitHub gets to answer. */
@@ -67,6 +75,40 @@ function remember(count: number | null | undefined): void {
   if (typeof count === "number") known = { count, at: Date.now() };
 }
 
+/** The count in this data centre's cache, or null when it isn't there (or the cache can't be read). */
+async function readCached(): Promise<number | null> {
+  try {
+    const hit = await caches.default.match(CACHE_KEY);
+    if (!hit) return null;
+    const { count } = (await hit.json()) as { count?: unknown };
+    return typeof count === "number" && Number.isSafeInteger(count) && count >= 0 ? count : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Puts the count in this data centre's cache for the other isolates there. Never fails: the cache only saves time. */
+function cache(count: number, ctx?: ExecutionContext): Promise<void> {
+  const putting = (async () => {
+    const body = JSON.stringify({ count });
+    await caches.default.put(CACHE_KEY, new Response(body, { headers: { "content-type": "application/json", "cache-control": `max-age=${CACHE_TTL}` } }));
+  })().catch((e) => console.log(JSON.stringify({ event: "download_count_cache_failed", message: String(e).slice(0, 120) })));
+  ctx?.waitUntil(putting);
+  return putting;
+}
+
+/** The stored count from R2, also put in the data centre's cache when there is one. */
+async function readAndCache(env: Env, ctx?: ExecutionContext): Promise<number | null | undefined> {
+  const count = await readStored(env);
+  if (typeof count === "number") void cache(count, ctx);
+  return count;
+}
+
+/** For a fresh isolate: the cached count, or else the stored one. */
+async function lookUp(env: Env, ctx?: ExecutionContext): Promise<number | null | undefined> {
+  return (await readCached()) ?? readAndCache(env, ctx);
+}
+
 /**
  * Asks GitHub and stores the count for every isolate. Run hourly by the Cron Trigger, and by a page
  * that found nothing stored. When GitHub fails, the stored count stays as it was and this says false.
@@ -79,6 +121,7 @@ export async function refreshDownloadCount(env: Env): Promise<boolean> {
   }
   remember(count);
   await env.REPORTS.put(COUNT_KEY, JSON.stringify({ count, at: new Date().toISOString() }), { httpMetadata: { contentType: "application/json" } });
+  await cache(count);
   return true;
 }
 
@@ -130,14 +173,15 @@ function fillInBackground(env: Env, ctx?: ExecutionContext): void {
 
 /**
  * The count, from memory when it was read in the last ten minutes. An older one is shown as it is
- * while the stored one is read again in the background. A fresh isolate reads the stored count,
- * waiting a moment at most. Null when no count is known: the line stays out.
+ * while the stored one is read again in the background (from R2 itself, as no page waits for it).
+ * A fresh isolate reads the cached count, or else the stored one, waiting a moment at most. Null
+ * when no count is known: the line stays out.
  */
 export async function downloadCount(env: Env, ctx?: ExecutionContext): Promise<number | null> {
   if (known) {
     if (Date.now() - known.at >= FRESH && !busy(readingAt)) {
       readingAt = Date.now();
-      const reading = readStored(env)
+      const reading = readAndCache(env, ctx)
         .then((count) => {
           // Nothing readable: keep the count in memory, and look again in ten minutes rather than on every visit.
           if (typeof count === "number") remember(count);
@@ -150,7 +194,7 @@ export async function downloadCount(env: Env, ctx?: ExecutionContext): Promise<n
     }
     return known.count;
   }
-  const reading = readStored(env);
+  const reading = lookUp(env, ctx);
   ctx?.waitUntil(reading.then(remember));
   const stored = await Promise.race([reading, new Promise<"slow">((r) => setTimeout(() => r("slow"), READ_WAIT))]);
   if (typeof stored === "number") remember(stored);

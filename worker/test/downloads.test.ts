@@ -3,7 +3,7 @@ import { createScheduledController } from "cloudflare:test";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import raw from "../wrangler.jsonc?raw";
 import worker from "../src/index.ts";
-import { ageDownloadCount, COUNT_KEY, downloadCount, refreshDownloadCount, resetDownloadCount } from "../src/downloads.ts";
+import { ageDownloadCount, CACHE_KEY, COUNT_KEY, downloadCount, refreshDownloadCount, resetDownloadCount } from "../src/downloads.ts";
 import { keyFor, newId } from "../src/ids.ts";
 import { call } from "./helpers.ts";
 
@@ -44,6 +44,7 @@ const pause = (ms: number) => new Promise((r) => setTimeout(r, ms));
 beforeEach(async () => {
   resetDownloadCount();
   await env.REPORTS.delete(COUNT_KEY);
+  await caches.default.delete(CACHE_KEY);
   fetchSpy = vi.spyOn(globalThis, "fetch");
   answer(() => github(RELEASES));
 });
@@ -203,11 +204,36 @@ describe("the download count", () => {
     expect(hidden(line(await res.text()))).toBe(true);
   });
 
+  // An R2 bucket whose reads take three seconds, as the EU bucket might from a data centre far away on a bad day.
+  const slowBucket = { get: () => new Promise((r) => setTimeout(() => r(null), 3000)) } as unknown as R2Bucket;
+
   it("gives up on a slow read of the stored count rather than keep the page waiting", async () => {
-    const slowBucket = { get: () => new Promise((r) => setTimeout(() => r(null), 3000)) } as unknown as R2Bucket;
     const started = Date.now();
     expect(await downloadCount({ ...env, REPORTS: slowBucket })).toBeNull();
-    expect(Date.now() - started).toBeLessThan(1500);
+    // About 300 ms at most, as before the count was kept in R2.
+    expect(Date.now() - started).toBeLessThan(600);
+  });
+
+  it("a fresh isolate finds the count in its data centre's cache, without waiting on R2", async () => {
+    await hourly();
+    resetDownloadCount();
+    const started = Date.now();
+    expect(await downloadCount({ ...env, REPORTS: slowBucket })).toBe(8);
+    expect(Date.now() - started).toBeLessThan(200);
+  });
+
+  it("a page that read the count from R2 leaves it in the cache for the data centre's other isolates", async () => {
+    await stored(8);
+    expect(await shown("/")).toEqual(["8", "8 downloads"]);
+    await vi.waitFor(async () => expect(await caches.default.match(CACHE_KEY)).toBeTruthy());
+    resetDownloadCount();
+    expect(await downloadCount({ ...env, REPORTS: slowBucket })).toBe(8);
+  });
+
+  it("keeps the cached count for a few minutes only, so each hour's count soon reaches every data centre", async () => {
+    await hourly();
+    const cached = await caches.default.match(CACHE_KEY);
+    expect(cached?.headers.get("cache-control")).toBe("max-age=300");
   });
 
   it("sends no ETag, so a browser can't keep showing an old count", async () => {

@@ -102,7 +102,7 @@ describe("SharePage · delete", () => {
     expect(await screen.findByRole("heading", { name: "Deleted. The link no longer works." })).toBeTruthy();
     expect(screen.queryByRole("heading", { name: "Delete this receipt?" })).toBeNull();
     // The button that had focus is gone: focus moves to the outcome, so a screen reader reads it.
-    expect(document.activeElement).toBe(screen.getByRole("heading", { name: "Deleted. The link no longer works." }));
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("heading", { name: "Deleted. The link no longer works." })));
   });
 
   it("titles an already-deleted receipt as gone", async () => {
@@ -111,7 +111,7 @@ describe("SharePage · delete", () => {
     fireEvent.click(screen.getByRole("button", { name: "Delete this receipt" }));
     expect(await screen.findByRole("heading", { name: "This receipt is already gone." })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Delete this receipt" })).toBeNull();
-    expect(document.activeElement).toBe(screen.getByRole("heading", { name: "This receipt is already gone." }));
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("heading", { name: "This receipt is already gone." })));
   });
 
   it("doesn't blame the connection for a server problem", async () => {
@@ -169,7 +169,7 @@ describe("SharePage · locked", () => {
     // Drawn from the server's model, as sent.
     expect(container.querySelector(".fettle-receipt")!.textContent).toContain(tiredModel().summary);
     // The form that had focus is gone: focus moves to the page heading, and the tab title follows.
-    expect(document.activeElement).toBe(screen.getByRole("heading", { level: 1, name: "Shared receipt" }));
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("heading", { level: 1, name: "Shared receipt" })));
     expect(document.title).toBe(`Fettle receipt: ${tiredModel().summary}`);
   });
 
@@ -178,7 +178,7 @@ describe("SharePage · locked", () => {
     fireEvent.change(screen.getByLabelText("Password"), { target: { value: "hunter22" } });
     fireEvent.click(screen.getByRole("button", { name: "Apri lo scontrino" }));
     await waitFor(() => expect(document.title).toBe(`Scontrino Fettle: ${tiredModel("it").summary}`));
-    expect(document.activeElement).toBe(screen.getByRole("heading", { level: 1, name: "Scontrino condiviso" }));
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("heading", { level: 1, name: "Scontrino condiviso" })));
   });
 
   const passKey = `fettle-pass:${ID}`;
@@ -315,7 +315,7 @@ describe("SharePage · locked", () => {
       submit("hunter22");
       expect(await screen.findByRole("heading", { name: "This receipt isn't here." }), JSON.stringify(Object.keys(body))).toBeTruthy();
       // The form that had focus is gone: focus moves to the card's title.
-      expect(document.activeElement).toBe(screen.getByRole("heading", { name: "This receipt isn't here." }));
+      await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("heading", { name: "This receipt isn't here." })));
     }
   });
 
@@ -323,7 +323,7 @@ describe("SharePage · locked", () => {
     render(<SharePage payload={locked} locale="en" fetcher={() => reply(404, { error: "not_found" })} />);
     submit("hunter22");
     const heading = await screen.findByRole("heading", { name: "This receipt isn't here." });
-    expect(document.activeElement).toBe(heading);
+    await waitFor(() => expect(document.activeElement).toBe(heading));
   });
 
   it("asks for the receipt in the page's language", () => {

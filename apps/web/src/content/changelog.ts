@@ -40,6 +40,7 @@ export const releases: Release[] = [
         "On a work PC away from the company network, a check no longer waits up to four extra seconds at the end: Fettle gathers the names it hides while it reads the PC.",
         "When Windows won't let Fettle read one of the places apps start from, the startup check now says it couldn't check, instead of counting only the rest; and folders inside the Startup folder are no longer counted as apps.",
         "A battery whose firmware reports its capacity as unknown is no longer shown as worn out.",
+        "Clearer wording: the battery line now says how much of its capacity the battery keeps compared with when it was new, and “No TPM found” now says that most recent processors have one built in that can be turned on in the BIOS.",
       ],
       it: [
         "Il numero di download nella home e nella pagina di download ora compare anche alla prima visita, non solo dopo aver ricaricato: il sito lo chiede a GitHub una volta l'ora e conserva la risposta, invece di chiederlo quando qualcuno apre la pagina.",
@@ -60,6 +61,7 @@ export const releases: Release[] = [
         "Su un PC di lavoro lontano dalla rete aziendale, il controllo non aspetta più fino a quattro secondi in più alla fine: Fettle raccoglie i nomi da nascondere mentre legge il PC.",
         "Quando Windows non permette a Fettle di leggere uno dei posti da cui partono le app, il controllo delle app di avvio ora dice che non è stato possibile controllare, invece di contare solo le altre; e le cartelle dentro la cartella Esecuzione automatica non vengono più contate come app.",
         "Una batteria il cui firmware indica la capacità come sconosciuta non viene più mostrata come usurata.",
+        "Testi più chiari: “Nessun TPM trovato” ora spiega che la maggior parte dei processori recenti ne ha uno integrato da attivare nel BIOS, e il riepilogo dice “Richiede attenzione.”",
       ],
     },
   },

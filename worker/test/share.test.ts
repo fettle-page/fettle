@@ -99,7 +99,7 @@ describe("GET /r/:id", () => {
     const html = await (await call(`/r/${id}?lang=it`)).text();
     expect(html).toContain('<html lang="it">');
     expect(payloadOf(html).locale).toBe("it");
-    expect(rootOf(html)).toContain("Ha bisogno di attenzioni.");
+    expect(rootOf(html)).toContain("Richiede attenzione.");
   });
 
   it("writes the preview in the reader's language", async () => {

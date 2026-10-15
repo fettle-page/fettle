@@ -27,7 +27,7 @@ describe("ogText", () => {
 
   it("speaks Italian", () => {
     expect(ogText(mixed, "it")).toEqual({
-      title: "Scontrino Fettle: Ha bisogno di attenzioni.",
+      title: "Scontrino Fettle: Richiede attenzione.",
       description: "1 da sistemare presto · 3 da tenere d'occhio · 2 non verificati · 12 a posto",
     });
     const one = receipt("summary.partial", lines("couldnt_check", 1));

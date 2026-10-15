@@ -222,3 +222,12 @@ describe("no word or dot left alone on a line", () => {
     expect(/(?:^|\n)\.foot-brand p\s*\{([^}]*)\}/.exec(css)?.[1]).toMatch(/text-wrap:\s*pretty/);
   });
 });
+
+describe("lists in the text pages", () => {
+  // The reset drops list markers; the download page's lists and the changelog's notes are meant to have
+  // them (.prose li::marker is coloured), so they read as lists rather than stray indents.
+  it("show their bullets", () => {
+    const css = src("src/styles/site.css").replace(/\/\*[\s\S]*?\*\//g, "");
+    expect(/(?:^|\n)\.prose ul\s*\{([^}]*)\}/.exec(css)?.[1]).toMatch(/list-style:\s*disc/);
+  });
+});

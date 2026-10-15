@@ -54,6 +54,14 @@ fn status<T>(status: CheckStatus, code: Option<CheckCode>) -> Section<T> {
     Section { check: Check { status, code, detail: None }, data: None }
 }
 
+/// Whether an error says a folder is on a network that can't be reached (path not found, network
+/// name gone, not connected, logon failure on the share…). Read from the error number, which
+/// stays the same in every Windows language.
+fn unreachable(error: &str) -> bool {
+    const NETWORK: [i32; 7] = [51, 53, 59, 64, 67, 1231, 1232];
+    error.rsplit_once("(os error ").and_then(|(_, n)| n.trim_end_matches(')').parse().ok()).is_some_and(|n: i32| NETWORK.contains(&n))
+}
+
 /// The kind of error a source's text describes: the runner's own words (runner.rs) or the error
 /// number Windows gave (WMI, the registry, a drive).
 fn error_code(error: &str) -> CheckCode {
@@ -484,13 +492,16 @@ fn windows(s: &Sources, now: i64) -> Section<Windows> {
 fn startup(s: &Sources) -> Section<Startup> {
     let Some(reg) = s.rows("startup_registry") else { return status(CheckStatus::Failed, s.code("startup_registry")) };
     let folders = s.rows("startup_folders").map(Vec::as_slice).unwrap_or_default();
-    // A place Windows wouldn't let Fettle read (access denied) could hold any number of apps:
-    // counting the rest would pass a partial list off as the whole. One that can't be reached (a
-    // Start Menu redirected to the office network, off it) is skipped: nothing starts from there
+    // A place Fettle couldn't read (access denied, a damaged Run key) could hold any number of apps:
+    // counting the rest would pass a partial list off as the whole. A folder that can't be reached
+    // (a Start Menu redirected to the office network, off it) is skipped: nothing starts from there
     // without the network either.
-    let refused = reg.iter().chain(folders).filter_map(|r| r.get("error").and_then(Value::as_str)).any(|e| error_code(e) == CheckCode::AccessDenied);
-    if refused {
-        return status(CheckStatus::Failed, Some(CheckCode::AccessDenied));
+    fn error(r: &Value) -> Option<&str> {
+        r.get("error").and_then(Value::as_str)
+    }
+    let unread = reg.iter().filter_map(error).chain(folders.iter().filter_map(error).filter(|e| !unreachable(e))).next();
+    if let Some(e) = unread {
+        return status(CheckStatus::Failed, Some(error_code(e)));
     }
     let approved = s.rows("startup_approved").cloned().unwrap_or_default();
     let enabled = |hive: &str, key: &str, name: &str| {
@@ -634,6 +645,18 @@ mod tests {
         let s = startup(&Sources(&r));
         assert_eq!(s.check.status, CheckStatus::Ok);
         assert_eq!(s.data.unwrap().items.iter().map(|i| i.name.clone().unwrap()).collect::<Vec<_>>(), ["Sync"]);
+        // Only a folder that can't be reached is skipped. Any other trouble, and any trouble with a Run
+        // key (a damaged registry, say), still means the list isn't whole.
+        let broken = json!({ "hive": "HKLM", "key": "Run", "error": "The configuration registry key is invalid. (os error 1010)" });
+        let r = raw(&[("startup_registry", rows(json!([broken]))), ("startup_folders", rows(json!([])))]);
+        assert_eq!(startup(&Sources(&r)).check.status, CheckStatus::Failed);
+        let odd_folder = json!({ "folder": "user", "error": "Il dispositivo non è pronto. (os error 1117)" });
+        let r = raw(&[("startup_registry", rows(json!([]))), ("startup_folders", rows(json!([odd_folder])))]);
+        assert_eq!(startup(&Sources(&r)).check.status, CheckStatus::Failed);
+        // In Italian too: Windows' words change, the error number doesn't.
+        let unreachable_it = json!({ "folder": "user", "error": "Impossibile trovare il percorso di rete. (os error 53)" });
+        let r = raw(&[("startup_registry", rows(json!([]))), ("startup_folders", rows(json!([unreachable_it])))]);
+        assert_eq!(startup(&Sources(&r)).check.status, CheckStatus::Ok);
         // Nothing there at all is a real answer.
         let r = raw(&[("startup_registry", rows(json!([]))), ("startup_folders", rows(json!([])))]);
         assert_eq!(startup(&Sources(&r)).data.unwrap().items.len(), 0);

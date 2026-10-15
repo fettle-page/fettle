@@ -391,9 +391,11 @@ fn battery(s: &Sources) -> Section<Battery> {
         Some(n) => s.rows(source).and_then(|rows| rows.iter().find(|r| str_of(r, "InstanceName") == Some(n))),
         None => s.first(source),
     };
-    let design = first.and_then(|r| u32_of(r, "DesignedCapacity"));
-    let full = row("battery_full_capacity").and_then(|r| u32_of(r, "FullChargedCapacity"));
-    let cycles = row("battery_cycle_count").and_then(|r| u32_of(r, "CycleCount"));
+    // 0xFFFFFFFF is the battery interface's "unknown" (BATTERY_UNKNOWN_CAPACITY).
+    let known = |v: Option<u32>| v.filter(|&v| v != u32::MAX);
+    let design = known(first.and_then(|r| u32_of(r, "DesignedCapacity")));
+    let full = known(row("battery_full_capacity").and_then(|r| u32_of(r, "FullChargedCapacity")));
+    let cycles = known(row("battery_cycle_count").and_then(|r| u32_of(r, "CycleCount")));
     if design.is_none() && full.is_none() {
         return if s.access_denied("battery_static") { status(CheckStatus::NeedsAdmin, None) } else { status(CheckStatus::Failed, s.code("battery_static")) };
     }
@@ -471,6 +473,13 @@ fn windows(s: &Sources, now: i64) -> Section<Windows> {
 
 fn startup(s: &Sources) -> Section<Startup> {
     let Some(reg) = s.rows("startup_registry") else { return status(CheckStatus::Failed, s.code("startup_registry")) };
+    let folders = s.rows("startup_folders").map(Vec::as_slice).unwrap_or_default();
+    // A place Windows wouldn't let Fettle read (access denied) could hold any number of apps:
+    // counting the rest would pass a partial list off as the whole.
+    let unread = reg.iter().chain(folders).find_map(|r| r.get("error").and_then(Value::as_str));
+    if let Some(error) = unread {
+        return status(CheckStatus::Failed, Some(error_code(error)));
+    }
     let approved = s.rows("startup_approved").cloned().unwrap_or_default();
     let enabled = |hive: &str, key: &str, name: &str| {
         approved
@@ -480,7 +489,6 @@ fn startup(s: &Sources) -> Section<Startup> {
     };
     let mut items: Vec<StartupItem> = reg
         .iter()
-        .filter(|r| r.get("error").is_none_or(Value::is_null))
         .map(|r| {
             let key = str_of(r, "key").unwrap_or("");
             let name = str_of(r, "name").unwrap_or("");
@@ -493,10 +501,7 @@ fn startup(s: &Sources) -> Section<Startup> {
             }
         })
         .collect();
-    for f in s.rows("startup_folders").map(Vec::as_slice).unwrap_or_default() {
-        if f.get("error").is_some_and(|e| !e.is_null()) {
-            continue;
-        }
+    for f in folders {
         let hive = if str_of(f, "folder") == Some("user") { "HKCU" } else { "HKLM" };
         let file = str_of(f, "file").unwrap_or("");
         items.push(StartupItem { name: str_of(f, "file").map(str::to_string), location: Some(StartupLocation::Folder), enabled: enabled(hive, "StartupFolder", file) });
@@ -570,6 +575,33 @@ mod tests {
         let mut swapped = r.clone();
         swapped.get_mut("battery_static").unwrap().data.as_mut().unwrap().as_array_mut().unwrap().reverse();
         assert_eq!(battery(&Sources(&swapped)).data.unwrap(), b);
+    }
+
+    #[test]
+    fn a_battery_capacity_windows_calls_unknown_is_not_read_as_a_number() {
+        // 0xFFFFFFFF is the battery interface's "unknown capacity"; read as a number it would make a
+        // new battery look worn out.
+        let r = raw(&[
+            ("battery_cimv2", rows(json!([{ "Name": "Battery" }]))),
+            ("battery_static", rows(json!([{ "InstanceName": "ACPI\\PNP0C0A\\1_0", "DesignedCapacity": 4294967295u32 }]))),
+            ("battery_full_capacity", rows(json!([{ "InstanceName": "ACPI\\PNP0C0A\\1_0", "FullChargedCapacity": 50000 }]))),
+            ("battery_cycle_count", rows(json!([{ "InstanceName": "ACPI\\PNP0C0A\\1_0", "CycleCount": 4294967295u32 }]))),
+        ]);
+        let b = battery(&Sources(&r)).data.unwrap();
+        assert_eq!((b.design_capacity_mwh, b.full_charge_capacity_mwh, b.cycle_count), (None, Some(50000), None));
+    }
+
+    #[test]
+    fn a_startup_place_that_couldn_t_be_read_is_not_counted_as_empty() {
+        let denied = || json!({ "hive": "HKLM", "key": r"Software\Microsoft\Windows\CurrentVersion\Run", "error": "Access is denied. (os error 5)" });
+        let r = raw(&[("startup_registry", rows(json!([denied()]))), ("startup_folders", rows(json!([])))]);
+        let s = startup(&Sources(&r));
+        assert_eq!((s.check.status, s.check.code, s.data), (CheckStatus::Failed, Some(CheckCode::AccessDenied), None));
+        let r = raw(&[("startup_registry", rows(json!([]))), ("startup_folders", rows(json!([{ "folder": "common", "error": "Accesso negato. (os error 5)" }])))]);
+        assert_eq!(startup(&Sources(&r)).check.code, Some(CheckCode::AccessDenied));
+        // Nothing there at all is a real answer.
+        let r = raw(&[("startup_registry", rows(json!([]))), ("startup_folders", rows(json!([])))]);
+        assert_eq!(startup(&Sources(&r)).data.unwrap().items.len(), 0);
     }
 
     #[test]

@@ -38,6 +38,8 @@ export const releases: Release[] = [
         "Reports saved, printed or copied in the app now also hide network addresses and server names in disk and startup app names, as the share server already did.",
         "Reports now also hide the name of every local account on the PC, including one renamed after it was created or one that never signed in.",
         "On a work PC away from the company network, a check no longer waits up to four extra seconds at the end: Fettle gathers the names it hides while it reads the PC.",
+        "When Windows won't let Fettle read one of the places apps start from, the startup check now says it couldn't check, instead of counting only the rest; and folders inside the Startup folder are no longer counted as apps.",
+        "A battery whose firmware reports its capacity as unknown is no longer shown as worn out.",
       ],
       it: [
         "Il numero di download nella home e nella pagina di download ora compare anche alla prima visita, non solo dopo aver ricaricato: il sito lo chiede a GitHub una volta l'ora e conserva la risposta, invece di chiederlo quando qualcuno apre la pagina.",
@@ -56,6 +58,8 @@ export const releases: Release[] = [
         "I report salvati, stampati o copiati dall'app ora nascondono anche gli indirizzi di rete e i nomi dei server nei nomi dei dischi e delle app di avvio, come già faceva il server di condivisione.",
         "I report ora nascondono anche il nome di ogni account locale del PC, compreso uno rinominato dopo la creazione o uno con cui nessuno ha mai effettuato l'accesso.",
         "Su un PC di lavoro lontano dalla rete aziendale, il controllo non aspetta più fino a quattro secondi in più alla fine: Fettle raccoglie i nomi da nascondere mentre legge il PC.",
+        "Quando Windows non permette a Fettle di leggere uno dei posti da cui partono le app, il controllo delle app di avvio ora dice che non è stato possibile controllare, invece di contare solo le altre; e le cartelle dentro la cartella Esecuzione automatica non vengono più contate come app.",
+        "Una batteria il cui firmware indica la capacità come sconosciuta non viene più mostrata come usurata.",
       ],
     },
   },

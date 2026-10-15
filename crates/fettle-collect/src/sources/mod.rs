@@ -2,7 +2,8 @@
 //!
 //! Every WQL query names its columns: only what `map.rs` reads is selected. That keeps
 //! `Win32_Processor` fast (`SELECT *` costs about 1 s) and keeps identifying fields such as serials
-//! out of memory entirely.
+//! out of the raw data. (When an older Windows lacks a named column, `wmi.rs` falls back to every
+//! column and drops all but the named ones straight away, before any JSON is built.)
 
 mod elevation;
 mod gpu;

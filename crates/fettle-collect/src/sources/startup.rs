@@ -53,23 +53,27 @@ pub fn startup_folders() -> Result<Value, String> {
     let mut out = Vec::new();
     for (label, dir) in folders {
         let Ok(dir) = dir else { continue };
-        let entries = match std::fs::read_dir(&dir) {
-            Ok(entries) => entries,
-            Err(e) => {
-                if let Some(error) = open_error(&e) {
-                    out.push(json!({"folder": label, "error": error}));
-                }
-                continue;
-            }
-        };
-        for entry in entries.flatten() {
-            let file = entry.file_name().to_string_lossy().into_owned();
-            if !file.eq_ignore_ascii_case("desktop.ini") {
-                out.push(json!({"folder": label, "file": file}));
-            }
+        match startup_files(&dir) {
+            Ok(files) => out.extend(files.into_iter().map(|file| json!({"folder": label, "file": file}))),
+            Err(e) => out.extend(open_error(&e).map(|error| json!({"folder": label, "error": error}))),
         }
     }
     Ok(Value::Array(out))
+}
+
+/// The files Windows starts from one Startup folder.
+fn startup_files(dir: &std::path::Path) -> std::io::Result<Vec<String>> {
+    let mut files = Vec::new();
+    for entry in std::fs::read_dir(dir)?.flatten() {
+        if entry.file_type().is_ok_and(|t| t.is_dir()) {
+            continue;
+        }
+        let file = entry.file_name().to_string_lossy().into_owned();
+        if !file.eq_ignore_ascii_case("desktop.ini") {
+            files.push(file);
+        }
+    }
+    Ok(files)
 }
 
 pub fn startup_approved() -> Result<Value, String> {
@@ -104,6 +108,18 @@ pub fn startup_approved() -> Result<Value, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn a_folder_inside_the_startup_folder_is_not_an_app() {
+        // Windows starts the files in the Startup folder, not what's inside a folder there.
+        let dir = std::env::temp_dir().join(format!("fettle-startup-test-{}", std::process::id()));
+        std::fs::create_dir_all(dir.join("Old shortcuts")).unwrap();
+        std::fs::write(dir.join("Notes.lnk"), b"").unwrap();
+        std::fs::write(dir.join("desktop.ini"), b"").unwrap();
+        let files = startup_files(&dir);
+        std::fs::remove_dir_all(&dir).unwrap();
+        assert_eq!(files.unwrap(), ["Notes.lnk"]);
+    }
 
     #[test]
     fn not_found_is_silent_other_errors_are_kept() {

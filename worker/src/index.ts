@@ -1,4 +1,4 @@
-import { DOWNLOAD_PAGES, withDownloadCount } from "./downloads.ts";
+import { DOWNLOAD_PAGES, refreshDownloadCount, withDownloadCount } from "./downloads.ts";
 import { apiError } from "./http.ts";
 import { createReport, deleteReport, getReport, unlockReport } from "./reports.ts";
 import { sharePage } from "./share.ts";
@@ -56,5 +56,10 @@ export default {
     if (pathname === "/r" || pathname.startsWith("/r/")) return sharePage(request, env);
     if (DOWNLOAD_PAGES.has(pathname)) return withDownloadCount(request, env, ctx);
     return env.ASSETS.fetch(request);
+  },
+  // Hourly (wrangler.jsonc's Cron Trigger): the download count, asked of GitHub here so no page has to.
+  // A failed ask fails the run, so Cron Events shows it (an expired GITHUB_TOKEN, say); the stored count stays.
+  async scheduled(_controller, env): Promise<void> {
+    if (!(await refreshDownloadCount(env))) throw new Error("download count: GitHub didn't answer");
   },
 } satisfies ExportedHandler<Env>;

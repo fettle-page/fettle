@@ -11,10 +11,12 @@ One Cloudflare Worker serves the share links:
 - `/r/:id` serves the share page (`apps/web`, page `/share`) with Open Graph tags filled in. For a readable report the Worker builds the receipt model once, draws the page with React (`@fettle/web/share-render`) and inlines the model, so the receipt arrives with the HTML and the browser hydrates it. The language comes from `?lang=` or `Accept-Language`. `/r/:id/delete` serves the delete page.
 - The share page's CSP allows its inline stylesheet and early theme script by SHA-256; the Worker reads the hashes from the built shell (cached per isolate).
 
+It also fills in the download count on the home and download pages (`src/downloads.ts`): GitHub's own total for the installer and the zip of every published release. A Cron Trigger runs the Worker once an hour (at minute 17); it asks GitHub and stores the count in R2 as `site/download-count.json`. A page reads the count from its isolate's memory (read again from R2 in the background after 10 minutes), or else from R2, waiting a second at most, and never waits on GitHub. If GitHub fails, the last stored count stays and that hourly run is marked failed in the Worker's Cron Events (an expired `GITHUB_TOKEN` shows up there). Before the first hourly run (or if someone deletes it) the object is missing; the first page that finds nothing then asks GitHub in the background and stores the answer, and its own line stays hidden. Visitors' browsers never contact GitHub, and nothing about visitors is stored.
+
 ## How it stores things
 
 - **IDs** are one letter for the expiry (`w`, `m`, `y`) followed by 16 random characters.
-- **R2 keys** are `<expiry>/<id>`.
+- **R2 keys** are `<expiry>/<id>`. The one other key, `site/download-count.json` (the download count), sits outside the report prefixes, so no report or lifecycle rule can touch it.
 - **Custom metadata** holds the expiry, a SHA-256 hash of the delete token and, for protected reports, a hash of the password: PBKDF2 over an HMAC-SHA256 of it keyed with the `PASSWORD_PEPPER` secret, marked `pwV: "2"`. Links made before 1.0.4 keep their plain PBKDF2 hash, with no `pwV`, and still open with it; any other `pwV` opens nothing (404). Neither the token nor the password is stored.
 - **Expiry** is checked by the Worker on every read; R2 lifecycle rules only clean up afterwards.
 - **URLs** are built from the request's own origin, so the code has no domain in it.
@@ -37,7 +39,7 @@ Uploads need the `ADDRESS_PEPPER` secret, and share passwords need `PASSWORD_PEP
 
 ## Cloudflare setup (done 2026-10-10)
 
-- R2 bucket `fettle-reports`, in the **EU jurisdiction** (shared receipts stay in EU data centres). Lifecycle rules delete `7d/` after 7 days, `30d/` after 30 days and `1y/` after 365 days. The Worker also refuses expired links on every read; the rules only clean up.
+- R2 bucket `fettle-reports`, in the **EU jurisdiction** (shared receipts stay in EU data centres). Lifecycle rules delete `7d/` after 7 days, `30d/` after 30 days and `1y/` after 365 days. The Worker also refuses expired links on every read; the rules only clean up. Keep any new rule to those prefixes: `site/` holds the download count.
 - Rate limiters have their own `namespace_id`s (unique across the account). They count per data centre, so they only bound cost; the global password cap is `UnlockGuard`.
 - The Worker serves only on the custom domain `fettle.page` (attached on deploy). `workers_dev` and preview URLs are off.
 - Zone `fettle.page`: full (strict) TLS, minimum TLS 1.2, HTTP/3, Early Hints, and browser cache left to the site's own headers. Everything that rewrites HTML or adds scripts or cookies is off: email obfuscation, Rocket Loader, automatic HTTPS rewrites, Bot Fight Mode, Web Analytics and Speed Brain. Turning any of them on would break the strict CSP or the site's no-cookies promise.
@@ -46,7 +48,7 @@ Uploads need the `ADDRESS_PEPPER` secret, and share passwords need `PASSWORD_PEP
 
 ## Deploy
 
-`npm run deploy -w @fettle/worker` (it rebuilds the site, then runs `wrangler deploy`).
+`npm run deploy -w @fettle/worker` (it rebuilds the site, then runs `wrangler deploy`). The deploy also sets the hourly Cron Trigger from `wrangler.jsonc`.
 
 Secrets, set once with `wrangler secret put <name>` (each put redeploys):
 - `ADDRESS_PEPPER` (required): long random text, mixed into the name of each address's daily upload budget so the name can't be worked back to an IP. Without it, uploads are refused (503) and a loud `address_pepper_missing` line is logged. Changing it only resets that day's upload counts.

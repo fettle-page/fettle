@@ -6,6 +6,8 @@
   // Only on fettle.page: no workers.dev address or preview URLs that could serve share links elsewhere.
   "routes": [{ "pattern": "fettle.page", "custom_domain": true }],
   "workers_dev": false,
+  // Hourly, off the top of the hour: asks GitHub for the download count and stores it in R2 (src/downloads.ts).
+  "triggers": { "crons": ["17 * * * *"] },
   "preview_urls": false,
   "assets": { "directory": "../apps/web/dist", "binding": "ASSETS", "run_worker_first": ["/api/*", "/r/*", "/", "/it", "/download", "/it/download", "/*/", "/*.html"], "not_found_handling": "404-page" },
   // Created in R2's EU jurisdiction: shared receipts are stored only in EU data centres.

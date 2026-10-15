@@ -9,8 +9,12 @@ export const releases: Release[] = [
     version: "1.0.5",
     date: null,
     notes: {
-      en: [],
-      it: [],
+      en: [
+        "The download count on the home and download pages now shows on the first visit too, not only after a reload: the site asks GitHub for it once an hour and keeps the answer, instead of asking when someone opens the page.",
+      ],
+      it: [
+        "Il numero di download nella home e nella pagina di download ora compare anche alla prima visita, non solo dopo aver ricaricato: il sito lo chiede a GitHub una volta l'ora e conserva la risposta, invece di chiederlo quando qualcuno apre la pagina.",
+      ],
     },
   },
   {

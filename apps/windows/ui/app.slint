@@ -141,7 +141,8 @@ export component AppWindow inherits Window {
     // What the mat shows: "blank" (first time and during a check), "live" (this check's receipt)
     // or "last" (the last receipt, faded).
     in property <string> mat: "blank";
-    // What the side panel shows: "home", "checking", "result" or "settings".
+    // What the side panel shows: "home", "checking", "result", "settings", "share", "links" or
+    // "preview".
     in-out property <string> view: "home";
     in property <ReceiptData> receipt;
     in property <bool> printed: true;

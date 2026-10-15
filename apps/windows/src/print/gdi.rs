@@ -255,7 +255,6 @@ pub fn render_page(ops: &[Op], size: PageSize, per_point: f32) -> (i32, i32, Vec
     }
 }
 
-/// Windows' print dialog, then every page on the chosen printer. Ok(false) when cancelled.
 /// Whether Windows can print here: its print service (the Print Spooler, which IT departments often
 /// switch off) is running and at least one printer is installed. Both are read without admin rights;
 /// when Windows won't say, the print dialog decides.
@@ -286,6 +285,7 @@ pub fn printing_available() -> bool {
     }
 }
 
+/// Windows' print dialog, then every page on the chosen printer. Ok(false) when cancelled.
 pub fn print(owner: HWND, model: &ReceiptModel) -> Result<bool, String> {
     use windows::Win32::Foundation::{GlobalFree, HGLOBAL};
     use windows::Win32::Storage::Xps::{AbortDoc, DOCINFOW, EndDoc, EndPage, StartDocW, StartPage};

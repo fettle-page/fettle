@@ -92,7 +92,8 @@ fn openable(url: &str) -> bool {
     (host == "localhost" || host == "127.0.0.1") && port_ok
 }
 
-/// Opens a share link in the default browser (only fettle's own https links).
+/// Opens a link in the default browser: any https link (a share link is whatever the share server
+/// answered), or plain http to a Worker on this PC.
 pub fn open_in_browser(url: &str) -> bool {
     if !openable(url) {
         return false;

@@ -289,7 +289,7 @@ pub enum Effect {
     Delete(SavedLink),
     /// Ask the server which of these links still exist.
     CheckLinks(Vec<SavedLink>),
-    /// Ask the website for the latest version, if a day has passed since the last answer.
+    /// Ask the website for the latest version, if the chosen interval has passed since the last answer.
     CheckUpdates,
     SaveUpdate(UpdateRecord),
     OpenUpdatePage,

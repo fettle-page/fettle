@@ -61,8 +61,8 @@ Name: "it"; MessagesFile: "compiler:Languages\Italian.isl"; InfoBeforeFile: "pri
 [CustomMessages]
 en.RemoveData=Also remove what Fettle keeps on this PC: its settings, the remembered check and the list of links you shared?%n%nThe links themselves stay online until they expire. Without that list, Fettle can no longer delete them for you.
 it.RemoveData=Rimuovere anche ciò che Fettle conserva su questo PC: le impostazioni, l'ultimo controllo ricordato e l'elenco dei link condivisi?%n%nI link restano online fino alla scadenza. Senza quell'elenco, Fettle non potrà più eliminarli per te.
-en.RemoveDataOthers=Other accounts on this PC have Fettle data too. To be safe, Fettle doesn't delete files in another account's folders. Each person can delete their own folder, or you can:
-it.RemoveDataOthers=Anche altri account di questo PC hanno dati di Fettle. Per sicurezza, Fettle non elimina file nelle cartelle di un altro account. Ognuno può eliminare la propria cartella, oppure puoi farlo tu:
+en.RemoveDataOthers=Fettle also keeps data in these folders. To be safe, uninstalling for all users only removes the data of the account doing the uninstall. Each person can delete their own folder, or you can:
+it.RemoveDataOthers=Fettle conserva dati anche in queste cartelle. Per sicurezza, la disinstallazione per tutti gli utenti rimuove solo i dati dell'account che disinstalla. Ognuno può eliminare la propria cartella, oppure puoi farlo tu:
 en.UpdatesGroup=Updates:
 it.UpdatesGroup=Aggiornamenti:
 en.UpdateCheck=Check for a new version (only the version number is asked for; you can change this later in Settings)
@@ -182,12 +182,14 @@ begin
     for I := 0 to GetArrayLength(Folders) - 1 do
       if Lowercase(Folders[I]) <> Lowercase(Data) then
         Others := Others + #13#10 + Folders[I];
-    if not DirExists(Data) and (Others = '') then
-      Exit;
-    if MsgBox(CustomMessage('RemoveData'), mbConfirmation, MB_YESNO or MB_DEFBUTTON2) <> IDYES then
-      Exit;
+    // Asked only when there's something of this account's to remove; the list follows unless the
+    // answer was to keep the data.
     if DirExists(Data) then
+    begin
+      if MsgBox(CustomMessage('RemoveData'), mbConfirmation, MB_YESNO or MB_DEFBUTTON2) <> IDYES then
+        Exit;
       DelTree(Data, True, True, True);
+    end;
     if Others <> '' then
       MsgBox(CustomMessage('RemoveDataOthers') + #13#10 + Others, mbInformation, MB_OK);
   end

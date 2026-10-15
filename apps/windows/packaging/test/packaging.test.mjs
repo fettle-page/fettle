@@ -107,8 +107,10 @@ describe("fettle.iss: uninstalling for all users", () => {
     assert.match(allUsers, /CustomMessage\('RemoveDataOthers'\)/);
     assert.doesNotMatch(allUsers, /DeleteFile|RemoveDir|DelTree\(Folders/);
     assert.doesNotMatch(iss, /function RemoveFettleData/);
-    // Its own folder isn't listed as someone else's.
+    // Its own folder isn't listed as someone else's, and the question comes only with a folder of
+    // its own to remove (a Yes that removes nothing would mislead).
     assert.match(allUsers, /Lowercase\(Folders\[I\]\) <> Lowercase\(Data\)/);
+    assert.match(allUsers, /if DirExists\(Data\) then\s+begin\s+if MsgBox\(CustomMessage\('RemoveData'\)/);
   });
 
   it("counts each folder once (a repaired profile leaves a second entry, ending in .bak, for the same one)", () => {

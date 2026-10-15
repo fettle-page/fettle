@@ -62,6 +62,7 @@
   "share.e.network": "Impossibile raggiungere il server di Fettle. Controlla la connessione e riprova.",
   "share.e.rate_limited": "Troppi link in poco tempo. Riprova più tardi.",
   "share.e.rate_limited_in": "Troppi link in poco tempo. Riprova tra {minutes} minuti.",
+  "share.e.rate_limited_in_one": "Troppi link in poco tempo. Riprova tra un minuto.",
   "share.e.too_large": "Questo report è troppo grande per essere condiviso. Salvalo come JSON.",
   "share.e.password_too_short": "La password deve avere almeno 8 caratteri.",
   "share.e.password_too_long": "La password può avere al massimo 128 caratteri.",

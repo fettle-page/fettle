@@ -218,7 +218,8 @@ pub fn problem(f: &Failure) -> (&'static str, Option<i64>) {
     match f.error {
         "network" => ("share.e.network", None),
         "rate_limited" => match f.retry_after {
-            Some(s) => ("share.e.rate_limited_in", Some((s.div_ceil(60)).max(1) as i64)),
+            Some(s) if s <= 60 => ("share.e.rate_limited_in_one", None),
+            Some(s) => ("share.e.rate_limited_in", Some(s.div_ceil(60) as i64)),
             None => ("share.e.rate_limited", None),
         },
         "too_large" => ("share.e.too_large", None),
@@ -491,7 +492,9 @@ mod tests {
     fn failures_read_as_words() {
         assert_eq!(problem(&Failure::new("network")), ("share.e.network", None));
         assert_eq!(problem(&Failure { error: "rate_limited", retry_after: Some(61), detail: None }), ("share.e.rate_limited_in", Some(2)));
-        assert_eq!(problem(&Failure { error: "rate_limited", retry_after: Some(5), detail: None }), ("share.e.rate_limited_in", Some(1)));
+        // A minute or less reads "in a minute", never "in 1 minutes".
+        assert_eq!(problem(&Failure { error: "rate_limited", retry_after: Some(5), detail: None }), ("share.e.rate_limited_in_one", None));
+        assert_eq!(problem(&Failure { error: "rate_limited", retry_after: Some(60), detail: None }), ("share.e.rate_limited_in_one", None));
         assert_eq!(problem(&Failure::new("rate_limited")), ("share.e.rate_limited", None));
         assert_eq!(problem(&Failure::new("too_large")), ("share.e.too_large", None));
         assert_eq!(problem(&Failure::new("password_too_short")), ("share.e.password_too_short", None));

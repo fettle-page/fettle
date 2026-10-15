@@ -191,8 +191,8 @@ pub struct State {
     pub share: ShareStatus,
     /// The links this PC shared and can still delete.
     pub links: Vec<SavedLink>,
-    /// The Links view's last message: (app string key, whether it's a failure).
-    pub links_status: Option<(&'static str, bool)>,
+    /// The Links view's last message (an app string key).
+    pub links_status: Option<&'static str>,
     /// A link being deleted (its id): other Delete buttons wait.
     pub deleting: Option<String>,
     /// The links are being checked against the server (Delete waits meanwhile).
@@ -592,11 +592,11 @@ impl State {
                     Ok((id, how)) => {
                         self.links.retain(|l| l.id != id);
                         let key = if how == crate::share::Deleted::AlreadyGone { "links.already_gone" } else { "links.deleted" };
-                        self.links_status = Some((key, false));
+                        self.links_status = Some(key);
                         vec![Effect::ForgetLinks(vec![id])]
                     }
                     Err(()) => {
-                        self.links_status = Some(("links.delete_failed", true));
+                        self.links_status = Some("links.delete_failed");
                         vec![]
                     }
                 }
@@ -617,18 +617,15 @@ impl State {
                         let forget: Vec<String> = self.links.iter().filter(|l| gone.contains(&l.id)).map(|l| l.id.clone()).collect();
                         self.links.retain(|l| !gone.contains(&l.id));
                         self.links_gone = before - self.links.len();
-                        self.links_status = Some((
-                            match self.links_gone {
-                                0 => "links.all_work",
-                                1 => "links.one_gone",
-                                _ => "links.some_gone",
-                            },
-                            false,
-                        ));
+                        self.links_status = Some(match self.links_gone {
+                            0 => "links.all_work",
+                            1 => "links.one_gone",
+                            _ => "links.some_gone",
+                        });
                         if forget.is_empty() { vec![] } else { vec![Effect::ForgetLinks(forget)] }
                     }
                     Err(()) => {
-                        self.links_status = Some(("links.check_failed", true));
+                        self.links_status = Some("links.check_failed");
                         vec![]
                     }
                 }
@@ -1056,11 +1053,11 @@ mod tests {
         assert_eq!(s.update(Event::DeleteLink("b".into())), vec![], "one at a time");
         assert_eq!(s.update(Event::LinkDeleted(Ok(("a".into(), crate::share::Deleted::Now)))), vec![Effect::ForgetLinks(vec!["a".into()])]);
         assert_eq!(s.links.iter().map(|l| l.id.as_str()).collect::<Vec<_>>(), vec!["b"]);
-        assert_eq!(s.links_status, Some(("links.deleted", false)));
+        assert_eq!(s.links_status, Some("links.deleted"));
         s.update(Event::DeleteLink("b".into()));
         s.update(Event::LinkDeleted(Err(())));
         assert_eq!(s.links.len(), 1, "kept: it may still be public");
-        assert_eq!(s.links_status, Some(("links.delete_failed", true)));
+        assert_eq!(s.links_status, Some("links.delete_failed"));
     }
 
     fn with_links(ids: &[&str]) -> State {
@@ -1084,13 +1081,13 @@ mod tests {
         let done = s.update(Event::LinksChecked(Ok(vec!["a".into(), "c".into()])));
         assert_eq!(s.links.iter().map(|l| l.id.as_str()).collect::<Vec<_>>(), vec!["b"]);
         assert_eq!(done, vec![Effect::ForgetLinks(vec!["a".into(), "c".into()])]);
-        assert_eq!((s.links_status, s.links_gone), (Some(("links.some_gone", false)), 2));
+        assert_eq!((s.links_status, s.links_gone), (Some("links.some_gone"), 2));
         s.update(Event::CheckLinks);
         assert_eq!(s.update(Event::LinksChecked(Ok(vec![]))), vec![], "nothing gone, nothing to save");
-        assert_eq!(s.links_status, Some(("links.all_work", false)));
+        assert_eq!(s.links_status, Some("links.all_work"));
         s.update(Event::CheckLinks);
         s.update(Event::LinksChecked(Ok(vec!["b".into()])));
-        assert_eq!(s.links_status, Some(("links.one_gone", false)));
+        assert_eq!(s.links_status, Some("links.one_gone"));
         assert_eq!(State::default().update(Event::CheckLinks), vec![], "nothing to check");
     }
 
@@ -1111,7 +1108,7 @@ mod tests {
         s.update(Event::CheckLinks);
         assert_eq!(s.update(Event::LinksChecked(Err(()))), vec![]);
         assert_eq!(s.links.len(), 1);
-        assert_eq!(s.links_status, Some(("links.check_failed", true)));
+        assert_eq!(s.links_status, Some("links.check_failed"));
     }
 
     #[test]
@@ -1120,7 +1117,7 @@ mod tests {
         s.update(Event::DeleteLink("a".into()));
         s.update(Event::LinkDeleted(Ok(("a".into(), crate::share::Deleted::AlreadyGone))));
         assert!(s.links.is_empty());
-        assert_eq!(s.links_status, Some(("links.already_gone", false)));
+        assert_eq!(s.links_status, Some("links.already_gone"));
     }
 
     #[test]

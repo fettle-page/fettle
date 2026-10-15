@@ -599,9 +599,11 @@ section.hero {
 .prose a:not(.btn) { color: var(--color-mat); }
 .prose a:focus-visible { outline-color: var(--color-mat); }
 .updated { margin-top: 34px !important; font: 500 13px var(--font-mono) !important; color: var(--color-ink-soft); }
+.updated-date { white-space: nowrap; }
 .download-cta { margin: 0 0 34px !important; }
 .download-cta:has(+ .download-more) { margin-bottom: 20px !important; }
 .download-more { margin: 0 0 34px !important; }
+.download-more a { white-space: nowrap; } /* each link breaks as a whole */
 .btn.is-waiting {
   background: transparent; color: var(--color-ink-soft); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--color-paper) 72%, var(--color-ink));
   cursor: default; font-family: var(--font-mono); font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; font-size: 13px;

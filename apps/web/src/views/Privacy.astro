@@ -34,7 +34,7 @@ const { contact, email } = links(release);
           </section>
         ))
       }
-      <p class="updated">{c.updated}</p>
+      <p class="updated">{c.updated.split(": ")[0]}: <span class="updated-date">{c.updated.split(": ")[1]}</span></p>
     </article>
   </Doc>
 </Base>

@@ -113,8 +113,8 @@ describe("the free / open source seal", () => {
     const it_ = ring("it.html");
     expect(en[1]).toBe("en");
     expect(it_[1]).toBe("it");
-    expect(en[2].split("Free · open source · no tracking").length - 1).toBe(2);
-    expect(it_[2].split("Gratis · open source · nessun tracciamento").length - 1).toBe(1);
+    expect(en[2]!.split("Free · open source · no tracking").length - 1).toBe(2);
+    expect(it_[2]!.split("Gratis · open source · nessun tracciamento").length - 1).toBe(1);
     const css = src("src/styles/site.css");
     expect(css).toMatch(/\.seal-ring-en\s*\{\s*letter-spacing:\s*-0\.08\d*em;?\s*\}/);
     expect(css).toMatch(/\.seal-ring-it\s*\{\s*letter-spacing:\s*0\.18\d*em;?\s*\}/);
@@ -149,5 +149,29 @@ describe("the top bar on phones and tablets", () => {
     expect(phone).toMatch(/\.nav \.tape\s*\{\s*padding-inline:\s*9px/);
     expect(media("max-width: 359.98px")).toMatch(/\.nav-wordmark\s*\{\s*height:\s*24px/);
     for (const file of ["index.html", "it/faq.html"]) expect(page(file), file).toMatch(/<li class="nav-theme"><button[^>]*class="tape theme-toggle"/);
+  });
+});
+
+describe("short things stay together at a line end", () => {
+  // Seen at 360–1440 px: "· no tracking" starting a line, "SHA-256 / checksums", "? / lang=", "55 / °C", "13 / ottobre 2026".
+  it("keeps each separator dot with the word before it", async () => {
+    const { t } = await import("../src/i18n/strings.ts");
+    for (const locale of ["en", "it"] as const) expect(t(locale, "footer.small"), locale).not.toMatch(/ ·/);
+    for (const file of ["download.html", "it/download.html"]) {
+      const more = /<p class="download-more">([\s\S]*?)<\/p>/.exec(page(file))![1]!;
+      expect(more, file).not.toMatch(/<\/a> ·/);
+    }
+    expect(src("src/styles/site.css")).toMatch(/\.download-more a\s*\{\s*white-space:\s*nowrap;?\s*\}/);
+  });
+  it("keeps ?lang= and a temperature's °C whole in the changelog", () => {
+    const changelog = src("src/content/changelog.ts");
+    expect(changelog).not.toMatch(/\?lang=/);
+    expect(changelog).toMatch(/\?\\u2060lang=/);
+    expect(changelog).not.toMatch(/\d °C/);
+  });
+  it("keeps the privacy page's date on one line", () => {
+    expect(page("privacy.html")).toContain('Last updated: <span class="updated-date">13 October 2026</span>');
+    expect(page("it/privacy.html")).toContain('Ultimo aggiornamento: <span class="updated-date">13 ottobre 2026</span>');
+    expect(src("src/styles/site.css")).toMatch(/\.updated-date\s*\{\s*white-space:\s*nowrap;?\s*\}/);
   });
 });

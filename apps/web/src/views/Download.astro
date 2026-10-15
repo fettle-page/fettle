@@ -26,7 +26,7 @@ const intro = files ? c.introReady.replace("{version}", files.version) : c.intro
           <>
             <p class="download-cta"><DownloadCount locale={locale} href={files.installer} label={c.installer} /></p>
             <p class="download-more">
-              <a href={files.portable}>{c.portable}</a> · <a href={files.checksums}>{c.checksums}</a> · <a href={files.all}>{c.allReleases}</a>
+              <a href={files.portable}>{c.portable}</a>&nbsp;· <a href={files.checksums}>{c.checksums}</a>&nbsp;· <a href={files.all}>{c.allReleases}</a>
             </p>
           </>
         ) : (

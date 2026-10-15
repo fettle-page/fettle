@@ -3,8 +3,8 @@
 //! The report format has no fields for serials, product keys or network details, so what is left
 //! to catch is identifying text that slips into ordinary strings: the PC's name, account names,
 //! the account's full name, the domain and email addresses in error details and startup names,
-//! profile folders in paths, account SIDs, and (in error details only) MAC, IPv4 and IPv6 addresses and
-//! network server names. The app gathers the names on Windows; this module only rewrites text.
+//! profile folders in paths, account SIDs, and (in error details, disk and startup names) MAC, IPv4
+//! and IPv6 addresses and network server names. The app gathers the names on Windows; this module only rewrites text.
 
 use crate::startup_names::friendly_startup_name;
 use crate::{Check, Report};
@@ -150,7 +150,7 @@ impl Redactor {
     /// Rewrites every text field in the report, and gives startup items their readable names.
     /// Dates, the volume letter and the app's own fields are left alone: they can't carry a name.
     pub fn report(&self, report: &mut Report) {
-        self.rewrite(report, &|s| self.hardware(s), &|s| self.text(s));
+        self.rewrite(report, &|s| self.hardware(s), &|s| self.detail(s));
     }
 
     /// Every text field: firmware and driver text through `fixed`, text a user can name (disk and
@@ -808,6 +808,19 @@ mod tests {
         // A version number that looks like an address stays.
         assert_eq!(f.graphics.as_ref().unwrap().data.as_ref().unwrap().adapters[0].driver_version.as_deref(), Some("1.2.3.4"));
         assert_eq!(f.memory.as_ref().unwrap().check.detail.as_deref(), Some("adapter <mac> at C:/Users/<user>/x"));
+    }
+
+    #[test]
+    fn the_apps_pass_hides_addresses_in_names_as_the_servers_does() {
+        let mut report = uploaded();
+        report.facts.startup.as_mut().unwrap().data.as_mut().unwrap().items.push(crate::StartupItem { name: Some(r"\\NAS01\logon at 192.168.1.20".into()), ..Default::default() });
+        r().report(&mut report);
+        let f = &report.facts;
+        assert_eq!(f.storage.as_ref().unwrap().data.as_ref().unwrap().disks[0].model.as_deref(), Some("Backup at <ip> (<ip>)"));
+        let names: Vec<_> = f.startup.as_ref().unwrap().data.as_ref().unwrap().items.iter().map(|i| i.name.clone().unwrap()).collect();
+        assert_eq!(names[2], r"\\<server>\logon at <ip>");
+        // Versions keep their dots.
+        assert_eq!(f.graphics.as_ref().unwrap().data.as_ref().unwrap().adapters[0].driver_version.as_deref(), Some("1.2.3.4"));
     }
 
     #[test]

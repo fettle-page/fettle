@@ -35,6 +35,7 @@ export const releases: Release[] = [
         "The download page now gives the portable zip's real size (about 15 MB) and the space Fettle needs (about 40 MB), the FAQ calls the everyday check by its name in the app, the Quick check, the code-signing page says a share link uploads the report behind the receipt, and two Italian sentences now read correctly.",
         "The home page legend's tag buttons now stay switched off until the page's script can make them work, so with JavaScript off the keyboard no longer stops on buttons that do nothing.",
         "A Windows account whose name has several words, such as “Mario Rossi”, is now also hidden word by word, so a disk or startup app called “Rossi backup” no longer shows the surname in a report.",
+        "Reports saved, printed or copied in the app now also hide network addresses and server names in disk and startup app names, as the share server already did.",
       ],
       it: [
         "Il numero di download nella home e nella pagina di download ora compare anche alla prima visita, non solo dopo aver ricaricato: il sito lo chiede a GitHub una volta l'ora e conserva la risposta, invece di chiederlo quando qualcuno apre la pagina.",
@@ -50,6 +51,7 @@ export const releases: Release[] = [
         "La pagina di download ora indica la dimensione reale dello zip portatile (circa 15 MB) e lo spazio che serve a Fettle (circa 40 MB), le domande frequenti chiamano il controllo di tutti i giorni con il suo nome nell'app, Controllo rapido, la pagina sulla firma del codice dice che un link di condivisione carica il report da cui nasce lo scontrino, e due frasi in italiano ora sono corrette.",
         "I pulsanti delle etichette nella legenda della home ora restano disattivati finché lo script della pagina non li fa funzionare, così con JavaScript disattivato la tastiera non si ferma più su pulsanti che non fanno nulla.",
         "Un account di Windows il cui nome ha più parole, come “Mario Rossi”, ora viene nascosto anche parola per parola, così un disco o un'app di avvio chiamati “Rossi backup” non mostrano più il cognome in un report.",
+        "I report salvati, stampati o copiati dall'app ora nascondono anche gli indirizzi di rete e i nomi dei server nei nomi dei dischi e delle app di avvio, come già faceva il server di condivisione.",
       ],
     },
   },

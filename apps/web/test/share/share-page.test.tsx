@@ -114,6 +114,16 @@ describe("SharePage · delete", () => {
     await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("heading", { name: "This receipt is already gone." })));
   });
 
+  it("tells people they're done once the receipt is deleted or gone, in both languages", async () => {
+    window.location.hash = "#tok123";
+    for (const [status, locale, text] of [[204, "en", "You can close this page."], [404, "en", "You can close this page."], [204, "it", "Puoi chiudere questa pagina."]] as const) {
+      render(<SharePage payload={{ kind: "delete", id: ID }} locale={locale} fetcher={() => reply(status)} />);
+      fireEvent.click(screen.getByRole("button", { name: locale === "en" ? "Delete this receipt" : "Elimina lo scontrino" }));
+      expect(await screen.findByText(text)).toBeTruthy();
+      cleanup();
+    }
+  });
+
   it("doesn't blame the connection for a server problem", async () => {
     window.location.hash = "#tok123";
     render(<SharePage payload={{ kind: "delete", id: ID }} locale="en" fetcher={() => reply(500)} />);
@@ -288,6 +298,8 @@ describe("SharePage · locked", () => {
     fireEvent.change(screen.getByLabelText("Password"), { target: { value: "nope" } });
     fireEvent.submit(screen.getByLabelText("Password").closest("form")!);
     expect(await screen.findByText(text)).toBeTruthy();
+    // Every try would only get the same answer until then.
+    expect((screen.getByRole("button", { name: locale === "en" ? "Open receipt" : "Apri lo scontrino" }) as HTMLButtonElement).disabled).toBe(true);
   });
 
   it("says when Fettle can't be reached", async () => {

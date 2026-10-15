@@ -68,6 +68,7 @@ export const releases: Release[] = [
         "On a phone, the stamp at the bottom of a receipt on the site and on share links no longer lands on the barcode.",
         "On the home page, “Read the source on GitHub” now looks like the link it is.",
         "The download page's lists and the changelog's notes have their bullets back.",
+        "On a share link, the card after deleting now says you can close the page, and Open receipt is switched off once the day's password tries are used up.",
       ],
       it: [
         "Il numero di download nella home e nella pagina di download ora compare anche alla prima visita, non solo dopo aver ricaricato: il sito lo chiede a GitHub una volta l'ora e conserva la risposta, invece di chiederlo quando qualcuno apre la pagina.",
@@ -116,6 +117,7 @@ export const releases: Release[] = [
         "Sul telefono, il timbro in fondo allo scontrino, sul sito e nei link condivisi, non finisce più sopra il codice a barre.",
         "Nella home, “Leggi il codice sorgente su GitHub” ora ha l'aspetto del link che è.",
         "Gli elenchi della pagina di download e le note delle versioni hanno di nuovo i loro punti elenco.",
+        "In un link condiviso, il riquadro dopo l'eliminazione ora dice che puoi chiudere la pagina, e Apri lo scontrino si disattiva quando i tentativi di password del giorno sono finiti.",
       ],
     },
   },

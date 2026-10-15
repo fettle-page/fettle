@@ -190,8 +190,13 @@ function Delete({ id, locale, fetcher }: { id: string; locale: Locale; fetcher: 
   }
 
   // Once it's gone, the outcome is the whole page.
-  if (state === "done") return <Card title={t("delete.done")} focus />;
-  if (state === "gone") return <Card title={t("delete.gone")} focus />;
+  if (state === "done" || state === "gone") {
+    return (
+      <Card title={t(state === "done" ? "delete.done" : "delete.gone")} focus>
+        <p>{t("delete.close")}</p>
+      </Card>
+    );
+  }
 
   const message = DELETE_MESSAGE[state];
   return (
@@ -347,7 +352,8 @@ function Locked({ id, locale, fetcher }: { id: string; locale: Locale; fetcher: 
           aria-invalid={state.status === "wrong" || undefined}
           aria-describedby={message ? "unlock-message" : undefined}
         />
-        <button className="tape" type="submit" disabled={state.status === "busy"}>
+        {/* Off once the day's tries are used up: every try would get the same answer until then. */}
+        <button className="tape" type="submit" disabled={state.status === "busy" || state.status === "limited_today"}>
           {t("locked.button")}
         </button>
         {/* Always there, so a screen reader announces the message when it appears. */}

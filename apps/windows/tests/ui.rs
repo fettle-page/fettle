@@ -880,6 +880,19 @@ fn selected_tab(app: &Fettle) -> String {
 }
 
 #[test]
+fn a_short_label_stays_on_one_line_beside_a_long_value() {
+    // "Scheda madre" beside a long board name: the value wraps, the label doesn't ("Scheda / madre").
+    let h = harness(Locale::It);
+    press(&h.app, "Controlla questo PC");
+    h.background.run_all(&h.app);
+    let label = ElementHandle::find_by_accessible_label(h.app.window(), "Scheda madre").next().expect("the board's label");
+    let cpu = ElementHandle::find_by_accessible_label(h.app.window(), "CPU").next().expect("the CPU's label");
+    // Monospaced: one line of "Scheda madre" is 12 characters wide, "CPU" 3.
+    let per_char = cpu.size().width / 3.0;
+    assert!(label.size().width >= per_char * 11.5, "{:?} vs one character {per_char}", label.size());
+}
+
+#[test]
 fn arrow_keys_move_between_a_groups_choices() {
     // Theme, language, update interval and link expiry are radio groups: the arrows choose.
     let h = harness(Locale::En);

@@ -149,19 +149,22 @@ component KV inherits HorizontalLayout {
     // The room the row has (the paper is a fixed 42 characters): values take up to 78% of it.
     in property <length> room: 328px;
     spacing: 8px;
-    // Labels stay whole when they fit; a very long one (a startup shortcut's name) wraps.
-    RText {
+    // A short label (a word or two, "Scheda madre") never breaks: the value beside it wraps instead.
+    // A very long one (a startup shortcut's name) wraps, and the value keeps up to 78% of the room.
+    property <bool> short-label: item.label.character-count <= 16;
+    label := RText {
         text: item.label;
         color: Theme.ink-soft;
         horizontal-stretch: 0;
-        max-width: room - min(value.preferred-width, room * 0.78) - 24px;
+        wrap: short-label ? no-wrap : word-wrap;
+        max-width: short-label ? room : room - min(value.preferred-width, room * 0.78) - 24px;
     }
     Leader { }
     value := RText {
         text: item.value;
         color: value-ink;
         horizontal-alignment: right;
-        max-width: room * 0.78;
+        max-width: short-label ? room - label.preferred-width - 24px : room * 0.78;
         horizontal-stretch: 0;
     }
 }

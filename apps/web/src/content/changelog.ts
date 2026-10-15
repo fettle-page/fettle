@@ -54,6 +54,7 @@ export const releases: Release[] = [
         "Uninstalling Fettle for all users now removes only the uninstalling account's own Fettle data, and lists the other accounts' Fettle folders for them (or you) to delete: an administrator deleting files in other people's folders could be tricked into deleting files elsewhere.",
         "Accessibility: the arrow keys now move between the choices in Settings and when sharing a link (theme, language, update interval, link expiry), each Delete in My shared links tells a screen reader which link it deletes, and the faded last receipt on the first screen is easier to read.",
         "When a Deep check doesn't work, the app now says just that, instead of that it couldn't start (it may have started and then stopped).",
+        "On the receipt, a short label such as “Board” stays on one line beside a long value, which wraps instead (in Italian, “Scheda madre” used to break in two).",
       ],
       it: [
         "Il numero di download nella home e nella pagina di download ora compare anche alla prima visita, non solo dopo aver ricaricato: il sito lo chiede a GitHub una volta l'ora e conserva la risposta, invece di chiederlo quando qualcuno apre la pagina.",
@@ -88,6 +89,7 @@ export const releases: Release[] = [
         "Disinstallare Fettle per tutti gli utenti ora rimuove solo i dati di Fettle dell'account che disinstalla, ed elenca le cartelle di Fettle degli altri account perché le eliminino loro (o tu): un amministratore che elimina file nelle cartelle di altri potrebbe essere indotto a eliminare file altrove.",
         "Accessibilità: i tasti freccia ora passano da una scelta all'altra in Impostazioni e quando si condivide un link (tema, lingua, frequenza del controllo, scadenza del link), ogni Elimina in I miei link condivisi dice a un lettore di schermo quale link elimina, e l'ultimo scontrino sbiadito nella prima schermata si legge meglio.",
         "Quando un controllo approfondito non funziona, l'app ora dice proprio questo, invece che non è stato possibile avviarlo (potrebbe essere partito e poi essersi fermato); e alcuni testi in italiano sono più chiari.",
+        "Sullo scontrino, un'etichetta breve come “Scheda madre” resta su una riga accanto a un valore lungo, che va a capo al suo posto (prima si spezzava in due).",
       ],
     },
   },

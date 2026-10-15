@@ -296,7 +296,10 @@ pub fn apply(w: &AppWindow, s: &State, ctx: &Ctx, cache: &mut Cache) {
 
     // After a check: the answer, the Deep check when it would show more, the numbers.
     if let Some((checked, (receipt, m))) = &current {
-        w.set_answer(m.actions.first().cloned().unwrap_or_else(|| t("result.nothing", lang, &[])).into());
+        // The first step; with none, "nothing to do", unless Fettle could hardly check anything, when
+        // that would read as if all were well: then the receipt's own top line.
+        let none = || if receipt.summary.key == "summary.partial" { m.summary.clone() } else { t("result.nothing", lang, &[]) };
+        w.set_answer(m.actions.first().cloned().unwrap_or_else(none).into());
         w.set_deep(wants_deep_check(receipt, checked.report.elevated));
         changed(&mut cache.numbers, format!("{}|{}|{}", lang.code(), m.meta.collected_at, m.meta.when), || {
             w.set_numbers(model(sections_of(m, lang).into_iter().filter(|sec| slint::Model::row_count(&sec.details) > 0).collect()));

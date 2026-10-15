@@ -1205,9 +1205,36 @@ fn opening_the_json_fold_moves_nothing_above_it() {
 }
 
 /// A tired laptop with three next steps (the website's sample report).
+/// The report of a parity case whose name starts with `prefix`.
+fn case_report(prefix: &str) -> Report {
+    let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../crates/fettle-receipt/tests/parity/cases");
+    let file = std::fs::read_dir(dir).unwrap().map(|e| e.unwrap().path()).find(|p| p.file_name().unwrap().to_string_lossy().starts_with(prefix)).unwrap();
+    let case: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(file).unwrap()).unwrap();
+    serde_json::from_value(case["report"].clone()).unwrap()
+}
+
 fn tired_report() -> Report {
     let path = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../worker/test/fixtures/tired.json");
     serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap()
+}
+
+#[test]
+fn when_nothing_could_be_checked_the_panel_says_so_not_that_all_is_well() {
+    // Windows answered nothing: "Nothing to do right now" beside "Fettle couldn't check much" reads
+    // as if all were well.
+    let mut report = dump_report();
+    let failed = serde_json::json!({ "check": { "status": "failed", "code": "timed_out" } });
+    report.facts = serde_json::from_value(serde_json::json!({ "system": failed, "storage": failed, "battery": failed, "memory": failed, "windows": failed, "startup": failed, "graphics": failed })).unwrap();
+    let h = harness_with(Locale::En, temp_dir(), move |deps| deps.scanner = Arc::new(FakeScanner(report)));
+    press(&h.app, "Check this PC");
+    h.background.run_all(&h.app);
+    assert_eq!(h.app.window().get_answer().as_str(), "Fettle couldn't check much on this PC.");
+    // Fine so far with no step (the odd-text test scan): there's still nothing to do.
+    let odd = case_report("dump-odd-text");
+    let fine = harness_with(Locale::En, temp_dir(), move |deps| deps.scanner = Arc::new(FakeScanner(odd)));
+    press(&fine.app, "Check this PC");
+    fine.background.run_all(&fine.app);
+    assert_eq!(fine.app.window().get_answer().as_str(), "Nothing to do right now.");
 }
 
 #[test]

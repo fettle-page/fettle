@@ -56,6 +56,7 @@ export const releases: Release[] = [
         "When a Deep check doesn't work, the app now says just that, instead of that it couldn't start (it may have started and then stopped).",
         "On the receipt, a short label such as “Board” stays on one line beside a long value, which wraps instead (in Italian, “Scheda madre” used to break in two).",
         "When the battery is worn, its next step now says what to do: replace the battery to get the runtime back.",
+        "When Windows answered almost nothing, the side panel now says Fettle couldn't check much on this PC, instead of “Nothing to do right now”.",
       ],
       it: [
         "Il numero di download nella home e nella pagina di download ora compare anche alla prima visita, non solo dopo aver ricaricato: il sito lo chiede a GitHub una volta l'ora e conserva la risposta, invece di chiederlo quando qualcuno apre la pagina.",
@@ -92,6 +93,7 @@ export const releases: Release[] = [
         "Quando un Controllo approfondito non funziona, l'app ora dice proprio questo, invece che non è stato possibile avviarlo (potrebbe essere partito e poi essersi fermato); e alcuni testi in italiano sono più chiari.",
         "Sullo scontrino, un'etichetta breve come “Scheda madre” resta su una riga accanto a un valore lungo, che va a capo al suo posto (prima si spezzava in due).",
         "Quando la batteria è usurata, il passo successivo ora dice cosa fare: sostituisci la batteria per riavere l'autonomia di prima.",
+        "Quando Windows non ha risposto quasi a nulla, il pannello laterale ora dice che Fettle non è riuscito a controllare quasi nulla su questo PC, invece di “Niente da fare per ora”.",
       ],
     },
   },

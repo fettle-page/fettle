@@ -35,6 +35,21 @@ describe("the app's extra features on the site", () => {
     expect(faqs("en").find((f) => f.id === "forum")!.a.join(" ")).toContain("serial numbers, the PC's name, your name, username and email address, and network addresses");
   });
 
+  it("the forum answer says how to save the full report, with the app's own button and file type names", () => {
+    for (const locale of ["en", "it"] as const) {
+      const app = JSON.parse(readFileSync(new URL(`../../windows/copy/${locale}.json`, import.meta.url), "utf8")) as Record<string, string>;
+      const answer = faqs(locale).find((f) => f.id === "forum")!.a.join(" ");
+      expect(answer, locale).toContain(`"${app["export.filter_json"]}"`);
+      expect(answer, locale).toContain(locale === "en" ? `press ${app["export.json"]} and choose` : `premi ${app["export.json"]} e scegli`);
+    }
+    expect(faqs("en").find((f) => f.id === "forum")!.a.at(-1)).toBe(
+      "If someone who knows PCs asks for the details, you can also save the full report as JSON and send them the file: press Save and choose \"Report for experts (JSON)\" as the file type.",
+    );
+    expect(faqs("it").find((f) => f.id === "forum")!.a.at(-1)).toBe(
+      "Se qualcuno esperto di PC ti chiede i dettagli, puoi anche salvare il report completo in JSON e mandargli il file: premi Salva e scegli \"Report per esperti (JSON)\" come tipo di file.",
+    );
+  });
+
   it("the share answer says the app keeps a list of your links", () => {
     expect(faqs("en").find((f) => f.id === "share")!.a.join(" ")).toContain("My shared links");
     expect(faqs("it").find((f) => f.id === "share")!.a.join(" ")).toContain("I miei link condivisi");

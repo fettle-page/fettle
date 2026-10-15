@@ -11,9 +11,11 @@ export const releases: Release[] = [
     notes: {
       en: [
         "The download count on the home and download pages now shows on the first visit too, not only after a reload: the site asks GitHub for it once an hour and keeps the answer, instead of asking when someone opens the page.",
+        "The FAQ now says how to save the full report for someone who knows PCs: press Save and choose “Report for experts (JSON)” as the file type.",
       ],
       it: [
         "Il numero di download nella home e nella pagina di download ora compare anche alla prima visita, non solo dopo aver ricaricato: il sito lo chiede a GitHub una volta l'ora e conserva la risposta, invece di chiederlo quando qualcuno apre la pagina.",
+        "Le domande frequenti ora spiegano come salvare il report completo per chi se ne intende di PC: premi Salva e scegli “Report per esperti (JSON)” come tipo di file.",
       ],
     },
   },

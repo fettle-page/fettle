@@ -241,11 +241,13 @@ function forgetPass(id: string) {
 type LockedState = { status: "idle" | "busy" | "wrong" | "limited" | "limited_today" | "offline" | "failed" } | { status: "open"; model: ReceiptModel; expiresAt: string } | { status: "missing" };
 
 function Locked({ id, locale, fetcher }: { id: string; locale: Locale; fetcher: Fetcher }) {
-  const [pass] = useState(() => savedPass(id));
-  const [state, setState] = useState<LockedState>({ status: pass ? "busy" : "idle" });
+  // "idle" first, as the server drew it (it can't see the browser's saved pass), so hydration matches.
+  const [state, setState] = useState<LockedState>({ status: "idle" });
   const [password, setPassword] = useState("");
   const field = useRef<HTMLInputElement>(null);
   const tried = useRef(false);
+  /** A typed password was sent: from then on, the saved pass's answer no longer counts. */
+  const typed = useRef(false);
   const t = (key: ShareKey) => shareText(key, locale);
 
   const unlock = (body: { password: string } | { pass: string }) =>
@@ -260,16 +262,20 @@ function Locked({ id, locale, fetcher }: { id: string; locale: Locale; fetcher: 
   }
 
   useEffect(() => {
-    if (!pass || tried.current) return;
+    if (tried.current) return;
     tried.current = true;
+    const pass = savedPass(id);
+    if (!pass) return;
+    setState({ status: "busy" });
     unlock({ pass })
       .then(async (res) => {
+        if (typed.current) return;
         if (res.status === 200) return openWith(res);
         if (res.status === 404) return setState({ status: "missing" });
         if (res.status === 403) forgetPass(id);
         setState({ status: "idle" });
       })
-      .catch(() => setState({ status: "idle" }));
+      .catch(() => typed.current || setState({ status: "idle" }));
   });
 
   if (state.status === "open") return <Shared model={state.model} expiresAt={state.expiresAt} locale={locale} opened />;
@@ -277,6 +283,7 @@ function Locked({ id, locale, fetcher }: { id: string; locale: Locale; fetcher: 
 
   async function open(e: FormEvent) {
     e.preventDefault();
+    typed.current = true;
     setState({ status: "busy" });
     try {
       const res = await unlock({ password });

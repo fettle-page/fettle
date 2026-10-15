@@ -54,6 +54,30 @@ describe("server-drawn share page", () => {
   }
 });
 
+describe("server-drawn locked page with a saved pass", () => {
+  it("hydrates without a mismatch, then checks the pass", async () => {
+    const id = "m3kx9f2q7pa8hd4wz";
+    const payload: SharePayload = { kind: "locked", id, expiresAt: "2026-11-06T10:00:00.000Z", locale: "en" };
+    const container = document.createElement("div");
+    container.innerHTML = renderSharePage(payload, "en"); // the server can't see the browser's saved pass
+    document.body.append(container);
+    localStorage.setItem(`fettle-pass:${id}`, JSON.stringify({ pass: "p4ss", expiresAt: new Date(Date.now() + 86_400_000).toISOString() }));
+    const errors = vi.spyOn(console, "error").mockImplementation(() => {});
+    const recoverable: unknown[] = [];
+    const fetcher = vi.fn(() => new Promise<Response>(() => {}));
+    await act(async () => {
+      hydrateRoot(container, <StrictMode><SharePage payload={payload} locale="en" fetcher={fetcher} /></StrictMode>, { onRecoverableError: (e) => recoverable.push(e) });
+    });
+    expect(recoverable).toEqual([]);
+    expect(errors).not.toHaveBeenCalled();
+    // The pass is being checked: the button really is disabled meanwhile, not only in React's idea of it.
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(container.querySelector<HTMLButtonElement>("button[type=submit]")!.disabled).toBe(true);
+    container.remove();
+    localStorage.clear();
+  });
+});
+
 describe("server-drawn short pages", () => {
   for (const payload of [{ kind: "missing", locale: "en" }, { kind: "locked", id: "m3kx9f2q7pa8hd4wz", expiresAt: "2026-11-06T10:00:00.000Z", locale: "it" }] as SharePayload[]) {
     it(`hydrate without a mismatch (${payload.kind})`, async () => {

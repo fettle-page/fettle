@@ -208,6 +208,26 @@ describe("SharePage · locked", () => {
     expect(screen.queryByText("That password isn't right.")).toBeNull();
   });
 
+  it("keeps a receipt opened by password when an old saved pass is refused later", async () => {
+    localStorage.setItem(passKey, JSON.stringify({ pass: "old", expiresAt: tomorrow() }));
+    let refuseOld!: () => void;
+    const fetcher = vi.fn((_url: string, init: RequestInit) =>
+      String(init.body).includes('"pass":"old"')
+        ? new Promise<Response>((r) => { refuseOld = () => r(new Response(JSON.stringify({ error: "invalid_pass" }), { status: 403 })); })
+        : reply(200, { model: tiredModel(), expiresAt, pass: "new", passExpiresAt: tomorrow() }),
+    );
+    const { container } = render(<SharePage payload={locked} locale="en" fetcher={fetcher} />);
+    await waitFor(() => expect(fetcher).toHaveBeenCalledTimes(1));
+    // The old pass is still being checked when the visitor types the password anyway.
+    fireEvent.change(screen.getByLabelText("Password"), { target: { value: "hunter22" } });
+    fireEvent.submit(screen.getByLabelText("Password").closest("form")!);
+    await waitFor(() => expect(container.querySelector(".fettle-receipt")).not.toBeNull());
+    refuseOld();
+    await new Promise((r) => setTimeout(r, 20));
+    expect(container.querySelector(".fettle-receipt")).not.toBeNull();
+    expect(JSON.parse(localStorage.getItem(passKey)!).pass).toBe("new");
+  });
+
   it("ignores an expired saved pass", () => {
     localStorage.setItem(passKey, JSON.stringify({ pass: "old", expiresAt: "2020-01-01T00:00:00.000Z" }));
     const fetcher = vi.fn(() => reply(200, {}));

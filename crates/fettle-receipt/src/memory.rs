@@ -1,7 +1,7 @@
 //! What a memory stick's labels say. Windows doesn't report timings, but most makers spell the
 //! rated speed and CAS latency (CL) out in the part number, so Fettle reads them from there and
-//! says so. Unknown formats return nothing rather than a guess. (receipt-ui's memory.ts; its
-//! regular expressions are written out by hand here.)
+//! says so. Unknown formats return nothing rather than a guess. (The patterns are matched by
+//! hand, without regular expressions.)
 
 /// `n` ASCII digits at `at`, as a number.
 fn digits_at(s: &[u8], at: usize, n: usize) -> Option<u32> {

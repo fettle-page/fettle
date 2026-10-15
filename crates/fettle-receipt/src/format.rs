@@ -1,4 +1,4 @@
-//! Byte sizes, counts, temperatures, days and the scan stamp, as receipt-ui's format.ts prints them.
+//! Byte sizes, counts, temperatures, days and the scan stamp, as the receipt prints them.
 
 use fettle_verdicts::{Locale, fmt};
 

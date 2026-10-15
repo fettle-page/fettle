@@ -1,4 +1,4 @@
-//! The raw numbers under each section's "details" fold (receipt-ui's details.ts). Missing facts
+//! The raw numbers under each section's "details" fold. Missing facts
 //! simply leave no row.
 
 use crate::format::{bytes, int, iso_day, temp};

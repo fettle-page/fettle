@@ -9,7 +9,7 @@ pub enum Action<'a> {
     Key(&'a str),
 }
 
-/// A verdict line, as `line()` in rules/common.ts.
+/// A verdict line.
 pub fn line(id: impl Into<String>, level: Level, key: &str, params: &[(&str, Param)], action: Action) -> Line {
     let headline = if params.is_empty() { MessageRef::key(key) } else { MessageRef::with(key, params) };
     let warns = matches!(level, Level::KeepAnEye | Level::ActSoon);

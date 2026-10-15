@@ -1,5 +1,5 @@
-//! The receipt for a report, in English or Italian: a port of receipt-ui's model, details,
-//! formats and markdown, kept equal to it by the parity corpus in `tests/parity`.
+//! The receipt for a report, in English or Italian: the model, details, formats and markdown,
+//! pinned by the parity corpus in `tests/parity`.
 
 pub mod copy;
 pub mod details;

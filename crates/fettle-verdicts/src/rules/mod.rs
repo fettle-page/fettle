@@ -1,4 +1,4 @@
-// One module per TypeScript rule file (the four short ones share `others`).
+// One module per section's rules (the four short ones share `others`).
 
 pub mod common;
 pub mod cpu;

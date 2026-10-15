@@ -1,4 +1,4 @@
-//! Everything the receipt shows, already in one language (receipt-ui's model.ts). The platforms
+//! Everything the receipt shows, already in one language. The platforms
 //! (Slint, Compose, React) only lay it out.
 
 use crate::details::{DetailGroup, DetailRow, machine_rows, section_details};

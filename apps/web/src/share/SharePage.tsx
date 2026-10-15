@@ -149,9 +149,10 @@ function Card({ title, focus = false, children }: { title: string; focus?: boole
   );
 }
 
-function Missing({ locale }: { locale: Locale }) {
+/** `focus`: it replaced the password form, so focus moves to its title. */
+function Missing({ locale, focus = false }: { locale: Locale; focus?: boolean }) {
   return (
-    <Card title={shareText("missing.title", locale)}>
+    <Card title={shareText("missing.title", locale)} focus={focus}>
       <p>{shareText("missing.body", locale)}</p>
     </Card>
   );
@@ -301,7 +302,7 @@ function Locked({ id, locale, fetcher }: { id: string; locale: Locale; fetcher: 
   });
 
   if (state.status === "open") return <Shared model={state.model} expiresAt={state.expiresAt} locale={locale} opened />;
-  if (state.status === "missing") return <Missing locale={locale} />;
+  if (state.status === "missing") return <Missing locale={locale} focus />;
 
   async function open(e: FormEvent) {
     e.preventDefault();

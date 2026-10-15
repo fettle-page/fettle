@@ -45,7 +45,7 @@ and sends nothing on its own except the update check, which you can turn off.
 | **Battery** | How much charge it still holds compared with new, and how many cycles it has done. |
 | **Memory** | Sticks, slots, speed, and whether a second stick would help. |
 | **Windows** | Edition, security updates, Windows 11 readiness, restarts. |
-| **Startup** | Everything that starts with Windows. |
+| **Startup** | The apps that start with Windows. |
 | **Graphics** | Your graphics card and how old its driver is. |
 
 If Fettle couldn't check something, the receipt says so, and says why.

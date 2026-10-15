@@ -314,7 +314,16 @@ describe("SharePage · locked", () => {
       render(<SharePage payload={locked} locale="en" fetcher={() => reply(200, body)} />);
       submit("hunter22");
       expect(await screen.findByRole("heading", { name: "This receipt isn't here." }), JSON.stringify(Object.keys(body))).toBeTruthy();
+      // The form that had focus is gone: focus moves to the card's title.
+      expect(document.activeElement).toBe(screen.getByRole("heading", { name: "This receipt isn't here." }));
     }
+  });
+
+  it("moves focus to the missing card when the receipt went while the password was typed", async () => {
+    render(<SharePage payload={locked} locale="en" fetcher={() => reply(404, { error: "not_found" })} />);
+    submit("hunter22");
+    const heading = await screen.findByRole("heading", { name: "This receipt isn't here." });
+    expect(document.activeElement).toBe(heading);
   });
 
   it("asks for the receipt in the page's language", () => {

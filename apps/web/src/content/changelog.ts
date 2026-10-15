@@ -65,6 +65,7 @@ export const releases: Release[] = [
         "The home page now describes battery health as the app does: how much the battery holds compared with new.",
         "Short things now stay together at the end of a line: a temperature and its °C, the privacy page's date, the download page's extra links and the footer's separators.",
         "On a share link, the password card no longer leaves a gap under its message, headings no longer leave one word on their last line, and on a phone the footer's line sits centred over its button.",
+        "On a phone, the stamp at the bottom of a receipt on the site and on share links no longer lands on the barcode.",
       ],
       it: [
         "Il numero di download nella home e nella pagina di download ora compare anche alla prima visita, non solo dopo aver ricaricato: il sito lo chiede a GitHub una volta l'ora e conserva la risposta, invece di chiederlo quando qualcuno apre la pagina.",
@@ -110,6 +111,7 @@ export const releases: Release[] = [
         "La home ora descrive lo stato della batteria come l'app: la capacità rispetto a quando era nuova.",
         "Le cose brevi ora restano unite a fine riga: una temperatura e il suo °C, la data della pagina sulla privacy, i link in più della pagina di download e i separatori del piè di pagina.",
         "In un link condiviso, il riquadro della password non lascia più uno spazio vuoto sotto il messaggio, i titoli non lasciano più una parola da sola sull'ultima riga, e sul telefono la frase del piè di pagina è centrata sopra il suo pulsante.",
+        "Sul telefono, il timbro in fondo allo scontrino, sul sito e nei link condivisi, non finisce più sopra il codice a barre.",
       ],
     },
   },

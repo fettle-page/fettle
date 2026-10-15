@@ -145,7 +145,8 @@
 /* Footer, barcode and the one inked stamp */
 .fettle-receipt .r-foot { position: relative; text-align: center; font-size: 0.846em; color: var(--r-ink-soft); }
 .fettle-receipt .barcode {
-  height: 3.1em; margin: 1.45em 0 0; width: 46%;
+  /* Narrower on a phone-width receipt, so the longest stamp (about 15.3em, "Controllato") never lands on it. */
+  height: 3.1em; margin: 1.45em 0 0; width: min(46%, calc(100% - 16.5em));
   background: repeating-linear-gradient(90deg, var(--r-ink) 0 2px, transparent 2px 4px, var(--r-ink) 4px 5px, transparent 5px 8px, var(--r-ink) 8px 11px, transparent 11px 13px);
   opacity: 0.82;
 }

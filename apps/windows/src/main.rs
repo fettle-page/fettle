@@ -44,17 +44,47 @@ fn main() -> Result<(), slint::PlatformError> {
     // A process can choose its renderer only once: if the window can't open (no usable graphics
     // card in a virtual machine, a broken driver), start again on the next one down.
     let current = std::env::var("FETTLE_RENDERER").unwrap_or_else(|_| DEFAULT_RENDERER.into());
-    if result.is_err()
+    if result.as_ref().is_err_and(Stop::tries_another_renderer)
         && let Some(next) = next_renderer(&current)
         && let Ok(exe) = std::env::current_exe()
         && std::process::Command::new(exe).args(std::env::args().skip(1)).env("FETTLE_RENDERER", next).spawn().is_ok()
     {
         return Ok(());
     }
-    result
+    result.map_err(Stop::into_error)
 }
 
-fn run() -> Result<(), slint::PlatformError> {
+/// Why the app stopped before its window closed.
+enum Stop {
+    /// The renderer or the window failed: another renderer may do.
+    Window(slint::PlatformError),
+    /// Something before the window (a development switch's file): another renderer won't help.
+    Setup(slint::PlatformError),
+}
+
+impl Stop {
+    fn tries_another_renderer(&self) -> bool {
+        matches!(self, Stop::Window(_))
+    }
+    fn into_error(self) -> slint::PlatformError {
+        match self {
+            Stop::Window(e) | Stop::Setup(e) => e,
+        }
+    }
+}
+
+impl From<slint::PlatformError> for Stop {
+    fn from(e: slint::PlatformError) -> Stop {
+        Stop::Window(e)
+    }
+}
+
+/// The report `--dev-report` names.
+fn dev_report(path: &str) -> Result<fettle_windows::dev::SavedReport, Stop> {
+    fettle_windows::dev::SavedReport::load(path).map_err(|e| Stop::Setup(slint::PlatformError::Other(e)))
+}
+
+fn run() -> Result<(), Stop> {
     let dev = DevArgs::parse(std::env::args().skip(1));
     select_backend(dev.hidden(), dev.unfocused())?;
     // Deep-check reports a helper left behind (the app stopped waiting, or was closed).
@@ -64,8 +94,7 @@ fn run() -> Result<(), slint::PlatformError> {
         deps.store = std::rc::Rc::new(fettle_windows::store::FileStore::new(dir.into()));
     }
     if let Some(path) = &dev.report {
-        let saved = fettle_windows::dev::SavedReport::load(path).map_err(slint::PlatformError::Other)?;
-        deps.scanner = std::sync::Arc::new(saved);
+        deps.scanner = std::sync::Arc::new(dev_report(path)?);
     }
     let app = Fettle::new(deps)?;
     tint_title_bar_when_ready(&app);
@@ -90,7 +119,7 @@ fn run() -> Result<(), slint::PlatformError> {
             if let Some(path) = dev.shot.clone() {
                 schedule_shot(app.window(), path, dev.wait_ms);
             }
-            return app.window().run();
+            return Ok(app.window().run()?);
         }
         app.dispatch(event);
     }
@@ -103,11 +132,11 @@ fn run() -> Result<(), slint::PlatformError> {
     if let Some(path) = dev.fps_live.clone() {
         fettle_windows::dev::measure_live(app.window(), path);
     }
-    app.window().run()
+    Ok(app.window().run()?)
 }
 
-/// Skia drawing on the CPU: full fidelity (rotation, shadows) in ~40 MB (FETTLE_RENDERER picks
-/// another; `main` restarts on "software" if the window can't open).
+/// Skia on the graphics card first (FETTLE_RENDERER picks another); `main` restarts on the next
+/// one down, Skia on the processor and then the plain software renderer, if the window can't open.
 fn select_backend(hidden: bool, unfocused: bool) -> Result<(), slint::PlatformError> {
     let renderer = std::env::var("FETTLE_RENDERER").unwrap_or_else(|_| DEFAULT_RENDERER.into());
     let selector = |renderer: String| {
@@ -143,6 +172,14 @@ fn tint_title_bar_when_ready(app: &Fettle) {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn only_a_window_that_wont_open_tries_another_renderer() {
+        // A mistyped --dev-report path isn't the graphics card's fault: say so once, don't restart twice.
+        let stop = dev_report("no-such-report.json").err().expect("a missing report");
+        assert!(!stop.tries_another_renderer());
+        assert!(Stop::Window(slint::PlatformError::NoPlatform).tries_another_renderer());
+    }
 
     #[test]
     fn the_graphics_card_first_then_the_processor_then_the_simplest() {

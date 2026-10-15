@@ -1,4 +1,4 @@
-// FAQ, shared by /faq and the landing page teaser (the first three), in English and Italian.
+// FAQ, shared by /faq and the landing page's questions slip (PRINTED_QUESTIONS), in English and Italian.
 // Every answer must stay true for the released app.
 import type { Locale } from "../i18n/paths.ts";
 

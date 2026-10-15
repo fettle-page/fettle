@@ -1,4 +1,5 @@
-// The app's share client, run against this Worker: if either side changes the contract, this fails.
+// The share contract's TypeScript mirror (@fettle/share-client), run against this Worker: if the Worker
+// changes the contract, this fails. The app's real client is Rust (apps/windows/src/share.rs) and isn't run here.
 import * as client from "@fettle/share-client";
 import type { Report } from "@fettle/report-schema";
 import { describe, expect, it } from "vitest";

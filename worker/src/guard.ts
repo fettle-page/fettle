@@ -42,7 +42,7 @@ type Salt = { day: number; value: string };
  * guess limits, so someone burning through wrong guesses can't lock out people who already opened it.
  */
 export class UnlockGuard extends DurableObject<Env> {
-  /** Reserves a try for `visitor`: 0 when allowed, otherwise the seconds to wait (the minute's or the day's end). */
+  /** Reserves a try for `visitor`: 0 when allowed, otherwise the seconds to wait (a full minute for the per-minute cap, which errs long, or until the day's end). */
   async begin(visitor: string, now = Date.now()): Promise<number> {
     const window = Math.floor(now / WINDOW_MS);
     const day = Math.floor(now / DAY_MS);

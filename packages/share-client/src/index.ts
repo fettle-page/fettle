@@ -1,5 +1,7 @@
-// The app's side of share links: upload a report, delete it later. Never throws; every outcome
-// is a value the UI can word. The limits mirror the Worker's, so a bad request isn't even sent.
+// A TypeScript mirror of the share contract, run against the Worker by worker/test/client.test.ts.
+// Nothing ships it: the app's real client is apps/windows/src/share.rs (Rust), so a change there
+// needs its own check against the Worker. Upload a report, delete it later. Never throws; every
+// outcome is a value a UI can word. The limits mirror the Worker's, so a bad request isn't even sent.
 import type { Report } from "@fettle/report-schema";
 
 export type Expiry = "7d" | "30d" | "1y";

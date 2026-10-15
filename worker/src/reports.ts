@@ -50,7 +50,6 @@ export async function logRef(id: string): Promise<string> {
 }
 
 const address = (request: Request) => request.headers.get("cf-connecting-ip") ?? "unknown";
-/** The per-minute key: an IPv4 address, or an IPv6 /64. */
 /** `report` after the brain's privacy pass, or null if the pass fails or its result isn't a valid report. */
 function scrubbed(report: Report): Report | null {
   try {
@@ -70,6 +69,7 @@ function withoutNulls(value: unknown): unknown {
   return Object.fromEntries(Object.entries(value).filter(([, v]) => v !== null).map(([k, v]) => [k, withoutNulls(v)]));
 }
 
+/** The per-minute key: an IPv4 address, or an IPv6 /64. */
 export const clientKey = (request: Request) => rateKey(address(request));
 /** The daily key: an IPv4 address, or an IPv6 /48. */
 const dailyKey = (request: Request) => dayKey(address(request));

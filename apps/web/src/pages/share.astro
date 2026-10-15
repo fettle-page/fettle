@@ -1,6 +1,7 @@
 ---
 // The share shell the Worker fills in for /r/<id>: it fetches this page from the assets binding,
-// puts the report in #fettle-share and adds Open Graph tags. Contract: worker/src/share.ts.
+// puts the payload in #fettle-share, draws the page into #root (except the delete page, whose token
+// only the browser sees) and adds Open Graph tags. Contract: worker/src/share.ts.
 // Fonts are imported inside share.css: one stylesheet request.
 import "../share/share.css";
 ---

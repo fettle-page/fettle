@@ -1,7 +1,8 @@
 ---
 // The main download button, with a quieter section for how many times Fettle was downloaded (like a
-// star count on a button). The share Worker fills it in with GitHub's own total (worker/src/downloads.ts);
-// served without the Worker, or when GitHub doesn't answer, it stays hidden and the button is plain.
+// star count on a button). The share Worker fills it in with GitHub's own total, which it asks for hourly and
+// keeps (worker/src/downloads.ts); served without the Worker, or before any count is known, it stays hidden
+// and the button is plain.
 import type { Locale } from "../i18n/paths.ts";
 import { t } from "../i18n/strings.ts";
 

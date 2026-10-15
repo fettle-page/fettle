@@ -53,4 +53,6 @@ Uploads need the `ADDRESS_PEPPER` secret, and share passwords need `PASSWORD_PEP
 Secrets, set once with `wrangler secret put <name>` (each put redeploys):
 - `ADDRESS_PEPPER` (required): long random text, mixed into the name of each address's daily upload budget so the name can't be worked back to an IP. Without it, uploads are refused (503) and a loud `address_pepper_missing` line is logged. Changing it only resets that day's upload counts.
 - `PASSWORD_PEPPER` (required for share passwords): other long random text, mixed into every new share password's hash, so a copy of the stored reports isn't enough to start guessing passwords. Without it, uploads with a password and password unlocks of links made since 1.0.4 are refused (503), without counting as a guess, and a loud `password_pepper_missing` line is logged; links without a password, older links and 24-hour passes keep working. Never change or lose it: links made with the old value could no longer be opened with their password.
-- `GITHUB_TOKEN` (optional): a read-only token for the download count. Deploy the site with each app release: `/app/latest.json` follows `published` in `apps/web/src/release.ts`.
+- `GITHUB_TOKEN` (optional): a read-only token for the download count.
+
+Deploy the site with each app release: `/app/latest.json` follows `published` in `apps/web/src/release.ts`.

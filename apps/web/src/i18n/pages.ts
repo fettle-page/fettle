@@ -16,7 +16,7 @@ type Pages = {
     needsH: string; needs: string[]; formatsH: string; formats: string[]; warningH: string; warning: string[]; signingLink: string;
   };
   codeSigning: { title: string; description: string; kicker: string; h1: string; intro: string; unsigned: Section; signed: Section; sections: Section[]; privacyLink: string };
-  /** One page serves every missing address, in both languages (src/scripts/not-found.ts picks one). */
+  /** Each language has its own 404 page (src/pages/404.astro and it/404.astro); the static assets serve the nearest one. */
   notFound: { title: string; description: string; h1: string; p: string; line: string; next: string; links: { href: string; label: string }[] };
 };
 

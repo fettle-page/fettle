@@ -202,6 +202,14 @@ pub struct Memory {
     pub slots_total: Option<u32>,
 }
 
+impl Memory {
+    /// Whether the memory is soldered to the board (any LPDDR module): there are no sticks to add
+    /// or move, whatever slot count the firmware reports.
+    pub fn soldered(&self) -> bool {
+        self.modules.iter().any(|m| matches!(m.kind, Some(MemoryKind::Lpddr3 | MemoryKind::Lpddr4 | MemoryKind::Lpddr5)))
+    }
+}
+
 /// Speed fields are provisional until a machine with XMP/EXPO off has been seen.
 #[derive(Serialize, Deserialize, JsonSchema, Debug, Clone, PartialEq, Default)]
 #[serde(default)]

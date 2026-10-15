@@ -3,7 +3,7 @@
 use super::common::{Action, couldnt_check, line, plural, section_problem};
 use crate::thresholds::{BATTERY_ACT_SOON, BATTERY_KEEP_AN_EYE, DRIVER_AGE_INFO_MONTHS, STARTUP_ITEMS_KEEP_AN_EYE};
 use crate::{Level, Param, SectionId, SectionVerdict, fmt};
-use fettle_facts::{Battery, CheckStatus, Graphics, Memory, MemoryKind, Section, Startup};
+use fettle_facts::{Battery, CheckStatus, Graphics, Memory, Section, Startup};
 
 /// `None` when there's no battery (desktops), so the receipt has no battery section at all.
 pub fn battery_rules(s: Option<&Section<Battery>>) -> Option<SectionVerdict> {
@@ -45,7 +45,7 @@ pub fn memory_rules(s: Option<&Section<Memory>>) -> SectionVerdict {
     let gb = (bytes / 2f64.powi(30)).round() as i64;
     let mut lines = vec![line("memory", Level::Fine, "memory.fine", &[("gb", Param::Int(gb)), ("sticks", Param::Int(modules.len() as i64))], Action::Default)];
     // LPDDR is soldered to the board: there's no second stick to add.
-    let soldered = modules.iter().any(|m| matches!(m.kind, Some(MemoryKind::Lpddr3 | MemoryKind::Lpddr4 | MemoryKind::Lpddr5)));
+    let soldered = data.is_some_and(Memory::soldered);
     if modules.len() == 1 && !soldered && data.and_then(|d| d.slots_total).unwrap_or(0) >= 2 {
         lines.push(line("memory-channels", Level::Info, "memory.single_channel", &[], Action::Default));
     }

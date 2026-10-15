@@ -136,6 +136,9 @@ fn trimmed(s: Option<&String>) -> Option<&str> {
 
 fn memory(d: &Memory, locale: Locale) -> Vec<DetailGroup> {
     let modules = &d.modules;
+    // Soldered memory (LPDDR) has no slots, and its chips' narrow channels don't mean what a
+    // stick's do: four LPDDR5 channels are as wide as an ordinary desktop's two.
+    let soldered = d.soldered();
     // Voltage is collected but not shown: firmware often reports the JEDEC 1.10 V even while an
     // XMP/EXPO profile runs the stick at ~1.35 V (seen on the dev workstation), so it would mislead.
     let sticks: Vec<DetailGroup> = modules
@@ -159,11 +162,13 @@ fn memory(d: &Memory, locale: Locale) -> Vec<DetailGroup> {
             let now = positive(m.configured_speed_mts).or_else(|| positive(m.speed_mts));
             let max = positive(m.speed_mts);
             let speed = now.map(|now| match max {
-                Some(max) if max > now => ui("d.speed_max", locale, &[("now", Param::Float(now)), ("max", Param::Float(max))]),
+                Some(max) if max > now => ui(if soldered { "d.speed_rated" } else { "d.speed_max" }, locale, &[("now", Param::Float(now)), ("max", Param::Float(max))]),
                 _ => format!("{} MT/s", fmt::js_number(now)),
             });
             let rated = rated_from_part_number(m.part_number.as_deref()).map(|(speed, cl)| format!("{speed} MT/s · CL{cl}"));
             let (channel, dimm) = slot_of(m.bank_label.as_deref(), m.device_locator.as_deref());
+            // A soldered chip's "DIMM 0" is the firmware's numbering, not a slot.
+            let dimm = dimm.filter(|_| !soldered);
             let slot = match channel {
                 Some(c) => Some([Some(ui("d.channel", locale, &[("c", c.to_string().into())])), dimm.map(|d| format!("DIMM {d}"))].into_iter().flatten().collect::<Vec<_>>().join(" · ")),
                 None => trimmed(m.device_locator.as_ref()).map(str::to_string),
@@ -191,7 +196,7 @@ fn memory(d: &Memory, locale: Locale) -> Vec<DetailGroup> {
     let mut distinct = channels.clone();
     distinct.sort();
     distinct.dedup();
-    let channel_text = if modules.is_empty() || channels.iter().any(Option::is_none) {
+    let channel_text = if soldered || modules.is_empty() || channels.iter().any(Option::is_none) {
         None
     } else {
         Some(match distinct.len() {
@@ -200,10 +205,13 @@ fn memory(d: &Memory, locale: Locale) -> Vec<DetailGroup> {
         })
     };
     // Some firmware reports fewer slots than the sticks it lists; a contradiction is shown as unknown.
-    let slots = d
-        .slots_total
-        .filter(|t| *t > 0 && *t as usize >= modules.len())
-        .map(|t| ui("d.slots_used", locale, &[("used", Param::Int(modules.len() as i64)), ("total", Param::Int(t.into()))]));
+    let slots = if soldered {
+        Some(ui("d.soldered", locale, &[]))
+    } else {
+        d.slots_total
+            .filter(|t| *t > 0 && *t as usize >= modules.len())
+            .map(|t| ui("d.slots_used", locale, &[("used", Param::Int(modules.len() as i64)), ("total", Param::Int(t.into()))]))
+    };
     let summary = DetailGroup { title: None, rows: rows_of(locale, vec![("d.total", binary_gb(Some(total))), ("d.slots", slots), ("d.channels", channel_text)]) };
     let mut list = sticks;
     list.push(summary);

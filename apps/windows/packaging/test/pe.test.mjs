@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
-import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { join, resolve } from "node:path";
-import { describe, it } from "node:test";
+import { existsSync, mkdirSync, readFileSync, rmdirSync, rmSync, writeFileSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { after, describe, it } from "node:test";
 import { apiSet, delayImports, importChain, imports, loadFlags, missing, redistributable, runtimeFor } from "../pe.mjs";
 
 const root = resolve(import.meta.dirname, "../../../..");
@@ -51,8 +51,19 @@ function fakePe({ dlls = [], delayed = [], flags = null } = {}) {
   return b;
 }
 
+// This file's scratch folders, removed once its tests are done, passed or failed.
+const scratchRoot = join(root, "target", "tmp", "fettle-packaging", "pe");
+after(() => {
+  rmSync(scratchRoot, { recursive: true, force: true });
+  try {
+    rmdirSync(dirname(scratchRoot));
+  } catch {
+    // Another test file's folder is still there.
+  }
+});
+
 function scratch(name) {
-  const dir = join(root, "target", "tmp", "fettle-packaging", name);
+  const dir = join(scratchRoot, name);
   rmSync(dir, { recursive: true, force: true });
   mkdirSync(dir, { recursive: true });
   return dir;

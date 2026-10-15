@@ -356,17 +356,19 @@ mod tests {
 
     #[test]
     fn the_helper_never_overwrites_a_file() {
-        let path = scratch("overwrite").join("fettle-deep-1-1.json");
+        let (_scratch, dir) = scratch("overwrite");
+        let path = dir.join("fettle-deep-1-1.json");
         assert!(write_report(&path, &a_report()).is_ok());
         assert!(write_report(&path, &a_report()).is_err(), "already there");
     }
 
-    /// A fresh folder for a test, by its real path (as the app hands the helper one).
-    fn scratch(name: &str) -> PathBuf {
-        let dir = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/tmp/fettle-elevate").join(name);
-        let _ = std::fs::remove_dir_all(&dir);
-        std::fs::create_dir_all(&dir).unwrap();
-        local_form(std::fs::canonicalize(&dir).unwrap()).unwrap()
+    /// A fresh folder for a test, and its real path (as the app hands the helper one). The folder
+    /// goes with the guard, even when the test fails.
+    fn scratch(name: &str) -> (crate::store::tests::Scratch, PathBuf) {
+        let guard = crate::store::tests::scratch_at(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/tmp/fettle-elevate").join(name));
+        std::fs::create_dir_all(&*guard).unwrap();
+        let real = local_form(std::fs::canonicalize(&*guard).unwrap()).unwrap();
+        (guard, real)
     }
 
     fn junction(link: &Path, target: &Path) {
@@ -382,7 +384,8 @@ mod tests {
         // An antivirus scanner may open a new file the moment it's made; its name must still go when the
         // helper lets go, not when the scanner does (or never, if it holds on past the helper's exit).
         use std::os::windows::fs::OpenOptionsExt;
-        let path = scratch("held").join("fettle-deep-1-1.json");
+        let (_scratch, dir) = scratch("held");
+        let path = dir.join("fettle-deep-1-1.json");
         let file = std::fs::OpenOptions::new().write(true).create_new(true).access_mode(0x4000_0000 | 0x0001_0000).share_mode(7).open(&path).unwrap();
         let scanner = std::fs::OpenOptions::new().read(true).share_mode(7).open(&path).unwrap();
         remove_open(&file).unwrap();
@@ -396,7 +399,7 @@ mod tests {
         // The folders were checked before the file was made, but a folder swapped for a junction in
         // between would send the file elsewhere: the file Windows actually made is checked too, and
         // removed before anything is written to it.
-        let dir = scratch("swapped");
+        let (_scratch, dir) = scratch("swapped");
         let real = dir.join("real");
         std::fs::create_dir_all(&real).unwrap();
         let link = dir.join("link");
@@ -433,7 +436,7 @@ mod tests {
         // says the Deep check failed without a prompt, rather than starting a helper that can't write.
         assert_eq!(deep_report_path(Path::new(r"\\nas\tools\Fettle data"), 7, 9), Err(DeepError::Folder));
         assert_eq!(deep_report_path(Path::new("Fettle data"), 7, 9), Err(DeepError::Folder));
-        let dir = scratch("target");
+        let (_scratch, dir) = scratch("target");
         let path = deep_report_path(&dir, 7, 9).expect("a local folder");
         assert_eq!(path, local_form(std::fs::canonicalize(&dir).unwrap()).unwrap().join("fettle-deep-7-9.json"));
         assert_eq!(helper_target(args(&["fettle.exe", "--deep-scan", path.to_str().unwrap()])), Helper::Write(path.clone()));
@@ -452,7 +455,7 @@ mod tests {
 
     #[test]
     fn the_helper_never_writes_through_a_junction() {
-        let dir = scratch("junction");
+        let (_scratch, dir) = scratch("junction");
         let real = dir.join("real");
         std::fs::create_dir_all(&real).unwrap();
         let link = dir.join("link");
@@ -479,7 +482,7 @@ mod tests {
         // They'd be the administrator's (the app uses the user's own anyway).
         let mut report = a_report();
         report.facts.startup = startup(&["AdminTool"]);
-        let dir = scratch("startup");
+        let (_scratch, dir) = scratch("startup");
         let path = dir.join("fettle-deep-1-2.json");
         write_report(&path, &for_the_app(report)).unwrap();
         let written: Report = serde_json::from_slice(&std::fs::read(&path).unwrap()).unwrap();
@@ -490,7 +493,7 @@ mod tests {
     fn a_helper_that_finishes_after_the_app_stopped_waiting_writes_nothing() {
         // It stops in time for the app to read the file and delete it, rather than leave one behind.
         assert!(HELPER_DEADLINE + std::time::Duration::from_secs(5) < APP_WAIT, "a margin for the helper starting late");
-        let dir = scratch("late");
+        let (_scratch, dir) = scratch("late");
         let in_time = dir.join("fettle-deep-1-1.json");
         assert_eq!(finish_helper(&in_time, &a_report(), std::time::Duration::from_secs(30)), 0);
         assert!(in_time.exists());
@@ -512,7 +515,7 @@ mod tests {
 
     #[test]
     fn old_deep_files_are_cleared_at_launch() {
-        let dir = scratch("leftovers");
+        let (_scratch, dir) = scratch("leftovers");
         let old = dir.join("fettle-deep-1-1.json");
         let fresh = dir.join("fettle-deep-2-2.json");
         let other = dir.join("settings.json");

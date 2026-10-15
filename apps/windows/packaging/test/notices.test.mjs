@@ -186,9 +186,11 @@ describe("the Skia build the bundled list was written for", () => {
 });
 
 describe("writeNotices on this repo", { skip: !cargoPath() && "cargo not found" }, () => {
-  it("writes one file that names every crate in the app, Slint and Skia, under 2 MB", () => {
+  it("writes one file that names every crate in the app, Slint and Skia, under 2 MB", (t) => {
     const dir = join(import.meta.dirname, "../../../../target/tmp/notices-test");
     rmSync(dir, { recursive: true, force: true });
+    // Gone when the test is, passed or failed.
+    t.after(() => rmSync(dir, { recursive: true, force: true }));
     const file = join(dir, "THIRD-PARTY-NOTICES.txt");
     const crates = writeNotices(file);
     assert.ok(existsSync(file));

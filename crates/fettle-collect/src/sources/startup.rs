@@ -109,16 +109,34 @@ pub fn startup_approved() -> Result<Value, String> {
 mod tests {
     use super::*;
 
+    /// A scratch folder under target/tmp (never Windows' Temp), gone when the test is, passed or failed.
+    struct Scratch(std::path::PathBuf);
+
+    impl Scratch {
+        fn new(name: &str) -> Scratch {
+            let dir = std::path::PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/tmp/fettle-collect").join(name);
+            let _ = std::fs::remove_dir_all(&dir);
+            Scratch(dir)
+        }
+    }
+
+    impl Drop for Scratch {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.0);
+            if let Some(root) = self.0.parent() {
+                let _ = std::fs::remove_dir(root);
+            }
+        }
+    }
+
     #[test]
     fn a_folder_inside_the_startup_folder_is_not_an_app() {
         // Windows starts the files in the Startup folder, not what's inside a folder there.
-        let dir = std::env::temp_dir().join(format!("fettle-startup-test-{}", std::process::id()));
-        std::fs::create_dir_all(dir.join("Old shortcuts")).unwrap();
-        std::fs::write(dir.join("Notes.lnk"), b"").unwrap();
-        std::fs::write(dir.join("desktop.ini"), b"").unwrap();
-        let files = startup_files(&dir);
-        std::fs::remove_dir_all(&dir).unwrap();
-        assert_eq!(files.unwrap(), ["Notes.lnk"]);
+        let dir = Scratch::new("startup-folder");
+        std::fs::create_dir_all(dir.0.join("Old shortcuts")).unwrap();
+        std::fs::write(dir.0.join("Notes.lnk"), b"").unwrap();
+        std::fs::write(dir.0.join("desktop.ini"), b"").unwrap();
+        assert_eq!(startup_files(&dir.0).unwrap(), ["Notes.lnk"]);
     }
 
     #[test]

@@ -1,14 +1,25 @@
 import assert from "node:assert/strict";
-import { existsSync, mkdirSync, readFileSync, rmSync, statSync } from "node:fs";
-import { join, resolve } from "node:path";
-import { describe, it } from "node:test";
+import { existsSync, mkdirSync, readFileSync, rmdirSync, rmSync, statSync } from "node:fs";
+import { dirname, join, resolve } from "node:path";
+import { after, describe, it } from "node:test";
 import { delayImports, loadFlags } from "../pe.mjs";
 import { crtDirIn, exitCodes, knownDllsIn, manifestFiles, newestCrt, readExitCodes } from "../runtime.mjs";
 
 const root = resolve(import.meta.dirname, "../../../..");
 
+// This file's scratch folders, removed once its tests are done, passed or failed.
+const scratchRoot = join(root, "target", "tmp", "fettle-packaging", "runtime");
+after(() => {
+  rmSync(scratchRoot, { recursive: true, force: true });
+  try {
+    rmdirSync(dirname(scratchRoot));
+  } catch {
+    // Another test file's folder is still there.
+  }
+});
+
 function scratch(name) {
-  const dir = join(root, "target", "tmp", "fettle-packaging", name);
+  const dir = join(scratchRoot, name);
   rmSync(dir, { recursive: true, force: true });
   mkdirSync(dir, { recursive: true });
   return dir;

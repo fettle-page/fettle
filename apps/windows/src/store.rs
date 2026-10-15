@@ -239,17 +239,60 @@ pub(crate) mod tests {
     use fettle_verdicts::Locale;
     use std::sync::atomic::{AtomicUsize, Ordering};
 
-    /// A fresh, empty folder for one test.
-    /// A fresh scratch folder under target/ (never Windows' Temp); each run clears the last run's.
-    pub(crate) fn temp_dir() -> PathBuf {
-        static ROOT: std::sync::OnceLock<PathBuf> = std::sync::OnceLock::new();
+    /// A test's scratch folder under target/tmp (never Windows' Temp). It goes when the last handle
+    /// to it does, which is also when its test fails or panics, so a run leaves nothing behind.
+    #[derive(Clone)]
+    pub(crate) struct Scratch(std::sync::Arc<ScratchDir>);
+
+    pub(crate) struct ScratchDir(PathBuf);
+
+    impl Drop for ScratchDir {
+        fn drop(&mut self) {
+            // remove_dir_all removes a junction inside without following it.
+            let _ = std::fs::remove_dir_all(&self.0);
+            // The run's folder too, once the last test's is gone (it stays while others still run).
+            if let Some(root) = self.0.parent() {
+                let _ = std::fs::remove_dir(root);
+            }
+        }
+    }
+
+    impl AsRef<Path> for Scratch {
+        fn as_ref(&self) -> &Path {
+            self
+        }
+    }
+
+    impl std::ops::Deref for Scratch {
+        type Target = Path;
+        fn deref(&self) -> &Path {
+            &self.0.0
+        }
+    }
+
+    /// A fresh, empty, not yet created folder for one test (`target/tmp/fettle-unit/<n>`).
+    pub(crate) fn temp_dir() -> Scratch {
         static N: AtomicUsize = AtomicUsize::new(0);
-        let root = ROOT.get_or_init(|| {
-            let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/tmp/fettle-unit");
-            let _ = std::fs::remove_dir_all(&root);
-            root
+        scratch_at(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../target/tmp/fettle-unit").join(N.fetch_add(1, Ordering::Relaxed).to_string()))
+    }
+
+    /// A scratch folder at `path`, emptied first (a run killed before its clean-up leaves one).
+    pub(crate) fn scratch_at(path: PathBuf) -> Scratch {
+        let _ = std::fs::remove_dir_all(&path);
+        Scratch(std::sync::Arc::new(ScratchDir(path)))
+    }
+
+    #[test]
+    fn a_tests_scratch_folder_goes_even_when_the_test_panics() {
+        let dir = temp_dir();
+        let path = dir.to_path_buf();
+        let result = std::panic::catch_unwind(move || {
+            std::fs::create_dir_all(dir.join("inner")).unwrap();
+            std::fs::write(dir.join("inner").join("file.json"), "{}").unwrap();
+            panic!("a failing test");
         });
-        root.join(N.fetch_add(1, Ordering::Relaxed).to_string())
+        assert!(result.is_err());
+        assert!(!path.exists(), "{path:?} was left behind");
     }
 
     pub(crate) fn dump_report() -> Report {
@@ -280,7 +323,7 @@ pub(crate) mod tests {
     fn a_machine_wide_update_setting_is_the_default_until_the_user_chooses() {
         // An all-users install with the box cleared: every account starts with the check off.
         let dir = temp_dir();
-        let store = FileStore::new(dir.clone()).with_machine_updates(Some(false));
+        let store = FileStore::new(dir.to_path_buf()).with_machine_updates(Some(false));
         assert!(!store.load_settings().updates, "no settings yet");
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("settings.json"), r#"{"theme":"dark"}"#).unwrap();
@@ -289,32 +332,34 @@ pub(crate) mod tests {
         std::fs::write(dir.join("settings.json"), r#"{"updates":true}"#).unwrap();
         assert!(store.load_settings().updates);
         // Without a machine-wide setting, the check is on unless the user turned it off.
-        assert!(FileStore::new(temp_dir()).with_machine_updates(None).load_settings().updates);
+        let dir = temp_dir();
+        assert!(FileStore::new(dir.to_path_buf()).with_machine_updates(None).load_settings().updates);
     }
 
     #[test]
     fn updates_are_saved_only_once_the_user_chooses() {
         // An all-users install turned the check off for the PC; this user changes only the theme.
         let dir = temp_dir();
-        let store = FileStore::new(dir.clone()).with_machine_updates(Some(false));
+        let store = FileStore::new(dir.to_path_buf()).with_machine_updates(Some(false));
         let mut s = store.load_settings();
         s.theme = ThemeChoice::Dark;
         store.save_settings(&s);
         let saved: serde_json::Value = serde_json::from_str(&std::fs::read_to_string(dir.join("settings.json")).unwrap()).unwrap();
         assert!(saved.get("updates").is_none(), "no choice made, none saved: {saved}");
         // So the machine-wide default still decides, whatever it becomes later.
-        assert!(FileStore::new(dir.clone()).with_machine_updates(None).load_settings().updates);
+        assert!(FileStore::new(dir.to_path_buf()).with_machine_updates(None).load_settings().updates);
         // Once the user chooses in Settings, it's theirs and saved.
         s.updates = false;
         s.updates_chosen = true;
         store.save_settings(&s);
-        assert!(!FileStore::new(dir.clone()).with_machine_updates(None).load_settings().updates);
-        assert!(FileStore::new(dir).load_settings().updates_chosen);
+        assert!(!FileStore::new(dir.to_path_buf()).with_machine_updates(None).load_settings().updates);
+        assert!(FileStore::new(dir.to_path_buf()).load_settings().updates_chosen);
     }
 
     #[test]
     fn settings_round_trip_and_start_from_defaults() {
-        let store = FileStore::new(temp_dir());
+        let dir = temp_dir();
+        let store = FileStore::new(dir.to_path_buf());
         assert_eq!(store.load_settings(), Settings::default());
         let s = Settings { remember: false, show_private: true, lang: Some(Locale::It), theme: ThemeChoice::Oled, ..Settings::default() };
         store.save_settings(&s);
@@ -326,10 +371,10 @@ pub(crate) mod tests {
         let dir = temp_dir();
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("settings.json"), r#"{"remember": "yes", "theme": "dark", "lang": 7}"#).unwrap();
-        let s = FileStore::new(dir.clone()).load_settings();
+        let s = FileStore::new(dir.to_path_buf()).load_settings();
         assert_eq!((s.remember, s.theme, s.lang), (true, ThemeChoice::Dark, None));
         std::fs::write(dir.join("settings.json"), "{not json").unwrap();
-        assert_eq!(FileStore::new(dir).load_settings(), Settings::default());
+        assert_eq!(FileStore::new(dir.to_path_buf()).load_settings(), Settings::default());
     }
 
     // The installer's "check for updates" box (fettle.iss): cleared, it writes {"updates":false} on a
@@ -339,12 +384,12 @@ pub(crate) mod tests {
         let dir = temp_dir();
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("settings.json"), r#"{"updates":false}"#).unwrap();
-        assert_eq!(FileStore::new(dir.clone()).load_settings(), Settings { updates: false, updates_chosen: true, ..Settings::default() });
+        assert_eq!(FileStore::new(dir.to_path_buf()).load_settings(), Settings { updates: false, updates_chosen: true, ..Settings::default() });
 
         // Settings saved without a choice about updates have no "updates" field, so the installer
         // (which only writes when there's none) adds one right after the "{", keeping the rest.
         let saved = Settings { remember: false, theme: ThemeChoice::Oled, ..Settings::default() };
-        let store = FileStore::new(dir.clone());
+        let store = FileStore::new(dir.to_path_buf());
         store.save_settings(&saved);
         let text = std::fs::read_to_string(dir.join("settings.json")).unwrap();
         assert!(!text.contains(r#""updates""#), "no choice made, none saved: {text}");
@@ -355,7 +400,8 @@ pub(crate) mod tests {
 
     #[test]
     fn the_last_check_round_trips_and_clears() {
-        let store = FileStore::new(temp_dir());
+        let dir = temp_dir();
+        let store = FileStore::new(dir.to_path_buf());
         assert_eq!(store.load_last(), None);
         let r = dump_report();
         store.save_last(&r);
@@ -369,36 +415,36 @@ pub(crate) mod tests {
         let dir = temp_dir();
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("last-report.json"), "[1, 2").unwrap();
-        assert_eq!(FileStore::new(dir.clone()).load_last(), None);
+        assert_eq!(FileStore::new(dir.to_path_buf()).load_last(), None);
         assert!(!dir.join("last-report.json").exists());
         let mut newer = serde_json::to_value(dump_report()).unwrap();
         newer["schema_version"] = (SCHEMA_VERSION + 1).into();
         std::fs::write(dir.join("last-report.json"), newer.to_string()).unwrap();
-        assert_eq!(FileStore::new(dir.clone()).load_last(), None);
+        assert_eq!(FileStore::new(dir.to_path_buf()).load_last(), None);
         // A report whose scan time can't be read can't make a receipt: forgotten too.
         let mut odd = serde_json::to_value(dump_report()).unwrap();
         odd["collected_at"] = "2026-02-32T10:00:00Z".into();
         std::fs::write(dir.join("last-report.json"), odd.to_string()).unwrap();
-        assert_eq!(FileStore::new(dir).load_last(), None);
+        assert_eq!(FileStore::new(dir.to_path_buf()).load_last(), None);
     }
 
     #[test]
     fn links_round_trip_and_expired_ones_are_forgotten() {
         let dir = temp_dir();
-        let store = FileStore::new(dir.clone());
+        let store = FileStore::new(dir.to_path_buf());
         let link = |id: &str, expires: &str| SavedLink { id: id.into(), url: format!("https://fettle.page/r/{id}"), delete_token: "t".into(), expires_at: expires.into() };
         store.save_links(&[link("a", "2026-10-01T00:00:00Z"), link("b", "2026-11-01T00:00:00Z")]);
         let now = fettle_verdicts::fmt::parse_rfc3339("2026-10-09T00:00:00Z").unwrap();
         assert_eq!(store.load_links(now), vec![link("b", "2026-11-01T00:00:00Z")]);
         // The expired one is gone from the file too.
-        assert_eq!(FileStore::new(dir).load_links(0).len(), 1);
+        assert_eq!(FileStore::new(dir.to_path_buf()).load_links(0).len(), 1);
     }
 
     #[test]
     fn two_windows_never_lose_each_others_links() {
         // Both windows loaded the same (empty) list at launch; each shares a link, then one deletes.
         let dir = temp_dir();
-        let (a, b) = (FileStore::new(dir.clone()), FileStore::new(dir.clone()));
+        let (a, b) = (FileStore::new(dir.to_path_buf()), FileStore::new(dir.to_path_buf()));
         let link = |id: &str| SavedLink { id: id.into(), url: format!("https://fettle.page/r/{id}"), delete_token: format!("token-{id}"), expires_at: "2026-11-01T00:00:00Z".into() };
         let ids = |s: &FileStore| s.load_links(0).into_iter().map(|l| l.id).collect::<Vec<_>>();
         a.add_link(&link("a"), 0);
@@ -418,7 +464,7 @@ pub(crate) mod tests {
         // Window A reads the list and takes a moment to save; window B shares a link meanwhile.
         let dir = temp_dir();
         let link = |id: &str| SavedLink { id: id.into(), url: format!("https://fettle.page/r/{id}"), delete_token: format!("token-{id}"), expires_at: "2026-11-01T00:00:00Z".into() };
-        let a = FileStore::new(dir.clone());
+        let a = FileStore::new(dir.to_path_buf());
         let slow = std::thread::spawn(move || {
             a.with_links_locked(&mut || {
                 let mut links = a.load_links(0);
@@ -428,9 +474,9 @@ pub(crate) mod tests {
             })
         });
         std::thread::sleep(std::time::Duration::from_millis(50));
-        FileStore::new(dir.clone()).add_link(&link("b"), 0);
+        FileStore::new(dir.to_path_buf()).add_link(&link("b"), 0);
         slow.join().unwrap();
-        let ids: Vec<String> = FileStore::new(dir.clone()).load_links(0).into_iter().map(|l| l.id).collect();
+        let ids: Vec<String> = FileStore::new(dir.to_path_buf()).load_links(0).into_iter().map(|l| l.id).collect();
         assert_eq!(ids, ["a", "b"]);
         assert!(!dir.join("links.lock").exists(), "the lock goes when it's let go");
     }
@@ -440,7 +486,7 @@ pub(crate) mod tests {
         // Another Fettle window is writing links.json at the same moment: its temporary file is its own.
         let dir = temp_dir();
         std::fs::create_dir_all(dir.join("links.json.tmp")).unwrap();
-        let store = FileStore::new(dir.clone());
+        let store = FileStore::new(dir.to_path_buf());
         let link = SavedLink { id: "a".into(), url: "https://fettle.page/r/a".into(), delete_token: "token-a".into(), expires_at: "2026-11-01T00:00:00Z".into() };
         store.add_link(&link, 0);
         assert_eq!(store.load_links(0), vec![link]);
@@ -453,6 +499,6 @@ pub(crate) mod tests {
         let dir = temp_dir();
         std::fs::create_dir_all(&dir).unwrap();
         std::fs::write(dir.join("links.json"), r#"[{"id": 1}, "x"]"#).unwrap();
-        assert_eq!(FileStore::new(dir).load_links(0), vec![]);
+        assert_eq!(FileStore::new(dir.to_path_buf()).load_links(0), vec![]);
     }
 }

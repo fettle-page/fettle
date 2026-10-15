@@ -36,9 +36,10 @@ describe("appVersion", () => {
 });
 
 describe("sums", () => {
-  it("writes sha256sum lines, sorted by file name, with LF line ends", () => {
+  it("writes sha256sum lines, sorted by file name, with LF line ends", (t) => {
     const dir = join(root, "target", "tmp", "sums-test");
     rmSync(dir, { recursive: true, force: true });
+    t.after(() => rmSync(dir, { recursive: true, force: true }));
     mkdirSync(dir, { recursive: true });
     writeFileSync(join(dir, "b.zip"), "bee");
     writeFileSync(join(dir, "a.exe"), "ay");

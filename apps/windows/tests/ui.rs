@@ -67,29 +67,79 @@ fn dump_report() -> Report {
     serde_json::from_value(case["report"].clone()).unwrap()
 }
 
-/// A fresh scratch folder under target/ (never Windows' Temp); each run clears the last run's.
-fn temp_dir() -> PathBuf {
-    static ROOT: std::sync::OnceLock<PathBuf> = std::sync::OnceLock::new();
+/// A test's scratch folder under target/ (never Windows' Temp). It goes when the last handle to it
+/// does (the test's own, and any harness holding it), which is also when the test fails or panics.
+#[derive(Clone)]
+struct Scratch(Arc<ScratchDir>);
+
+struct ScratchDir(PathBuf);
+
+impl Drop for ScratchDir {
+    fn drop(&mut self) {
+        let _ = std::fs::remove_dir_all(&self.0);
+        // The run's folder too, once the last test's is gone.
+        if let Some(root) = self.0.parent() {
+            let _ = std::fs::remove_dir(root);
+        }
+    }
+}
+
+impl std::ops::Deref for Scratch {
+    type Target = std::path::Path;
+    fn deref(&self) -> &std::path::Path {
+        &self.0.0
+    }
+}
+
+impl Scratch {
+    /// A folder inside this one, with a guard of its own.
+    fn child(&self, name: &str) -> Scratch {
+        Scratch(Arc::new(ScratchDir(self.join(name))))
+    }
+}
+
+impl AsRef<std::path::Path> for Scratch {
+    fn as_ref(&self) -> &std::path::Path {
+        self
+    }
+}
+
+/// A fresh, empty, not yet created folder for one test (`fettle-ui/<n>`, emptied first in case a
+/// killed run left it).
+fn temp_dir() -> Scratch {
     static N: AtomicUsize = AtomicUsize::new(0);
-    let root = ROOT.get_or_init(|| {
-        let root = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("fettle-ui");
-        let _ = std::fs::remove_dir_all(&root);
-        root
+    let dir = PathBuf::from(env!("CARGO_TARGET_TMPDIR")).join("fettle-ui").join(N.fetch_add(1, Ordering::Relaxed).to_string());
+    let _ = std::fs::remove_dir_all(&dir);
+    Scratch(Arc::new(ScratchDir(dir)))
+}
+
+#[test]
+fn a_tests_scratch_folder_goes_even_when_the_test_panics() {
+    let dir = temp_dir();
+    let path = dir.to_path_buf();
+    let result = std::panic::catch_unwind(move || {
+        let h = harness_in(Locale::En, dir);
+        press(&h.app, "Check this PC");
+        h.background.run_all(&h.app);
+        panic!("a failing test");
     });
-    root.join(N.fetch_add(1, Ordering::Relaxed).to_string())
+    assert!(result.is_err());
+    assert!(!path.exists(), "{path:?} was left behind");
 }
 
 struct Harness {
     app: Fettle,
     background: Rc<Manual>,
+    // Last, so the app (and its store) goes before the folder does.
+    _dir: Scratch,
 }
 
-fn harness_in(lang: Locale, dir: PathBuf) -> Harness {
+fn harness_in(lang: Locale, dir: Scratch) -> Harness {
     harness_with(lang, dir, |_| {})
 }
 
 /// A harness whose dependencies the test can still change (fake dialogs, clipboard…).
-fn harness_with(lang: Locale, dir: PathBuf, change: impl FnOnce(&mut Deps)) -> Harness {
+fn harness_with(lang: Locale, dir: Scratch, change: impl FnOnce(&mut Deps)) -> Harness {
     if !READY.get() {
         i_slint_backend_testing::init_no_event_loop();
         READY.set(true);
@@ -98,7 +148,7 @@ fn harness_with(lang: Locale, dir: PathBuf, change: impl FnOnce(&mut Deps)) -> H
     let deps = Deps {
         system_lang: lang,
         scanner: Arc::new(FakeScanner(dump_report())),
-        store: Rc::new(FileStore::new(dir)),
+        store: Rc::new(FileStore::new(dir.to_path_buf())),
         background: background.clone(),
         wake: Arc::new(|| {}),
         zone: Arc::new(|_| 120),
@@ -120,7 +170,7 @@ fn harness_with(lang: Locale, dir: PathBuf, change: impl FnOnce(&mut Deps)) -> H
     let app = Fettle::new(deps).expect("the window builds");
     // The window's opening size (the testing backend otherwise lays out at the minimum).
     app.window().window().set_size(slint::LogicalSize::new(1240.0, 720.0));
-    Harness { app, background }
+    Harness { app, background, _dir: dir }
 }
 
 fn harness(lang: Locale) -> Harness {
@@ -169,7 +219,7 @@ fn the_last_check_comes_back_faded_at_the_next_launch() {
     let first = harness_in(Locale::En, dir.clone());
     press(&first.app, "Check this PC");
     first.background.run_all(&first.app);
-    assert!(FileStore::new(dir.clone()).load_last().is_some(), "remembered on this PC");
+    assert!(FileStore::new(dir.to_path_buf()).load_last().is_some(), "remembered on this PC");
     drop(first);
     let again = harness_in(Locale::En, dir);
     assert!(has(&again.app, "Last time: fine so far, but Fettle couldn't read the disks' health."));
@@ -250,7 +300,7 @@ fn turning_remember_off_deletes_the_stored_check() {
     let h = harness_in(Locale::En, dir.clone());
     press(&h.app, "Check this PC");
     h.background.run_all(&h.app);
-    assert!(FileStore::new(dir.clone()).load_last().is_some());
+    assert!(FileStore::new(dir.to_path_buf()).load_last().is_some());
     press(&h.app, "Settings");
     assert_eq!(checked(&h.app, "Remember the last check on this PC"), Some(true));
     press(&h.app, "Remember the last check on this PC");
@@ -349,7 +399,7 @@ struct Exports {
     h: Harness,
     dialogs: Rc<FakeDialogs>,
     clipboard: Rc<FakeClipboard>,
-    dir: PathBuf,
+    dir: Scratch,
 }
 
 /// A checked PC with fake dialogs and clipboard.
@@ -359,7 +409,7 @@ fn exports() -> Exports {
     let dialogs = Rc::new(FakeDialogs::default());
     let clipboard = Rc::new(FakeClipboard::default());
     let (d, c) = (dialogs.clone(), clipboard.clone());
-    let h = harness_with(Locale::En, dir.join("store"), move |deps| {
+    let h = harness_with(Locale::En, dir.child("store"), move |deps| {
         deps.dialogs = d;
         deps.clipboard = c;
     });
@@ -446,7 +496,7 @@ fn no_printing() -> Exports {
     std::fs::create_dir_all(&dir).unwrap();
     let dialogs = Rc::new(FakeDialogs::default());
     let d = dialogs.clone();
-    let h = harness_with(Locale::En, dir.join("store"), move |deps| {
+    let h = harness_with(Locale::En, dir.child("store"), move |deps| {
         deps.dialogs = d;
         deps.printer = Rc::new(NoPrinting);
     });
@@ -955,7 +1005,7 @@ struct Updates {
     opened: Rc<RefCell<Vec<String>>>,
 }
 
-fn updates_in(lang: Locale, dir: PathBuf) -> Updates {
+fn updates_in(lang: Locale, dir: Scratch) -> Updates {
     let site = Arc::new(UpdateSite(NEWER, Default::default()));
     let opened = Rc::new(RefCell::new(Vec::new()));
     let (s, o) = (site.clone(), opened.clone());
@@ -1078,7 +1128,7 @@ fn a_data_folder_that_cant_be_written_still_asks_once_a_day() {
     let _ = std::fs::remove_file(&dir);
 }
 
-fn seeded_update(hours_ago: i64, settings: &str) -> PathBuf {
+fn seeded_update(hours_ago: i64, settings: &str) -> Scratch {
     let now = fettle_verdicts::fmt::parse_rfc3339("2026-10-09T12:00:00Z").unwrap();
     let dir = temp_dir();
     std::fs::create_dir_all(&dir).unwrap();
@@ -1107,7 +1157,7 @@ fn settings_offer_how_often_to_check_while_the_check_is_on() {
     assert_eq!(checked(&h.app, "Every day"), Some(true));
     press(&h.app, "Every week");
     assert_eq!(checked(&h.app, "Every week"), Some(true));
-    assert_eq!(FileStore::new(dir).load_settings().update_every, fettle_windows::state::UpdateEvery::Weekly);
+    assert_eq!(FileStore::new(dir.to_path_buf()).load_settings().update_every, fettle_windows::state::UpdateEvery::Weekly);
     press(&h.app, "Check for a new version");
     assert!(!has(&h.app, "Every week"), "no choice while the check is off");
 }
@@ -1215,7 +1265,7 @@ impl Http for LinkServer {
 fn my_shared_links_can_check_which_still_work() {
     let dir = temp_dir();
     let saved = |id: &str| fettle_windows::store::SavedLink { id: id.into(), url: format!("https://fettle.page/r/{id}"), delete_token: "t".into(), expires_at: "2026-10-20T00:00:00Z".into() };
-    FileStore::new(dir.clone()).save_links(&[saved("alive1234567890abcd"), saved("gone12345678901abcd")]);
+    FileStore::new(dir.to_path_buf()).save_links(&[saved("alive1234567890abcd"), saved("gone12345678901abcd")]);
     let server = Arc::new(LinkServer(Default::default()));
     let s = server.clone();
     let h = harness_with(Locale::En, dir.clone(), move |deps| deps.http = s);
@@ -1226,14 +1276,14 @@ fn my_shared_links_can_check_which_still_work() {
     assert!(has(&h.app, "1 link was deleted on the website, so it's gone from this list."));
     assert!(!has(&h.app, "https://fettle.page/r/gone12345678901abcd"));
     assert!(has(&h.app, "https://fettle.page/r/alive1234567890abcd"));
-    assert_eq!(FileStore::new(dir).load_links(0).len(), 1, "remembered");
+    assert_eq!(FileStore::new(dir.to_path_buf()).load_links(0).len(), 1, "remembered");
 }
 
 #[test]
 fn italian_link_dates_read_naturally() {
     let dir = temp_dir();
     let saved = |id: &str, expires: &str| fettle_windows::store::SavedLink { id: id.into(), url: format!("https://fettle.page/r/{id}"), delete_token: "t".into(), expires_at: expires.into() };
-    FileStore::new(dir.clone()).save_links(&[saved("eight1234567890abcd", "2026-11-08T10:00:00Z"), saved("first1234567890abcd", "2026-11-01T10:00:00Z")]);
+    FileStore::new(dir.to_path_buf()).save_links(&[saved("eight1234567890abcd", "2026-11-08T10:00:00Z"), saved("first1234567890abcd", "2026-11-01T10:00:00Z")]);
     let h = harness_in(Locale::It, dir);
     h.app.dispatch(fettle_windows::state::Event::Open(fettle_windows::state::Panel::Links));
     assert!(has(&h.app, "Fino all'8 novembre 2026"));

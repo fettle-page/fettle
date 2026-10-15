@@ -48,6 +48,27 @@ fn soldered_memory_says_so_instead_of_counting_slots_and_channels() {
     assert_eq!(values(&it, "Velocità"), ["4266 MT/s (chip da 6400)"; 4]);
 }
 
+fn unchanneled(kind: &str) -> Value {
+    let chip = |n: u32| json!({ "kind": kind, "capacity_bytes": 4294967296u64, "speed_mts": 6400, "bank_label": format!("BANK {n}"), "device_locator": format!("DIMM {n}") });
+    json!([0, 1].map(chip))
+}
+
+#[test]
+fn a_soldered_chip_without_a_channel_shows_no_slot() {
+    // The firmware's "DIMM 0" is its numbering, not a slot, with or without a channel.
+    let en = memory_rows(unchanneled("lpddr5"), 2, Locale::En);
+    assert_eq!(values(&en, "Slot"), Vec::<&str>::new());
+    assert_eq!(values(&en, "Size"), ["4 GB", "4 GB"]);
+    let it = memory_rows(unchanneled("lpddr5"), 2, Locale::It);
+    assert_eq!(values(&it, "Slot"), ["nessuno, saldata sulla scheda madre"]);
+}
+
+#[test]
+fn a_stick_without_a_channel_keeps_the_firmware_slot_name() {
+    let en = memory_rows(unchanneled("ddr4"), 2, Locale::En);
+    assert_eq!(values(&en, "Slot"), ["DIMM 0", "DIMM 1"]);
+}
+
 #[test]
 fn memory_sticks_keep_their_slots_and_channels() {
     let en = memory_rows(chips("ddr4"), 4, Locale::En);

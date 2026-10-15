@@ -167,10 +167,12 @@ fn memory(d: &Memory, locale: Locale) -> Vec<DetailGroup> {
             });
             let rated = rated_from_part_number(m.part_number.as_deref()).map(|(speed, cl)| format!("{speed} MT/s · CL{cl}"));
             let (channel, dimm) = slot_of(m.bank_label.as_deref(), m.device_locator.as_deref());
-            // A soldered chip's "DIMM 0" is the firmware's numbering, not a slot.
+            // A soldered chip's "DIMM 0" is the firmware's numbering, not a slot: it shows only its
+            // channel, and no slot at all when it has none (the raw locator would be that "DIMM 0").
             let dimm = dimm.filter(|_| !soldered);
             let slot = match channel {
                 Some(c) => Some([Some(ui("d.channel", locale, &[("c", c.to_string().into())])), dimm.map(|d| format!("DIMM {d}"))].into_iter().flatten().collect::<Vec<_>>().join(" · ")),
+                None if soldered => None,
                 None => trimmed(m.device_locator.as_ref()).map(str::to_string),
             };
             let title = [trimmed(m.manufacturer.as_ref()), trimmed(m.part_number.as_ref())].into_iter().flatten().collect::<Vec<_>>().join(" ");

@@ -34,10 +34,13 @@ const { source } = links(release);
     </nav>
     <div class="foot-prefs">
       <fieldset class="foot-theme" data-theme-picker hidden>
-        <legend>{t(locale, "theme.label")}</legend>
-        {(["auto", "light", "dark", "oled"] as const).map((v) => (
-          <label><input class="sr-only" type="radio" name="theme" value={v} /><span class={`swatch swatch-${v}`} aria-hidden="true"></span>{t(locale, `theme.${v}`)}</label>
-        ))}
+        {/* The legend names the group for screen readers; the row shows the label (WebKit draws a floated legend above it). */}
+        <legend class="sr-only">{t(locale, "theme.label")}</legend>
+        <div class="foot-theme-row"><span class="foot-theme-label" aria-hidden="true">{t(locale, "theme.label")}</span><div class="foot-theme-options">
+          {(["auto", "light", "dark", "oled"] as const).map((v) => (
+            <label><input class="sr-only" type="radio" name="theme" value={v} /><span class={`swatch swatch-${v}`} aria-hidden="true"></span>{t(locale, `theme.${v}`)}</label>
+          ))}
+        </div></div>
       </fieldset>
       <nav class="foot-lang" aria-labelledby="foot-lang-label">
         <span id="foot-lang-label" class="foot-lang-label">{t(locale, "footer.language")}</span>

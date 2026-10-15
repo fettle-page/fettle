@@ -86,3 +86,17 @@ describe("the share page header on a narrow phone", () => {
     expect(narrow).toMatch(/gap:\s*10px/);
   });
 });
+
+describe("the footer's theme picker", () => {
+  // WebKit draws a floated legend as a caption above the options, so the visible label is an ordinary
+  // element in the row and the legend only names the group for screen readers.
+  it("names the group with a hidden legend and shows its label in the row, in every browser", () => {
+    for (const file of ["index.html", "it/faq.html"]) {
+      const picker = /<fieldset class="foot-theme"[^>]*>([\s\S]*?)<\/fieldset>/.exec(page(file))![1]!;
+      expect(picker, file).toMatch(/^\s*<legend class="sr-only">[^<]+<\/legend>/);
+      expect(picker, file).toMatch(/<div class="foot-theme-row"><span class="foot-theme-label" aria-hidden="true">[^<]+<\/span><div class="foot-theme-options">(\s*<label>[\s\S]*?<\/label>){4}\s*<\/div><\/div>/);
+    }
+    const css = src("src/styles/site.css");
+    expect(css).not.toMatch(/\.foot-theme legend\s*\{[^}]*float/);
+  });
+});

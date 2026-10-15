@@ -59,6 +59,7 @@ export const releases: Release[] = [
         "When Windows answered almost nothing, the side panel now says Fettle couldn't check much on this PC, instead of “Nothing to do right now”.",
         "With more than four sections, the tabs under “The numbers” now take two rows instead of squeezing their names together.",
         "On a narrow phone, the share page's theme button no longer runs off the right edge of the screen in Italian.",
+        "In Safari, the footer's theme choices now sit beside their label, as in other browsers, and on a phone they wrap neatly under each other.",
       ],
       it: [
         "Il numero di download nella home e nella pagina di download ora compare anche alla prima visita, non solo dopo aver ricaricato: il sito lo chiede a GitHub una volta l'ora e conserva la risposta, invece di chiederlo quando qualcuno apre la pagina.",
@@ -98,6 +99,7 @@ export const releases: Release[] = [
         "Quando Windows non ha risposto quasi a nulla, il pannello laterale ora dice che Fettle non è riuscito a controllare quasi nulla su questo PC, invece di “Niente da fare per ora”.",
         "Con più di quattro sezioni, le schede sotto “I numeri” ora vanno su due righe invece di stringere i nomi uno contro l'altro.",
         "Su un telefono stretto, il pulsante del tema della pagina condivisa non esce più dal bordo destro dello schermo in italiano.",
+        "In Safari, le scelte del tema nel piè di pagina ora stanno accanto alla loro etichetta, come negli altri browser, e sul telefono vanno a capo in ordine una sotto l'altra.",
       ],
     },
   },

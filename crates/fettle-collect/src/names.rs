@@ -16,9 +16,10 @@ pub fn redactor() -> fettle_facts::redact::Redactor {
     let (mut users, hosts) = machine_names();
     let accounts = local_accounts();
     let full = full_names(&users, &accounts);
-    // Every local account's name too: one renamed after its profile folder was made, or one that
-    // never signed in, has a name no folder shows.
-    users.extend(accounts.into_iter().map(|(name, _)| name));
+    // Every account someone can sign in to, too: one renamed after its profile folder was made, or
+    // one that never signed in, has a name no folder shows. Disabled ones (Guest, DefaultAccount,
+    // and their translations) name no one.
+    users.extend(accounts.into_iter().filter(|a| a.enabled).map(|a| a.name));
     let mut hosts = hosts.into_iter();
     let first = hosts.next().unwrap_or_default();
     let r = hosts.fold(fettle_facts::redact::Redactor::new(users, first), |r, h| r.with_hostname(h));
@@ -50,34 +51,43 @@ fn domains() -> Vec<String> {
 /// software creates and nobody signs in to have product names there instead), and the signed-in
 /// account's from its domain or Entra ID.
 #[cfg(windows)]
-fn full_names(people: &[String], accounts: &[(String, Option<String>)]) -> Vec<String> {
+fn full_names(people: &[String], accounts: &[Account]) -> Vec<String> {
     use windows::Win32::Security::Authentication::Identity::NameDisplay;
 
     let mut names: Vec<String> = user_name_ex(NameDisplay).into_iter().collect();
-    for (name, full) in accounts {
-        if people.iter().any(|p| p.eq_ignore_ascii_case(name)) {
-            names.extend(full.clone().filter(|n| !n.trim().is_empty()));
+    for a in accounts {
+        if people.iter().any(|p| p.eq_ignore_ascii_case(&a.name)) {
+            names.extend(a.full_name.clone().filter(|n| !n.trim().is_empty()));
         }
     }
     names
 }
 
-/// Every local account on this PC, with its full name when it has one.
+/// A local account on this PC.
 #[cfg(windows)]
-fn local_accounts() -> Vec<(String, Option<String>)> {
-    use windows::Win32::NetworkManagement::NetManagement::{FILTER_NORMAL_ACCOUNT, MAX_PREFERRED_LENGTH, NetApiBufferFree, NetUserEnum, USER_INFO_10};
+struct Account {
+    name: String,
+    full_name: Option<String>,
+    /// Someone can sign in to it (Guest and DefaultAccount are usually switched off).
+    enabled: bool,
+}
+
+/// Every local account on this PC.
+#[cfg(windows)]
+fn local_accounts() -> Vec<Account> {
+    use windows::Win32::NetworkManagement::NetManagement::{FILTER_NORMAL_ACCOUNT, MAX_PREFERRED_LENGTH, NetApiBufferFree, NetUserEnum, UF_ACCOUNTDISABLE, USER_INFO_20};
     use windows::core::PCWSTR;
 
     let mut accounts = Vec::new();
     let (mut buf, mut read, mut total) = (std::ptr::null_mut(), 0u32, 0u32);
-    // Level 10 holds the full name; asking for everything at once leaves nothing to resume.
-    let status = unsafe { NetUserEnum(PCWSTR::null(), 10, FILTER_NORMAL_ACCOUNT, &mut buf, MAX_PREFERRED_LENGTH, &mut read, &mut total, None) };
+    // Level 20 holds the full name and the flags; asking for everything at once leaves nothing to resume.
+    let status = unsafe { NetUserEnum(PCWSTR::null(), 20, FILTER_NORMAL_ACCOUNT, &mut buf, MAX_PREFERRED_LENGTH, &mut read, &mut total, None) };
     if status == 0 && !buf.is_null() {
-        let users = unsafe { std::slice::from_raw_parts(buf as *const USER_INFO_10, read as usize) };
+        let users = unsafe { std::slice::from_raw_parts(buf as *const USER_INFO_20, read as usize) };
         let text = |p: windows::core::PWSTR| if p.is_null() { None } else { unsafe { p.to_string() }.ok() };
         for user in users {
-            if let Some(name) = text(user.usri10_name) {
-                accounts.push((name, text(user.usri10_full_name)));
+            if let Some(name) = text(user.usri20_name) {
+                accounts.push(Account { name, full_name: text(user.usri20_full_name), enabled: user.usri20_flags.0 & UF_ACCOUNTDISABLE.0 == 0 });
             }
         }
     }
@@ -209,9 +219,9 @@ mod tests {
     fn every_local_account_name_is_hidden() {
         let r = super::redactor();
         let accounts = super::local_accounts();
-        assert!(!accounts.is_empty());
-        for (name, _) in accounts {
-            assert!(!r.text(&format!(r"PC\{name}")).contains(&name), "a local account's name wasn't hidden");
+        assert!(accounts.iter().any(|a| a.enabled), "this account at least");
+        for a in accounts.iter().filter(|a| a.enabled) {
+            assert_eq!(r.text(&format!(r"PC\{}", a.name)), r"PC\<user>", "a local account's name wasn't hidden");
         }
     }
 

@@ -38,16 +38,16 @@ body { background: var(--t-page); color: var(--on-mat); font-family: var(--font-
   font: 700 12px/1 var(--font-mono); letter-spacing: 0.14em; text-transform: uppercase;
   text-decoration: none;
   text-shadow: 0 1px 0 rgb(255 255 255 / 0.18), 0 -1px 0 rgb(0 0 0 / 0.6);
-  box-shadow: 0 2px 0 rgb(0 0 0 / 0.25);
   clip-path: polygon(0 0, 100% 0, 98.5% 50%, 100% 100%, 0 100%, 1.5% 50%);
   cursor: pointer;
 }
 .tape.quiet { cursor: default; opacity: 0.8; }
 .theme-toggle { margin-left: auto; gap: 7px; }
 .theme-icon { width: 13px; height: 13px; flex: none; }
-.tape.light { background: var(--t-tape-light); color: var(--t-tape-light-ink); text-shadow: none; box-shadow: 0 2px 0 rgb(0 0 0 / 0.25), inset 0 0 0 1px var(--t-tape-light-ring); }
+.tape.light { background: var(--t-tape-light); color: var(--t-tape-light-ink); text-shadow: none; box-shadow: inset 0 0 0 1px var(--t-tape-light-ring); }
 .tape:disabled { cursor: progress; opacity: 0.6; }
-.tape:focus-visible { outline: 2px solid var(--t-accent); outline-offset: 3px; }
+/* The torn edges (clip-path) would also cut off the ring, so a focused tape is cut straight. */
+.tape:focus-visible { outline: 2px solid var(--t-accent); outline-offset: 3px; clip-path: none; }
 
 .stage { flex: 1; padding: 48px 16px 64px; }
 /* The receipt feeds out once: transform only, so it's visible (and counted as painted) from the start. */

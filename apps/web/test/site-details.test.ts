@@ -37,3 +37,18 @@ describe("footer theme picker", () => {
     expect(css).toMatch(/\.foot-theme label:has\(input:focus-visible\)/);
   });
 });
+
+describe("keyboard focus on label-maker tapes", () => {
+  // A tape's torn edges are a clip-path, which also cuts off the focus outline drawn outside it, so a
+  // focused tape drops the torn edges and shows the ring (WCAG 2.4.7).
+  const body = (css: string, selector: string) =>
+    [...css.replace(/\/\*[\s\S]*?\*\//g, "").matchAll(/([^{}]+)\{([^}]*)\}/g)].filter(([, sel]) => sel!.split(/,(?![^(]*\))/).some((s) => s.trim() === selector)).map(([, , b]) => b).join(";");
+  it("shows the focus ring on the site's tapes", () => {
+    expect(body(src("src/styles/site.css"), ":is(a, button).tape:focus-visible")).toMatch(/clip-path:\s*none/);
+  });
+  it("shows the focus ring on the share page's tapes", () => {
+    const rule = body(src("src/share/share.css"), ".tape:focus-visible");
+    expect(rule).toMatch(/clip-path:\s*none/);
+    expect(rule).toMatch(/outline:\s*2px solid/);
+  });
+});

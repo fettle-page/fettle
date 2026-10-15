@@ -25,11 +25,13 @@ export const releases: Release[] = [
         "The download count on the home and download pages now shows on the first visit too, not only after a reload: the site asks GitHub for it once an hour and keeps the answer, instead of asking when someone opens the page.",
         "The FAQ now says how to save the full report for someone who knows PCs: press Save and choose “Report for experts (JSON)” as the file type.",
         "The FAQ and the home page now name the Copy button as the app shows it, instead of “Copy for Discord or Reddit”.",
+        "The keyboard focus ring now shows on the site's label buttons (the menu, the theme button and Download) and on the share page's buttons. Their torn edges used to hide it.",
       ],
       it: [
         "Il numero di download nella home e nella pagina di download ora compare anche alla prima visita, non solo dopo aver ricaricato: il sito lo chiede a GitHub una volta l'ora e conserva la risposta, invece di chiederlo quando qualcuno apre la pagina.",
         "Le domande frequenti ora spiegano come salvare il report completo per chi se ne intende di PC: premi Salva e scegli “Report per esperti (JSON)” come tipo di file.",
         "Le domande frequenti e la home ora chiamano il pulsante Copia come lo mostra l'app, invece di “Copia per Discord o Reddit”.",
+        "L'indicatore del focus da tastiera ora si vede sui pulsanti a etichetta del sito (il menu, il pulsante del tema e Scarica) e su quelli della pagina condivisa. Prima lo nascondevano i loro bordi strappati.",
       ],
     },
   },

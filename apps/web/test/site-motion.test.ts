@@ -136,14 +136,20 @@ describe("press feedback", () => {
     // Only tapes you can click press in; label tapes (v1.1, the sample's section heads) stay put.
     const tape = rule(site, ":is(a, button).tape:active");
     expect(tape).toContain("translate: 0 1px");
-    expect(tape).toMatch(/box-shadow:\s*0 1px 0/);
+    // Pressing changes nothing else, so the current page's accent underline and the light tape's ring stay as they are.
+    expect(tape).not.toContain("box-shadow");
     expect(rule(site, ".tape:active")).toBe("");
-    // The current page's tape keeps its accent underline while pressed.
-    expect(rule(site, ':is(a, button).tape[aria-current="page"]:active')).toContain("inset 0 -2px 0 var(--t-accent)");
     expect(rule(site, ".btn-ghost:active")).toContain("translate: 0 2px");
     expect(rule(site, ".foot-theme label:active")).toContain("translate: 0 1px");
     expect(rule(site, ".tape")).toMatch(/translate 100ms/);
     expect(rule(site, ".btn")).toMatch(/translate 100ms/);
+  });
+
+  it("tapes draw no shadow outside their torn edges, where clip-path would hide it", () => {
+    for (const sel of [".tape", '.tape[aria-current="page"]', ".tape.light", ".tape.quiet"]) {
+      const shadows = /box-shadow:\s*([^;]+)/.exec(rule(site, sel))?.[1] ?? "";
+      for (const part of shadows.split(/,(?![^(]*\))/).filter((x) => x.trim())) expect(part.trim(), sel).toMatch(/^inset /);
+    }
   });
 
   it("hover lift is for mouse pointers only", () => {

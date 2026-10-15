@@ -9,7 +9,7 @@ const en = {
   lede: "A free Windows check-up that takes a few seconds and prints a receipt you can actually read. Battery, disks, memory, Windows, startup. In plain words.",
   ctaDownload: "Download for Windows",
   ctaSample: "See a sample receipt",
-  fine: "Free · open source · no tracking · Windows 10 & 11",
+  fine: "Free\u00a0· open source\u00a0· no tracking\u00a0· Windows 10 & 11",
 
   liveHead: "Your browser says",
   liveScreen: "Screen",
@@ -88,7 +88,7 @@ const en = {
   askHead: "Asked often",
   moreHead: "More questions",
   endH: "Check your own PC.",
-  endFine: "Windows 10 & 11 · free · open source · nothing to buy",
+  endFine: "Windows 10 & 11\u00a0· free\u00a0· open source\u00a0· nothing to buy",
 };
 
 export type HomeKey = keyof typeof en;
@@ -101,7 +101,7 @@ const it: Record<HomeKey, string> = {
   lede: "Un controllo gratuito per Windows che dura pochi secondi e stampa uno scontrino che si capisce davvero. Batteria, dischi, memoria, Windows, avvio. Parole semplici.",
   ctaDownload: "Scarica per Windows",
   ctaSample: "Guarda uno scontrino",
-  fine: "Gratis · open source · nessun tracciamento · Windows 10 e 11",
+  fine: "Gratis\u00a0· open source\u00a0· nessun tracciamento\u00a0· Windows 10 e 11",
 
   liveHead: "Il tuo browser dice",
   liveScreen: "Schermo",
@@ -180,7 +180,7 @@ const it: Record<HomeKey, string> = {
   askHead: "Domande frequenti",
   moreHead: "Altre domande",
   endH: "Controlla il tuo PC.",
-  endFine: "Windows 10 e 11 · gratis · open source · niente da comprare",
+  endFine: "Windows 10 e 11\u00a0· gratis\u00a0· open source\u00a0· niente da comprare",
 };
 
 const catalogs: Record<Locale, Record<HomeKey, string>> = { en, it };

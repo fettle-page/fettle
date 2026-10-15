@@ -206,3 +206,19 @@ describe("the home page's browser receipt", () => {
     expect(/(?:^|\n)\.live-row dd\s*\{([^}]*)\}/.exec(css)?.[1]).toMatch(/white-space:\s*nowrap/);
   });
 });
+
+describe("no word or dot left alone on a line", () => {
+  // Seen at 360–1440 px: "· WINDOWS 10 & 11" and "buy" alone, "JSON" alone, "Windows." alone.
+  it("keeps the home page's small-print dots with the word before them", async () => {
+    const { home } = await import("../src/i18n/home.ts");
+    for (const locale of ["en", "it"] as const) {
+      expect(home(locale).fine, locale).not.toMatch(/ ·/);
+      expect(home(locale).endFine, locale).not.toMatch(/ ·/);
+    }
+  });
+  it("wraps the technicians' list and the footer tagline prettily", () => {
+    const css = src("src/styles/site.css").replace(/\/\*[\s\S]*?\*\//g, "");
+    expect(/(?:^|\n)\.checks li\s*\{([^}]*)\}/.exec(css)?.[1]).toMatch(/text-wrap:\s*pretty/);
+    expect(/(?:^|\n)\.foot-brand p\s*\{([^}]*)\}/.exec(css)?.[1]).toMatch(/text-wrap:\s*pretty/);
+  });
+});

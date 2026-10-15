@@ -109,7 +109,8 @@ describe("landing page", () => {
     it(`${locale}: ends with a download button`, () => {
       const end = ending();
       expect(end).toMatch(new RegExp(`class="btn btn-primary"[^>]*href="${download}"|href="${download}"[^>]*class="btn btn-primary"`));
-      expect(unquote(text(end))).toContain(home(locale).endFine);
+      // text() reads no-break spaces (which keep each dot with its word) as plain ones.
+      expect(unquote(text(end))).toContain(home(locale).endFine.replace(/ /g, " "));
     });
   }
 

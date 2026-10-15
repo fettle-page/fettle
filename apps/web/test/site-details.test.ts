@@ -82,8 +82,11 @@ describe("the share page header on a narrow phone", () => {
   it("tightens its gaps rather than pushing the theme button off the screen, and keeps the logo whole", () => {
     const css = src("src/share/share.css").replace(/\/\*[\s\S]*?\*\//g, "");
     expect(/(?:^|\n)\.home\s*\{([^}]*)\}/.exec(css)?.[1]).toMatch(/flex-shrink:\s*0/);
-    const narrow = /@media \(max-width: 400px\)\s*\{\s*\.bar\s*\{([^}]*)\}/.exec(css)?.[1] ?? "";
-    expect(narrow).toMatch(/gap:\s*10px/);
+    const narrow = /@media \(max-width: 400px\)\s*\{\s*\.bar\s*\{([^}]*)\}\s*\.bar \.tape\s*\{([^}]*)\}/.exec(css);
+    expect(narrow?.[1]).toMatch(/gap:\s*10px/);
+    expect(narrow?.[2]).toMatch(/padding-inline:\s*9px/);
+    // 320 px phones: a smaller logo, so the theme button (the share page has no footer picker) still fits.
+    expect(/@media \(max-width: 359\.98px\)\s*\{\s*\.brand\s*\{([^}]*)\}/.exec(css)?.[1]).toMatch(/height:\s*24px/);
   });
 });
 

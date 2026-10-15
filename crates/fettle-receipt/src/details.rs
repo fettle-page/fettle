@@ -226,6 +226,37 @@ fn hours_text(hours: u64, locale: Locale) -> String {
     }
 }
 
+/// The words a product name uses for each edition Windows reports ("Professional" is "Pro").
+/// An N edition ("ProfessionalN") adds an "N".
+const EDITION_WORDS: &[(&str, &[&str])] = &[
+    ("Core", &["Home"]),
+    ("CoreSingleLanguage", &["Home", "Single", "Language"]),
+    ("CoreCountrySpecific", &["Home", "China"]),
+    ("Professional", &["Pro"]),
+    ("ProfessionalWorkstation", &["Pro", "Workstations"]),
+    ("ProfessionalEducation", &["Pro", "Education"]),
+    ("Enterprise", &["Enterprise"]),
+    ("EnterpriseS", &["Enterprise", "LTSC"]),
+    ("EnterpriseS", &["Enterprise", "LTSB"]),
+    ("Education", &["Education"]),
+    ("IoTEnterprise", &["IoT", "Enterprise"]),
+    ("IoTEnterpriseS", &["IoT", "Enterprise", "LTSC"]),
+    ("ServerRdsh", &["Enterprise", "multi-session"]),
+    ("CloudEdition", &["SE"]),
+];
+
+/// Whether the product name ("Windows 11 Pro") already says the edition ("Professional").
+fn names_edition(product: &str, edition: &str) -> bool {
+    let words: Vec<&str> = product.split_whitespace().collect();
+    let has = |w: &str| words.iter().any(|p| p.eq_ignore_ascii_case(w));
+    let known = |id: &str| EDITION_WORDS.iter().any(|(e, _)| *e == id);
+    let (base, n) = match edition.strip_suffix('N') {
+        Some(base) if !known(edition) && known(base) => (base, true),
+        _ => (edition, false),
+    };
+    (!n || has("N")) && EDITION_WORDS.iter().any(|(e, needed)| *e == base && needed.iter().all(|w| has(w)))
+}
+
 fn windows(d: &Windows, locale: Locale) -> Vec<DetailGroup> {
     let uptime = d.uptime_seconds.map(|up| match up / 86400 {
         0 => hours_text(up / 3600, locale),
@@ -247,7 +278,8 @@ fn windows(d: &Windows, locale: Locale) -> Vec<DetailGroup> {
             vec![
                 ("d.version", d.display_version.clone()),
                 ("d.build", d.build.map(|b| d.ubr.map(|u| format!("{b}.{u}")).unwrap_or_else(|| b.to_string()))),
-                ("d.edition", d.edition_id.clone()),
+                // "Professional" after "Windows 11 Pro" says nothing new (and in English on an Italian receipt).
+                ("d.edition", d.edition_id.clone().filter(|e| !d.product.as_deref().is_some_and(|p| names_edition(p, e)))),
                 ("d.last_update", d.last_update_installed.as_deref().filter(|s| !s.is_empty()).map(|s| iso_day(s, locale))),
                 ("d.uptime", uptime),
                 ("d.secure_boot", d.secure_boot.map(|on| ui(if on { "d.yes" } else { "d.no" }, locale, &[]))),

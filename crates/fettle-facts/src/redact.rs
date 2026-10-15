@@ -53,6 +53,10 @@ impl Redactor {
         let mut r = Redactor::default();
         for name in usernames.into_iter().map(Into::into) {
             let name = name.trim().to_string();
+            // A local account can be called "Mario Rossi": its words are names on their own too.
+            if name.contains(char::is_whitespace) {
+                add_name_words(&mut r.usernames, &name);
+            }
             if name.chars().count() >= MIN_NAME_LEN && !is_common_word(&name) {
                 add_name(&mut r.usernames, name);
             } else if !name.is_empty() && !r.context_names.iter().any(|n| n.eq_ignore_ascii_case(&name)) {
@@ -66,13 +70,7 @@ impl Redactor {
     /// common one, so a disk renamed "Rossi backup" doesn't give the surname away.
     pub fn with_full_name(mut self, name: impl Into<String>) -> Redactor {
         let name = name.into().trim().to_string();
-        // "Rossi, Mario (Contoso)": words end at anything that can't be part of a name.
-        let words = name.split(|c: char| !(c.is_alphanumeric() || c == '\'' || c == '-')).filter(|w| !w.is_empty());
-        for word in words.filter(|w| !is_common_word(w)) {
-            if word.chars().count() >= MIN_NAME_LEN {
-                add_name(&mut self.usernames, word.to_string());
-            }
-        }
+        add_name_words(&mut self.usernames, &name);
         if name.chars().count() >= MIN_NAME_LEN {
             add_name(&mut self.usernames, name);
         }
@@ -255,6 +253,17 @@ fn add_name(names: &mut Vec<String>, name: String) {
     if !names.iter().any(|n| n.eq_ignore_ascii_case(&name)) {
         names.push(name);
         names.sort_by_key(|n| std::cmp::Reverse(n.len()));
+    }
+}
+
+/// Adds each word of a person's name that isn't a common one. "Rossi, Mario (Contoso)": words end
+/// at anything that can't be part of a name.
+fn add_name_words(names: &mut Vec<String>, name: &str) {
+    let words = name.split(|c: char| !(c.is_alphanumeric() || c == '\'' || c == '-')).filter(|w| !w.is_empty());
+    for word in words.filter(|w| !is_common_word(w)) {
+        if word.chars().count() >= MIN_NAME_LEN {
+            add_name(names, word.to_string());
+        }
     }
 }
 
@@ -664,6 +673,19 @@ mod tests {
         let r = Redactor::new(["mario"], "DESKTOP-ABC").with_full_name("Windows User");
         assert_eq!(r.text("Windows Security notification icon"), "Windows Security notification icon");
         assert_eq!(r.text("Windows User Sync"), "<user> Sync");
+    }
+
+    #[test]
+    fn an_account_named_with_several_words_is_hidden_by_each_word_too() {
+        // A local account can be called "Mario Rossi" with no full name set.
+        let r = Redactor::new(["Mario Rossi"], "DESKTOP-ABC");
+        assert_eq!(r.text(r"C:\Users\Mario Rossi\x"), r"C:\Users\<user>\x");
+        assert_eq!(r.text("Rossi backup"), "<user> backup");
+        assert_eq!(r.text("Mario tools"), "<user> tools");
+        // Common words in such a name stay readable elsewhere.
+        let r = Redactor::new(["Utente PC"], "DESKTOP-ABC");
+        assert_eq!(r.text("Utente PC"), "<user>");
+        assert_eq!(r.text("Utente Sync"), "Utente Sync");
     }
 
     #[test]

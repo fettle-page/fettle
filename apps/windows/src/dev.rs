@@ -6,7 +6,7 @@
 //! `--dev-check` starts a check at launch; `--dev-data` keeps settings and the last check in
 //! another folder than %LOCALAPPDATA%\Fettle; `--dev-report <json>` makes that check read a saved
 //! report instead of this PC (screenshots of a sample PC, never the one it runs on);
-//! `--dev-size <width>x<height>` sizes the window (logical pixels). With `--dev-report`,
+//! `--dev-size <width>x<height>` sizes the window (logical pixels). With `--dev-check --dev-report`,
 //! `--dev-open deep` shows a Deep check under way: it never asks Windows and never finishes.
 //!
 //!   fettle --dev-fps <txt> [--dev-check] [--dev-data <dir>]

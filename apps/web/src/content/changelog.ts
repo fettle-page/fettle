@@ -49,6 +49,7 @@ export const releases: Release[] = [
         "If a Deep check finishes while the print preview is open, the preview now shows the Deep check's receipt, which is the one Print prints.",
         "While a Deep check runs, its button now says “Waiting for the Deep check…”, and Check again is off until it's done.",
         "When the share server asks you to wait a minute or less, the app now says “Try again in a minute” instead of “in 1 minutes”.",
+        "In the Dark and OLED themes, the main green button is a little darker, so its white text is easier to read.",
       ],
       it: [
         "Il numero di download nella home e nella pagina di download ora compare anche alla prima visita, non solo dopo aver ricaricato: il sito lo chiede a GitHub una volta l'ora e conserva la risposta, invece di chiederlo quando qualcuno apre la pagina.",
@@ -78,6 +79,7 @@ export const releases: Release[] = [
         "Se un controllo approfondito finisce mentre l'anteprima di stampa è aperta, l'anteprima ora mostra lo scontrino del controllo approfondito, cioè quello che viene stampato.",
         "Mentre un controllo approfondito è in corso, il suo pulsante ora dice “In attesa del controllo approfondito…”, e Ricontrolla resta disattivato finché non ha finito.",
         "Quando il server di condivisione chiede di aspettare un minuto o meno, l'app ora dice “Riprova tra un minuto” invece di “tra 1 minuti”.",
+        "Nei temi Scuro e OLED il pulsante verde principale è un po' più scuro, così il testo bianco si legge meglio.",
       ],
     },
   },

@@ -1283,3 +1283,28 @@ fn a_deep_checks_report_is_cleaned_again_with_the_users_own_names() {
     assert!(saved.contains("Backup of <user> at <email>"), "the Deep check's report, cleaned with this account's names");
     assert!(!saved.contains("mario.rossi@example.com"));
 }
+
+/// WCAG's contrast ratio between two colours.
+fn contrast(a: slint::Color, b: slint::Color) -> f64 {
+    let lum = |c: slint::Color| {
+        let ch = |v: u8| {
+            let v = v as f64 / 255.0;
+            if v <= 0.04045 { v / 12.92 } else { ((v + 0.055) / 1.055).powf(2.4) }
+        };
+        0.2126 * ch(c.red()) + 0.7152 * ch(c.green()) + 0.0722 * ch(c.blue())
+    };
+    let (x, y) = (lum(a), lum(b));
+    (x.max(y) + 0.05) / (x.min(y) + 0.05)
+}
+
+#[test]
+fn the_main_buttons_white_text_is_readable_in_every_theme() {
+    // 15 px text counts as normal-sized text, so WCAG AA asks for 4.5:1.
+    let h = harness(Locale::En);
+    let theme = h.app.window().global::<fettle_windows::Theme>();
+    for choice in ["light", "dark", "oled"] {
+        theme.set_choice(choice.into());
+        let ratio = contrast(slint::Color::from_rgb_u8(255, 255, 255), theme.get_btn());
+        assert!(ratio >= 4.5, "{choice}: {ratio:.2}");
+    }
+}

@@ -485,10 +485,12 @@ fn startup(s: &Sources) -> Section<Startup> {
     let Some(reg) = s.rows("startup_registry") else { return status(CheckStatus::Failed, s.code("startup_registry")) };
     let folders = s.rows("startup_folders").map(Vec::as_slice).unwrap_or_default();
     // A place Windows wouldn't let Fettle read (access denied) could hold any number of apps:
-    // counting the rest would pass a partial list off as the whole.
-    let unread = reg.iter().chain(folders).find_map(|r| r.get("error").and_then(Value::as_str));
-    if let Some(error) = unread {
-        return status(CheckStatus::Failed, Some(error_code(error)));
+    // counting the rest would pass a partial list off as the whole. One that can't be reached (a
+    // Start Menu redirected to the office network, off it) is skipped: nothing starts from there
+    // without the network either.
+    let refused = reg.iter().chain(folders).filter_map(|r| r.get("error").and_then(Value::as_str)).any(|e| error_code(e) == CheckCode::AccessDenied);
+    if refused {
+        return status(CheckStatus::Failed, Some(CheckCode::AccessDenied));
     }
     let approved = s.rows("startup_approved").cloned().unwrap_or_default();
     let enabled = |hive: &str, key: &str, name: &str| {
@@ -499,6 +501,7 @@ fn startup(s: &Sources) -> Section<Startup> {
     };
     let mut items: Vec<StartupItem> = reg
         .iter()
+        .filter(|r| r.get("error").is_none_or(Value::is_null))
         .map(|r| {
             let key = str_of(r, "key").unwrap_or("");
             let name = str_of(r, "name").unwrap_or("");
@@ -511,7 +514,7 @@ fn startup(s: &Sources) -> Section<Startup> {
             }
         })
         .collect();
-    for f in folders {
+    for f in folders.iter().filter(|f| f.get("error").is_none_or(Value::is_null)) {
         let hive = if str_of(f, "folder") == Some("user") { "HKCU" } else { "HKLM" };
         let file = str_of(f, "file").unwrap_or("");
         items.push(StartupItem { name: str_of(f, "file").map(str::to_string), location: Some(StartupLocation::Folder), enabled: enabled(hive, "StartupFolder", file) });
@@ -624,6 +627,13 @@ mod tests {
         assert_eq!((s.check.status, s.check.code, s.data), (CheckStatus::Failed, Some(CheckCode::AccessDenied), None));
         let r = raw(&[("startup_registry", rows(json!([]))), ("startup_folders", rows(json!([{ "folder": "common", "error": "Accesso negato. (os error 5)" }])))]);
         assert_eq!(startup(&Sources(&r)).check.code, Some(CheckCode::AccessDenied));
+        // A place that can't be reached (a Start Menu redirected to the office network, off it) is
+        // skipped quietly: what starts from there can't start without the network either.
+        let unreachable = json!({ "folder": "user", "error": "The network path was not found. (os error 53)" });
+        let r = raw(&[("startup_registry", rows(json!([{ "hive": "HKCU", "key": "Run", "name": "Sync", "command": "x" }]))), ("startup_folders", rows(json!([unreachable])))]);
+        let s = startup(&Sources(&r));
+        assert_eq!(s.check.status, CheckStatus::Ok);
+        assert_eq!(s.data.unwrap().items.iter().map(|i| i.name.clone().unwrap()).collect::<Vec<_>>(), ["Sync"]);
         // Nothing there at all is a real answer.
         let r = raw(&[("startup_registry", rows(json!([]))), ("startup_folders", rows(json!([])))]);
         assert_eq!(startup(&Sources(&r)).data.unwrap().items.len(), 0);

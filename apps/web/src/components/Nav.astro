@@ -26,7 +26,7 @@ const current = (p: string) => (marked && p === path ? "page" : undefined);
     <li class="wide-only"><a class="tape" href={`${to("/")}#how`}>{t(locale, "nav.how")}</a></li>
     <li class="wide-only"><a class="tape" href={to("/privacy")} aria-current={current("/privacy")}>{t(locale, "nav.privacy")}</a></li>
     <li class="wide-only"><a class="tape" href={to("/faq")} aria-current={current("/faq")}>{t(locale, "nav.faq")}</a></li>
-    <li><ThemeToggle locale={locale} /></li>
+    <li class="nav-theme"><ThemeToggle locale={locale} /></li>
     <li>
       <a class="tape quiet" href={alternates(path)[other]} hreflang={other} lang={other}>{t(locale, "nav.other_language")}</a>
     </li>

@@ -117,3 +117,34 @@ describe("the free / open source seal", () => {
     expect(css).toMatch(/\.seal-ring-it\s*\{\s*letter-spacing:\s*0\.18\d*em;?\s*\}/);
   });
 });
+
+describe("the top bar on phones and tablets", () => {
+  // Measured in Playwright (target/polish/navtry.mjs): the logo, theme, language and Download tapes need
+  // about 100 px more than a 360 px phone has, and "How it works" broke onto two lines up to 849 px.
+  const css = () => src("src/styles/site.css").replace(/\/\*[\s\S]*?\*\//g, "");
+  const media = (query: string) => {
+    const s = css();
+    const at = s.indexOf(`@media (${query})`);
+    if (at < 0) return "";
+    let depth = 0;
+    for (let i = s.indexOf("{", at); i < s.length; i++) {
+      if (s[i] === "{") depth++;
+      else if (s[i] === "}" && --depth === 0) return s.slice(at, i);
+    }
+    return "";
+  };
+  it("never squeezes the logo", () => {
+    expect(/(?:^|\n)\.nav-home\s*\{([^}]*)\}/.exec(css())?.[1]).toMatch(/flex-shrink:\s*0/);
+  });
+  it("keeps every tape on one line, showing the three page tapes only where they fit", () => {
+    expect(/(?:^|\n)\.nav \.tape\s*\{([^}]*)\}/.exec(css())?.[1]).toMatch(/white-space:\s*nowrap/);
+    expect(media("max-width: 860px")).toMatch(/\.wide-only\s*\{\s*display:\s*none/);
+  });
+  it("on phones leaves the theme to the footer's picker and tightens the tapes, in one row", () => {
+    const phone = media("max-width: 479.98px");
+    expect(phone).toMatch(/\.nav-theme\s*\{\s*display:\s*none/);
+    expect(phone).toMatch(/\.nav \.tape\s*\{\s*padding-inline:\s*9px/);
+    expect(media("max-width: 359.98px")).toMatch(/\.nav-wordmark\s*\{\s*height:\s*24px/);
+    for (const file of ["index.html", "it/faq.html"]) expect(page(file), file).toMatch(/<li class="nav-theme"><button[^>]*class="tape theme-toggle"/);
+  });
+});

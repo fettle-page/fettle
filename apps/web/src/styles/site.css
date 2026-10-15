@@ -80,9 +80,11 @@ a { color: inherit; }
   max-width: var(--wrap-max); margin-inline: auto;
   padding: 44px var(--gutter) 0;
 }
-.nav-home { display: inline-flex; color: var(--on-mat); }
+/* The logo never gives up its room to the tapes (it used to shrink to a speck on phones). */
+.nav-home { display: inline-flex; flex-shrink: 0; color: var(--on-mat); }
 .nav-wordmark { height: 30px; width: auto; }
 .tapes { display: flex; align-items: center; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.nav .tape { white-space: nowrap; } /* "How it works" on one line, like the others */
 
 .tape {
   display: inline-flex; align-items: center; min-height: 32px;
@@ -109,9 +111,23 @@ a { color: inherit; }
 /* Pressed onto the mat: down a pixel (translate, so each tape keeps its angle). */
 /* Only tapes you can click press in (a, button); label tapes like "v1.1" stay put. */
 :is(a, button).tape:active { translate: 0 1px; }
-@media (max-width: 760px) {
+/* The three page tapes need this much room on one line each; below it they're in the footer and the page. */
+@media (max-width: 860px) {
   .wide-only { display: none; }
+}
+@media (max-width: 760px) {
   .nav { padding-top: 36px; }
+}
+/* Phones: one row with the logo, language and Download; the theme is in the footer's picker. */
+@media (max-width: 479.98px) {
+  .nav-theme { display: none; }
+  .nav { gap: 10px; }
+  .tapes { gap: 6px; }
+  .nav .tape { padding-inline: 9px; }
+}
+@media (max-width: 359.98px) {
+  .nav-wordmark { height: 24px; }
+  .nav .tape { padding-inline: 7px; letter-spacing: 0.1em; }
 }
 
 /* ---------- Page body ---------- */

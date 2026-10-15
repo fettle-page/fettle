@@ -3,7 +3,7 @@
 
 use crate::copy::t;
 use crate::state::{Deep, MainView, Mat, Panel, PrivateCard, PrivateKind, ShareStatus, State, ThemeChoice};
-use crate::{AppWindow, Copy, Group, Hint, Line, LinkRow, ReceiptData, Row, Section, Theme, sections};
+use crate::{AppWindow, Copy, Group, Hint, Line, LinkRow, ReceiptData, Row, Section, TabRef, TabRow, Theme, sections};
 use fettle_facts::Report;
 use fettle_receipt::{DetailRow, ReceiptModel, Zone};
 use fettle_verdicts::{Locale, Param, Receipt, fmt};
@@ -302,7 +302,10 @@ pub fn apply(w: &AppWindow, s: &State, ctx: &Ctx, cache: &mut Cache) {
         w.set_answer(m.actions.first().cloned().unwrap_or_else(none).into());
         w.set_deep(wants_deep_check(receipt, checked.report.elevated));
         changed(&mut cache.numbers, format!("{}|{}|{}", lang.code(), m.meta.collected_at, m.meta.when), || {
-            w.set_numbers(model(sections_of(m, lang).into_iter().filter(|sec| slint::Model::row_count(&sec.details) > 0).collect()));
+            let numbers: Vec<Section> = sections_of(m, lang).into_iter().filter(|sec| slint::Model::row_count(&sec.details) > 0).collect();
+            let tabs: Vec<SharedString> = numbers.iter().map(|sec| sec.tab.clone()).collect();
+            w.set_number_rows(model(tab_rows(&tabs).into_iter().map(|row| TabRow { tabs: model(row) }).collect()));
+            w.set_numbers(model(numbers));
         });
     }
     w.set_deep_asking(s.deep == Deep::Asking);
@@ -417,9 +420,30 @@ pub fn feed(w: &AppWindow) {
     });
 }
 
+/// "The numbers" tabs in rows: up to four fit the panel's width; more go in two rows, the first
+/// one the longer.
+fn tab_rows(tabs: &[SharedString]) -> Vec<Vec<TabRef>> {
+    let refs: Vec<TabRef> = tabs.iter().enumerate().map(|(i, tab)| TabRef { tab: tab.clone(), index: i as i32 }).collect();
+    if refs.len() <= 4 {
+        return vec![refs];
+    }
+    let first = refs.len().div_ceil(2);
+    vec![refs[..first].to_vec(), refs[first..].to_vec()]
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn up_to_four_number_tabs_share_a_row_and_more_take_two() {
+        let tabs = |n: usize| (0..n).map(|i| SharedString::from(format!("t{i}"))).collect::<Vec<_>>();
+        let shape = |n: usize| tab_rows(&tabs(n)).iter().map(Vec::len).collect::<Vec<_>>();
+        assert_eq!(shape(4), [4]);
+        assert_eq!(shape(5), [3, 2]);
+        assert_eq!(shape(6), [3, 3]);
+        assert_eq!(tab_rows(&tabs(6))[1][0].index, 3, "each tab keeps its section's place");
+    }
 
     #[test]
     fn italian_dates_take_the_article_their_day_needs() {

@@ -6,7 +6,7 @@ import "fonts/bricolage-text-800.ttf";
 import "fonts/fettle-mono-400.ttf";
 import "fonts/fettle-mono-600.ttf";
 import { Theme, Copy } from "theme.slint";
-import { Row, Group, Line, Section, ReceiptData, BlankSection } from "data.slint";
+import { Row, Group, Line, Section, TabRow, ReceiptData, BlankSection } from "data.slint";
 import { Receipt, BlankReceipt, Wordmark } from "receipt.slint";
 import { Icon, PrimaryButton, Button, HomePanel, CheckingPanel, Progress, ResultPanel, SettingsPanel, Focusable } from "panels.slint";
 import { ShareView, LinksView, LinkRow } from "views.slint";
@@ -164,6 +164,7 @@ export component AppWindow inherits Window {
     in property <bool> deep-asking;
     in property <string> answer;
     in property <[Section]> numbers;
+    in property <[TabRow]> number-rows;
     in property <[string]> status-items;
     in property <[Hint]> hints;
     in property <string> dock-status;
@@ -528,6 +529,7 @@ export component AppWindow inherits Window {
                                     deep-problem: root.deep-problem;
                                     deep-asking: root.deep-asking;
                                     numbers: root.numbers;
+                                    number-rows: root.number-rows;
                                     private-shown: root.private-shown;
                                     private-rows: root.private-rows;
                                     again => {

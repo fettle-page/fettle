@@ -11,6 +11,9 @@ export struct Line {
     order: int,
 }
 export struct Section { id: string, title: string, tab: string, lines: [Line], details: [Group] }
+// A row of "The numbers" tabs: each tab's label and its section's place in the list.
+export struct TabRef { tab: string, index: int }
+export struct TabRow { tabs: [TabRef] }
 export struct ReceiptData {
     tone: string,
     when: string,

@@ -1219,6 +1219,39 @@ fn tired_report() -> Report {
 }
 
 #[test]
+fn six_number_tabs_take_two_rows_so_none_are_squeezed() {
+    use i_slint_backend_testing::AccessibleRole as R;
+    let laptop = case_report("dump-laptop-win10-user");
+    let h = harness_with(Locale::En, temp_dir(), move |deps| deps.scanner = Arc::new(FakeScanner(laptop)));
+    // Tall enough that the side panel's numbers are on screen (the testing API only finds those).
+    h.app.window().window().set_size(slint::LogicalSize::new(1240.0, 2400.0));
+    press(&h.app, "Check this PC");
+    h.background.run_all(&h.app);
+    // One handle per tab (the query can meet the same tab more than once).
+    let mut tabs: Vec<ElementHandle> = Vec::new();
+    for t in i_slint_backend_testing::ElementQuery::from_root(h.app.window()).match_descendants().match_predicate(|e| e.accessible_role() == Some(R::Tab)).find_all() {
+        if !tabs.iter().any(|seen| seen.accessible_label() == t.accessible_label()) {
+            tabs.push(t);
+        }
+    }
+    assert_eq!(tabs.len(), 6);
+    let rows: std::collections::BTreeSet<i64> = tabs.iter().map(|t| t.absolute_position().y.round() as i64).collect();
+    assert_eq!(rows.len(), 2, "three tabs to a row");
+    // Each tab has room for its label and some to spare.
+    for t in &tabs {
+        let label = t.accessible_label().unwrap().to_string();
+        assert!(t.size().width >= label.chars().count() as f32 * 7.0 + 16.0, "{label}: {:?}", t.size());
+    }
+    // The arrows still go through all six, across the rows.
+    let first = tabs.iter().find(|t| t.accessible_label().unwrap() == "Storage").unwrap();
+    click(&h.app, first);
+    for _ in 0..3 {
+        key(&h.app, slint::platform::Key::RightArrow);
+    }
+    assert_eq!(selected_tab(&h.app), "Windows");
+}
+
+#[test]
 fn when_nothing_could_be_checked_the_panel_says_so_not_that_all_is_well() {
     // Windows answered nothing: "Nothing to do right now" beside "Fettle couldn't check much" reads
     // as if all were well.

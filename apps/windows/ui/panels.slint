@@ -2,7 +2,7 @@
 // progress, the answer and its numbers, and Settings.
 import { Theme, Copy } from "theme.slint";
 import { AboutSlint } from "std-widgets.slint";
-import { Row, Group, Section } from "data.slint";
+import { Row, Group, Section, TabRow } from "data.slint";
 
 export component Icon inherits Path {
     in property <color> ink: Theme.chrome-ink;
@@ -321,26 +321,31 @@ export component CheckingPanel inherits VerticalLayout {
     }
 }
 
-// "The numbers": one tab per section that has details, and its rows.
+// "The numbers": one tab per section that has details, and its rows. Up to four tabs share a row;
+// more take two rows (the panel is too narrow for six), filled by the app.
 component Numbers inherits VerticalLayout {
     in property <[Section]> sections;
+    in property <[TabRow]> rows;
     property <int> chosen: 0;
     spacing: 12px;
     Rectangle {
-        height: 32px;
         border-radius: 7px;
         background: Theme.chrome-hover;
-        HorizontalLayout {
-            padding: 3px;
+        VerticalLayout {
+          padding: 3px;
+          spacing: 2px;
+          for row in rows: HorizontalLayout {
+            height: 26px;
             spacing: 2px;
-            for s[i] in sections: Rectangle {
+            for t in row.tabs: Rectangle {
+                property <int> i: t.index;
                 border-radius: 5px;
                 background: i == chosen ? Theme.chrome : transparent;
                 drop-shadow-blur: i == chosen ? 2px : 0;
                 drop-shadow-offset-y: self.drop-shadow-blur > 0 ? 1px : 0;
                 drop-shadow-color: #00000026;
                 accessible-role: tab;
-                accessible-label: s.tab;
+                accessible-label: t.tab;
                 accessible-checkable: true;
                 accessible-checked: i == chosen;
                 accessible-action-default => {
@@ -369,7 +374,7 @@ component Numbers inherits VerticalLayout {
                     border-color: Theme.accent;
                 }
                 Text {
-                    text: s.tab;
+                    text: t.tab;
                     font-family: Theme.text;
                     font-size: 12px;
                     font-weight: 800;
@@ -378,6 +383,7 @@ component Numbers inherits VerticalLayout {
                     vertical-alignment: center;
                 }
             }
+          }
         }
     }
     VerticalLayout {
@@ -431,6 +437,7 @@ export component ResultPanel inherits VerticalLayout {
     // would do nothing.
     in property <bool> deep-asking;
     in property <[Section]> numbers;
+    in property <[TabRow]> number-rows;
     // The privacy switch's card: empty when the switch is off.
     in property <bool> private-shown;
     in property <[Row]> private-rows;
@@ -512,7 +519,10 @@ export component ResultPanel inherits VerticalLayout {
     }
     if numbers.length > 0: VerticalLayout {
         Kicker { text: Copy.tr("numbers.kicker", Copy.lang); }
-        Numbers { sections: numbers; }
+        Numbers {
+            sections: numbers;
+            rows: number-rows;
+        }
     }
     if private-shown: Rectangle {
         border-radius: 8px;

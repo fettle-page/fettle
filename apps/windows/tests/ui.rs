@@ -838,6 +838,9 @@ fn arrow_keys_move_between_a_groups_choices() {
     click(&h.app, &light);
     key(&h.app, slint::platform::Key::RightArrow);
     assert_eq!(checked(&h.app, "Dark"), Some(true));
+    // The focus moves with the choice: Space now confirms Dark, not Light where the click was.
+    key(&h.app, " ");
+    assert_eq!(checked(&h.app, "Dark"), Some(true), "the focus followed the arrow");
     key(&h.app, slint::platform::Key::End);
     assert_eq!(checked(&h.app, "OLED"), Some(true));
     key(&h.app, slint::platform::Key::RightArrow);

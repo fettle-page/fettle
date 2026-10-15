@@ -15,6 +15,16 @@ pub const UNNAMED_BEFORE_1_0_3: &str = "Unnamed startup item";
 /// Product names for the "<Product>AutoLaunch_<code>" entries browsers register.
 const KNOWN: &[(&str, &str)] = &[("MicrosoftEdge", "Microsoft Edge"), ("GoogleChrome", "Google Chrome")];
 
+/// Entries Windows and drivers register under an internal name, with the copy key (`d.app.<key>`)
+/// the receipt shows instead, in its own language. Applied when the receipt is drawn, not stored:
+/// a report is the same in every language, and older reports read the same way.
+const SHOWN_AS: &[(&str, &str)] = &[("SecurityHealth", "windows_security"), ("RtkAudUService", "realtek_audio")];
+
+/// The copy key for a stored startup name the receipt shows by its product's name, if it has one.
+pub fn shown_as(stored: &str) -> Option<&'static str> {
+    SHOWN_AS.iter().find(|(id, _)| id.eq_ignore_ascii_case(stored.trim())).map(|(_, key)| *key)
+}
+
 /// The name to show and share for a startup item.
 pub fn friendly_startup_name(raw: &str) -> String {
     let name = strip_guid(raw.trim());
@@ -90,6 +100,15 @@ mod tests {
         for plain in ["OneDrive", "Steam", "Discord", "Logitech Options", "EA app", "HP Support Assistant", "Build_2026", "App_DEADBEEF"] {
             assert_eq!(name(plain), plain, "{plain}");
         }
+    }
+
+    #[test]
+    fn internal_names_are_stored_as_they_are_and_shown_by_key() {
+        use super::shown_as;
+        assert_eq!(name("SecurityHealth"), "SecurityHealth");
+        assert_eq!(shown_as("SecurityHealth"), Some("windows_security"));
+        assert_eq!(shown_as("rtkaudUservice"), Some("realtek_audio"));
+        assert_eq!(shown_as("Steam"), None);
     }
 
     #[test]

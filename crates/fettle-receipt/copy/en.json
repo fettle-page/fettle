@@ -73,6 +73,8 @@
   "d.enabled": "on",
   "d.disabled": "off",
   "d.unnamed_startup": "Unnamed startup item",
+  "d.app.windows_security": "Windows Security",
+  "d.app.realtek_audio": "Realtek Audio",
   "d.vram": "Video memory",
   "d.driver": "Driver",
   "d.driver_date": "Driver date",

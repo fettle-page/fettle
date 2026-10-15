@@ -73,6 +73,8 @@
   "d.enabled": "attiva",
   "d.disabled": "disattivata",
   "d.unnamed_startup": "App all'avvio senza nome",
+  "d.app.windows_security": "Sicurezza di Windows",
+  "d.app.realtek_audio": "Realtek Audio",
   "d.vram": "Memoria video",
   "d.driver": "Driver",
   "d.driver_date": "Data del driver",

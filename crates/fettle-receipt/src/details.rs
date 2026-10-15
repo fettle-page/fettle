@@ -266,9 +266,15 @@ pub fn name_order(a: &str, b: &str) -> Ordering {
 
 fn startup(d: &Startup, locale: Locale) -> Vec<DetailGroup> {
     // An item without a readable name (stored empty, or in English before 1.0.3) shows in the
-    // receipt's language; one whose name wasn't read at all isn't listed.
+    // receipt's language, and so does one Windows stored under an internal name ("SecurityHealth");
+    // one whose name wasn't read at all isn't listed.
+    use fettle_facts::startup_names::{UNNAMED_BEFORE_1_0_3, shown_as};
     let unnamed = ui("d.unnamed_startup", locale, &[]);
-    let label = |n: &str| if n.is_empty() || n == fettle_facts::startup_names::UNNAMED_BEFORE_1_0_3 { unnamed.clone() } else { n.to_string() };
+    let label = |n: &str| match shown_as(n) {
+        Some(key) => ui(&format!("d.app.{key}"), locale, &[]),
+        None if n.is_empty() || n == UNNAMED_BEFORE_1_0_3 => unnamed.clone(),
+        None => n.to_string(),
+    };
     let named: Vec<_> = d.items.iter().filter_map(|i| i.name.as_deref().map(|n| (label(n), i.enabled != Some(false)))).collect();
     let mut on: Vec<&str> = named.iter().filter(|(_, e)| *e).map(|(n, _)| n.as_str()).collect();
     let mut off: Vec<&str> = named.iter().filter(|(_, e)| !*e).map(|(n, _)| n.as_str()).collect();

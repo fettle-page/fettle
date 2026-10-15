@@ -1,16 +1,17 @@
-//! The receipt as compact markdown, for pasting into Discord or Reddit when asking for help
-//! (receipt-ui's markdown.ts). Lists rather than bare lines: Reddit joins single line breaks.
+//! The receipt as compact markdown, for pasting into Discord or Reddit when asking for help.
+//! Lists rather than bare lines: Reddit joins single line breaks.
 
 use crate::ReceiptModel;
 
 /// Discord's message limit. Reddit's is far higher, so this one decides.
 const MAX: usize = 2000;
 
-/// Text from the PC (models, names) can hold markdown; a backslash keeps it literal on both sites.
+/// Text from the PC (models, names) can hold markdown or Discord mentions (`@everyone`, `<@123>`); a
+/// backslash keeps it literal on both sites.
 fn esc(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
     for c in s.chars() {
-        if r"\*_~`|>^[]".contains(c) {
+        if r"\*_~`|<>^[]@".contains(c) {
             out.push('\\');
         }
         out.push(c);
@@ -95,5 +96,12 @@ mod tests {
     fn markdown_characters_from_the_pc_are_escaped() {
         let md = markdown(&model(1, "WD_BLACK *fast* `x`|y [z] > ~ ^ \\"));
         assert!(md.contains(r"WD\_BLACK \*fast\* \`x\`\|y \[z\] \> \~ \^ \\"), "{md}");
+    }
+
+    #[test]
+    fn mentions_and_tags_from_the_pc_stay_plain_text() {
+        // A disk renamed "@everyone" or "<@123>" would ping people once pasted into Discord.
+        let md = markdown(&model(1, "@everyone <@123> <#456>"));
+        assert!(md.contains(r"\@everyone \<\@123\> \<#456\>"), "{md}");
     }
 }

@@ -44,6 +44,7 @@ export const releases: Release[] = [
         "On Windows 10 Enterprise and Education, which can't enrol in Extended Security Updates from Windows Update, Fettle now suggests asking whoever manages the PC instead.",
         "The TPM row in a receipt's details now says “found” when Windows names no TPM version, instead of “on”, which the check can't tell.",
         "Laptops with soldered memory (LPDDR) no longer get the tip to add a second memory stick.",
+        "A receipt copied with Copy now keeps an “@everyone” or “<@…>” in a disk or app name as plain text, so pasting it into Discord can't ping anyone.",
       ],
       it: [
         "Il numero di download nella home e nella pagina di download ora compare anche alla prima visita, non solo dopo aver ricaricato: il sito lo chiede a GitHub una volta l'ora e conserva la risposta, invece di chiederlo quando qualcuno apre la pagina.",
@@ -68,6 +69,7 @@ export const releases: Release[] = [
         "Su Windows 10 Enterprise ed Education, che non possono iscriversi agli Extended Security Updates da Windows Update, Fettle ora suggerisce invece di chiedere a chi gestisce il PC.",
         "Nei dettagli dello scontrino, la riga TPM ora dice “presente” quando Windows non indica la versione del TPM, invece di “attivo”, che il controllo non può sapere.",
         "I portatili con memoria saldata (LPDDR) non ricevono più il consiglio di aggiungere un secondo banco di memoria.",
+        "Uno scontrino copiato con Copia ora lascia come testo normale un “@everyone” o “<@…>” nel nome di un disco o di un'app, così incollarlo su Discord non può notificare nessuno.",
       ],
     },
   },

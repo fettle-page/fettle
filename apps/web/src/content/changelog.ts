@@ -19,7 +19,7 @@ export function checkChangelog(entries: Release[]): void {
 export const releases: Release[] = [
   {
     version: "1.0.5",
-    date: null,
+    date: "2026-10-15",
     notes: {
       en: [
         "A Windows account whose name has several words, such as “Mario Rossi”, is now also hidden word by word, so a disk or startup app called “Rossi backup” no longer shows the surname in a report.",

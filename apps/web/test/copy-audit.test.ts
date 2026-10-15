@@ -100,8 +100,8 @@ describe("the privacy page's counting", () => {
   it("names everything counted per address each minute, and is dated for this change", () => {
     expect(privacy("en")).toContain("share page views, report reads and deletions");
     expect(privacy("it")).toContain("le visite alle pagine condivise, le letture e le eliminazioni dei report");
-    expect(pages("en").privacy.updated).toBe("Last updated: 13 October 2026");
-    expect(pages("it").privacy.updated).toMatch(/13 ottobre 2026/);
+    expect(pages("en").privacy.updated).toBe("Last updated: 15 October 2026");
+    expect(pages("it").privacy.updated).toMatch(/15 ottobre 2026/);
   });
 });
 

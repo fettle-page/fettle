@@ -170,8 +170,8 @@ describe("short things stay together at a line end", () => {
     expect(changelog).not.toMatch(/\d °C/);
   });
   it("keeps the privacy page's date on one line", () => {
-    expect(page("privacy.html")).toContain('Last updated: <span class="updated-date">13 October 2026</span>');
-    expect(page("it/privacy.html")).toContain('Ultimo aggiornamento: <span class="updated-date">13 ottobre 2026</span>');
+    expect(page("privacy.html")).toContain('Last updated: <span class="updated-date">15 October 2026</span>');
+    expect(page("it/privacy.html")).toContain('Ultimo aggiornamento: <span class="updated-date">15 ottobre 2026</span>');
     expect(src("src/styles/site.css")).toMatch(/\.updated-date\s*\{\s*white-space:\s*nowrap;?\s*\}/);
   });
 });

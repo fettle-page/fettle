@@ -193,11 +193,14 @@ describe("the legend explains the receipt", () => {
         expect(b).toContain('aria-pressed="false"');
         expect(b).toContain('aria-controls="sample"');
         expect(b).toContain('type="button"');
+        // Without JavaScript they do nothing, so they start switched off; the legend script switches them on.
+        expect(b).toMatch(/\sdisabled[\s>]/);
       }
       expect(html.split(show).length - 1).toBe(5);
       expect([...html.matchAll(/<span class="legend-none" hidden>([^<]*)<\/span>/g)].map((m) => m[1])).toEqual(Array(5).fill(none));
       // Read after the level name as its own sentence; a dash can be read out as "dash".
-      expect(html.split(`<span class="sr-only">. ${show}</span>`).length - 1).toBe(5);
+      // Hidden until the script runs: a button that can't show anything shouldn't offer to.
+      expect(html.split(`<span class="sr-only" data-legend-show hidden>. ${show}</span>`).length - 1).toBe(5);
       expect(html).not.toContain(` — ${show}`);
     });
   }

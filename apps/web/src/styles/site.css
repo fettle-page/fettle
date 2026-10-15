@@ -371,6 +371,7 @@ section.hero {
 .legend dd { margin: 0; font: 500 15px/1.45 var(--font-display); color: var(--on-mat-soft); }
 /* Each tag is a button: point at it to see its lines on the sample, click to pin (scripts/legend.ts). */
 .legend-pick { margin: 0; padding: 0; border: 0; background: none; font: inherit; color: inherit; cursor: pointer; }
+.legend-pick:disabled { cursor: default; } /* until scripts/legend.ts switches it on */
 .legend-pick:focus-visible { outline: none; }
 /* Focus is a dashed ring; a pin is a solid ring with a soft-green halo, so the two never look alike. */
 .legend-pick:focus-visible .tag { outline: 2px dashed var(--t-accent); outline-offset: 3px; }

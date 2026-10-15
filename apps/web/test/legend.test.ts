@@ -10,7 +10,7 @@ function fixture() {
   document.body.innerHTML = `
     <section id="how">
       <div class="legend"><dl>
-        ${LEVELS.map((l) => `<div><dt><button type="button" class="legend-pick" data-level="${l}" aria-pressed="false" aria-controls="sample">${l}</button></dt><dd>meaning <span class="legend-none" hidden>Not on this sample.</span></dd></div>`).join("")}
+        ${LEVELS.map((l) => `<div><dt><button type="button" class="legend-pick" data-level="${l}" aria-pressed="false" aria-controls="sample" disabled>${l}<span class="sr-only" data-legend-show hidden>. Show</span></button></dt><dd>meaning <span class="legend-none" hidden>Not on this sample.</span></dd></div>`).join("")}
       </dl></div>
       <div id="sample">
         ${["fine", "info", "keep_an_eye", "couldnt_check"].map((l) => `<p class="line" data-level="${l}">${l}</p>`).join("")}
@@ -33,6 +33,13 @@ describe("the legend explains the receipt", () => {
   beforeEach(() => {
     fixture();
     Element.prototype.scrollIntoView = vi.fn();
+  });
+
+  it("switches the tag buttons on, with their words for screen readers", () => {
+    for (const l of LEVELS) {
+      expect(pick(l).disabled, l).toBe(false);
+      expect(pick(l).querySelector<HTMLElement>("[data-legend-show]")!.hidden, l).toBe(false);
+    }
   });
 
   it("previews on pointer enter, clears on leave", () => {

@@ -33,6 +33,7 @@ export const releases: Release[] = [
         "Screen readers now read out a share link's messages, such as “Couldn't reach Fettle”, as soon as they appear.",
         "When a share link's wrong-password tries for the day are used up, the page now says how long until they come back (“Try again in about 10 hours”) instead of “tomorrow”: they reset at midnight UTC, which isn't tomorrow everywhere.",
         "The download page now gives the portable zip's real size (about 15 MB) and the space Fettle needs (about 40 MB), the FAQ calls the everyday check by its name in the app, the Quick check, the code-signing page says a share link uploads the report behind the receipt, and two Italian sentences now read correctly.",
+        "With JavaScript off, the home page legend's tags are no longer buttons that do nothing: screen readers read them as a plain legend.",
       ],
       it: [
         "Il numero di download nella home e nella pagina di download ora compare anche alla prima visita, non solo dopo aver ricaricato: il sito lo chiede a GitHub una volta l'ora e conserva la risposta, invece di chiederlo quando qualcuno apre la pagina.",
@@ -46,6 +47,7 @@ export const releases: Release[] = [
         "I lettori di schermo ora leggono i messaggi di un link condiviso, come “Impossibile raggiungere Fettle”, appena compaiono.",
         "Quando i tentativi di password sbagliata di un link condiviso per oggi sono finiti, la pagina ora dice tra quanto tornano disponibili (“Riprova tra circa 10 ore”) invece di “domani”: si azzerano a mezzanotte UTC, che non è domani dappertutto.",
         "La pagina di download ora indica la dimensione reale dello zip portatile (circa 15 MB) e lo spazio che serve a Fettle (circa 40 MB), le domande frequenti chiamano il controllo di tutti i giorni con il suo nome nell'app, Controllo rapido, la pagina sulla firma del codice dice che un link di condivisione carica il report da cui nasce lo scontrino, e due frasi in italiano ora sono corrette.",
+        "Con JavaScript disattivato, le etichette della legenda nella home non sono più pulsanti che non fanno nulla: i lettori di schermo le leggono come una semplice legenda.",
       ],
     },
   },

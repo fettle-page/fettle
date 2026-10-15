@@ -26,10 +26,11 @@ const legend: { level: Level; meaning: string }[] = [
     {legend.map(({ level, meaning }) => (
       <div>
         <dt>
-          <button type="button" class="legend-pick" data-level={level} aria-pressed="false" aria-controls="sample">
+          {/* Switched on by scripts/legend.ts: without JavaScript they couldn't show anything. */}
+          <button type="button" class="legend-pick" data-level={level} aria-pressed="false" aria-controls="sample" disabled>
             <span class={`tag tag-${level}`} aria-hidden="true">{text(`tag.${level}`, locale)}</span>
             <span class="sr-only">{text(`level.${level}`, locale)}</span>
-            <span class="sr-only">. {h.legendShow}</span>
+            <span class="sr-only" data-legend-show hidden>. {h.legendShow}</span>
           </button>
         </dt>
         <dd>{meaning} <span class="legend-none" hidden>{h.legendNone}</span></dd>

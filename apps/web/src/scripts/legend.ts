@@ -1,6 +1,6 @@
 // The legend explains the receipt: pointing at a tag shows its lines on the sample (site.css,
 // #how[data-show]); a click pins it, a second click or Esc clears it. Without JavaScript the legend
-// simply reads as a legend.
+// simply reads as a legend: the tag buttons stay switched off until this script runs.
 import { revealIfHidden } from "./reveal.ts";
 
 /** Wires the legend's tag buttons to the sample receipt. Does nothing on pages without them. */
@@ -23,6 +23,9 @@ export function initLegend(doc: Document): void {
 
   for (const b of picks) {
     const level = b.dataset.level!;
+    b.disabled = false;
+    const show = b.querySelector<HTMLElement>("[data-legend-show]");
+    if (show) show.hidden = false;
     const none = b.closest("div")?.querySelector<HTMLElement>(".legend-none");
     if (none) none.hidden = lines(level).length > 0;
     b.addEventListener("pointerenter", (e) => {

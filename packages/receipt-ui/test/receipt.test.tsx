@@ -47,7 +47,7 @@ describe("<Receipt>", () => {
 
   it("next steps are listed under the summary", () => {
     expect(out).toContain("Next step");
-    expect(out).toMatch(/<ol[\s\S]*A replacement battery would bring the runtime back\.[\s\S]*<\/ol>/);
+    expect(out).toMatch(/<ol[\s\S]*Replace the battery to get the runtime back\.[\s\S]*<\/ol>/);
   });
 
   it("details folds only where there are details", () => {

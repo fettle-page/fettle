@@ -46,7 +46,7 @@
   "battery.couldnt_check": "Fettle couldn't check the battery.",
   "battery.fine": "Your battery holds {pct}% of the capacity it had when new.",
   "battery.worn": "Your battery holds {pct}% of the capacity it had when new, so expect less runtime than it used to give.",
-  "battery.worn.action": "A replacement battery would bring the runtime back.",
+  "battery.worn.action": "Replace the battery to get the runtime back.",
   "battery.unknown": "The battery didn't report its original capacity.",
   "memory.couldnt_check": "Fettle couldn't check the memory.",
   "memory.fine": "{gb} GB of memory installed.",

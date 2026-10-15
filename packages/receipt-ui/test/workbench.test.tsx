@@ -54,7 +54,7 @@ describe("<Workbench>", () => {
   it("has no numbers block when no section has numbers", () => {
     const base = model({ battery: battery(50000, 25000) });
     const out = html({ ...base, sections: base.sections.map((s) => ({ ...s, details: [] })) });
-    expect(out).toContain("A replacement battery");
+    expect(out).toContain("Replace the battery");
     expect(out).not.toContain('role="tablist"');
     expect(out).not.toContain("The numbers");
   });

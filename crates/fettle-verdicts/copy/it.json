@@ -46,7 +46,7 @@
   "battery.couldnt_check": "Fettle non è riuscito a controllare la batteria.",
   "battery.fine": "Capacità della batteria: {pct}% di quella originale.",
   "battery.worn": "Capacità della batteria: {pct}% di quella originale. Aspettati meno autonomia di quando era nuova.",
-  "battery.worn.action": "Una batteria nuova riporterebbe l'autonomia di prima.",
+  "battery.worn.action": "Sostituisci la batteria per riavere l'autonomia di prima.",
   "battery.unknown": "La batteria non ha indicato la sua capacità originale.",
   "memory.couldnt_check": "Fettle non è riuscito a controllare la memoria.",
   "memory.fine": "{gb} GB di memoria installati.",

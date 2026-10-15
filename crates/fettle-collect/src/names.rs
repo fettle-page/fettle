@@ -1,23 +1,24 @@
 //! The names that must not leave this PC: every account's name, full name and email address, the
 //! account's domain, and the computer name. They feed `fettle_facts::redact::Redactor`.
 
-/// Profile folders that belong to no one in particular.
-const SHARED_PROFILES: &[&str] = &["Public", "Default", "Default User", "All Users"];
-
 /// The account folder name of a personal profile path, or None for system and shared profiles.
 pub fn profile_leaf(path: &str) -> Option<String> {
     let trimmed = path.trim_end_matches('\\');
     let (parent, leaf) = trimmed.rsplit_once('\\')?;
     let is_users_dir = parent.rsplit('\\').next().is_some_and(|p| p.eq_ignore_ascii_case("Users"));
-    let shared = SHARED_PROFILES.iter().any(|p| p.eq_ignore_ascii_case(leaf));
+    let shared = fettle_facts::redact::is_shared_profile(leaf);
     (is_users_dir && !leaf.is_empty() && !shared).then(|| leaf.to_string())
 }
 
 /// The privacy pass for this PC, with every name it goes by.
 #[cfg(windows)]
 pub fn redactor() -> fettle_facts::redact::Redactor {
-    let (users, hosts) = machine_names();
-    let full = full_names(&users);
+    let (mut users, hosts) = machine_names();
+    let accounts = local_accounts();
+    let full = full_names(&users, &accounts);
+    // Every local account's name too: one renamed after its profile folder was made, or one that
+    // never signed in, has a name no folder shows.
+    users.extend(accounts.into_iter().map(|(name, _)| name));
     let mut hosts = hosts.into_iter();
     let first = hosts.next().unwrap_or_default();
     let r = hosts.fold(fettle_facts::redact::Redactor::new(users, first), |r, h| r.with_hostname(h));
@@ -29,7 +30,7 @@ pub fn redactor() -> fettle_facts::redact::Redactor {
 /// The company's names: the account's domain (CONTOSO), the PC's DNS domain (corp.contoso.com), and
 /// the organisations OneDrive for work or school is signed in to ("OneDrive - Contoso Ltd").
 #[cfg(windows)]
-pub fn domains() -> Vec<String> {
+fn domains() -> Vec<String> {
     use windows::Win32::System::SystemInformation::ComputerNameDnsDomain;
     use winreg::RegKey;
     use winreg::enums::HKEY_CURRENT_USER;
@@ -49,12 +50,25 @@ pub fn domains() -> Vec<String> {
 /// software creates and nobody signs in to have product names there instead), and the signed-in
 /// account's from its domain or Entra ID.
 #[cfg(windows)]
-pub fn full_names(people: &[String]) -> Vec<String> {
-    use windows::Win32::NetworkManagement::NetManagement::{FILTER_NORMAL_ACCOUNT, MAX_PREFERRED_LENGTH, NetApiBufferFree, NetUserEnum, USER_INFO_10};
+fn full_names(people: &[String], accounts: &[(String, Option<String>)]) -> Vec<String> {
     use windows::Win32::Security::Authentication::Identity::NameDisplay;
-    use windows::core::PCWSTR;
 
     let mut names: Vec<String> = user_name_ex(NameDisplay).into_iter().collect();
+    for (name, full) in accounts {
+        if people.iter().any(|p| p.eq_ignore_ascii_case(name)) {
+            names.extend(full.clone().filter(|n| !n.trim().is_empty()));
+        }
+    }
+    names
+}
+
+/// Every local account on this PC, with its full name when it has one.
+#[cfg(windows)]
+fn local_accounts() -> Vec<(String, Option<String>)> {
+    use windows::Win32::NetworkManagement::NetManagement::{FILTER_NORMAL_ACCOUNT, MAX_PREFERRED_LENGTH, NetApiBufferFree, NetUserEnum, USER_INFO_10};
+    use windows::core::PCWSTR;
+
+    let mut accounts = Vec::new();
     let (mut buf, mut read, mut total) = (std::ptr::null_mut(), 0u32, 0u32);
     // Level 10 holds the full name; asking for everything at once leaves nothing to resume.
     let status = unsafe { NetUserEnum(PCWSTR::null(), 10, FILTER_NORMAL_ACCOUNT, &mut buf, MAX_PREFERRED_LENGTH, &mut read, &mut total, None) };
@@ -62,20 +76,21 @@ pub fn full_names(people: &[String]) -> Vec<String> {
         let users = unsafe { std::slice::from_raw_parts(buf as *const USER_INFO_10, read as usize) };
         let text = |p: windows::core::PWSTR| if p.is_null() { None } else { unsafe { p.to_string() }.ok() };
         for user in users {
-            let person = text(user.usri10_name).is_some_and(|n| people.iter().any(|p| p.eq_ignore_ascii_case(&n)));
-            names.extend(text(user.usri10_full_name).filter(|n| person && !n.trim().is_empty()));
+            if let Some(name) = text(user.usri10_name) {
+                accounts.push((name, text(user.usri10_full_name)));
+            }
         }
     }
     if !buf.is_null() {
         unsafe { NetApiBufferFree(Some(buf as *const _)) };
     }
-    names
+    accounts
 }
 
 /// The email addresses this PC's user signs in with: the work or school account's, the Microsoft
 /// accounts Windows knows, and OneDrive's.
 #[cfg(windows)]
-pub fn account_emails() -> Vec<String> {
+fn account_emails() -> Vec<String> {
     use windows::Win32::Security::Authentication::Identity::NameUserPrincipal;
     use winreg::RegKey;
     use winreg::enums::HKEY_CURRENT_USER;
@@ -119,11 +134,11 @@ fn user_name_ex_now(format: windows::Win32::Security::Authentication::Identity::
     unsafe { GetUserNameExW(format, Some(PWSTR(buf.as_mut_ptr())), &mut len) }.then(|| String::from_utf16_lossy(&buf[..len as usize])).filter(|s| !s.trim().is_empty())
 }
 
-/// Every account name on this PC, not just the one running the scan: an admin run under IT
-/// credentials still sees the employee's startup entries. Plus the computer's names: the short
+/// Every profile folder's account name on this PC, not just the one running the scan: disk names and
+/// machine-wide startup entries can carry anyone's name. Plus the computer's names: the short
 /// one in `COMPUTERNAME` (cut to 15 characters), the DNS one and the DNS one with its domain.
 #[cfg(windows)]
-pub fn machine_names() -> (Vec<String>, Vec<String>) {
+fn machine_names() -> (Vec<String>, Vec<String>) {
     use winreg::RegKey;
     use winreg::enums::HKEY_LOCAL_MACHINE;
     const PROFILE_LIST: &str = r"SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList";
@@ -187,12 +202,24 @@ mod tests {
         assert_eq!(r.text(&text), r"<pc-name>\<user> C:\Users\<user>\AppData");
     }
 
-    // The messages never print the names: they're this PC's.
+    // An account renamed after its profile folder was made, or one that never signed in, has a name
+    // no folder shows. The messages never print the names: they're this PC's.
+    #[cfg(windows)]
+    #[test]
+    fn every_local_account_name_is_hidden() {
+        let r = super::redactor();
+        let accounts = super::local_accounts();
+        assert!(!accounts.is_empty());
+        for (name, _) in accounts {
+            assert!(!r.text(&format!(r"PC\{name}")).contains(&name), "a local account's name wasn't hidden");
+        }
+    }
+
     #[cfg(windows)]
     #[test]
     fn this_pcs_full_names_and_addresses_are_hidden() {
         let r = super::redactor();
-        for name in super::full_names(&super::machine_names().0).iter().map(|n| n.trim()).filter(|n| n.chars().count() >= 3) {
+        for name in super::full_names(&super::machine_names().0, &super::local_accounts()).iter().map(|n| n.trim()).filter(|n| n.chars().count() >= 3) {
             assert!(!r.text(&format!("{name} backup")).contains(name), "a full name on this PC wasn't hidden");
         }
         for email in super::account_emails() {

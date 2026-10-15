@@ -35,7 +35,7 @@ const COMMON_WORDS: &[&str] = &[
     "von", "dell", "lenovo", "acer", "asus", "msi", "toshiba", "samsung", "sony", "fujitsu", "surface", "medion", "gigabyte",
     // The name part of shared addresses ("info@…", "segreteria@…").
     "info", "mail", "email", "contact", "contacts", "support", "sales", "hello", "noreply", "contatti", "segreteria",
-    "amministrazione", "ufficio", "commerciale", "assistenza",
+    "amministrazione", "commerciale", "assistenza",
 ];
 
 /// What Windows puts in USERDOMAIN when the account isn't in a company domain.
@@ -271,7 +271,8 @@ fn is_common_word(word: &str) -> bool {
     COMMON_WORDS.iter().any(|c| c.eq_ignore_ascii_case(word))
 }
 
-fn is_shared_profile(name: &str) -> bool {
+/// Whether a profile folder belongs to no one in particular ("Public", "Default").
+pub fn is_shared_profile(name: &str) -> bool {
     SHARED_PROFILES.iter().any(|p| p.eq_ignore_ascii_case(name))
 }
 

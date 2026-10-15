@@ -36,6 +36,7 @@ export const releases: Release[] = [
         "The home page legend's tag buttons now stay switched off until the page's script can make them work, so with JavaScript off the keyboard no longer stops on buttons that do nothing.",
         "A Windows account whose name has several words, such as “Mario Rossi”, is now also hidden word by word, so a disk or startup app called “Rossi backup” no longer shows the surname in a report.",
         "Reports saved, printed or copied in the app now also hide network addresses and server names in disk and startup app names, as the share server already did.",
+        "Reports now also hide the name of every local account on the PC, including one renamed after it was created or one that never signed in.",
       ],
       it: [
         "Il numero di download nella home e nella pagina di download ora compare anche alla prima visita, non solo dopo aver ricaricato: il sito lo chiede a GitHub una volta l'ora e conserva la risposta, invece di chiederlo quando qualcuno apre la pagina.",
@@ -52,6 +53,7 @@ export const releases: Release[] = [
         "I pulsanti delle etichette nella legenda della home ora restano disattivati finché lo script della pagina non li fa funzionare, così con JavaScript disattivato la tastiera non si ferma più su pulsanti che non fanno nulla.",
         "Un account di Windows il cui nome ha più parole, come “Mario Rossi”, ora viene nascosto anche parola per parola, così un disco o un'app di avvio chiamati “Rossi backup” non mostrano più il cognome in un report.",
         "I report salvati, stampati o copiati dall'app ora nascondono anche gli indirizzi di rete e i nomi dei server nei nomi dei dischi e delle app di avvio, come già faceva il server di condivisione.",
+        "I report ora nascondono anche il nome di ogni account locale del PC, compreso uno rinominato dopo la creazione o uno con cui nessuno ha mai effettuato l'accesso.",
       ],
     },
   },

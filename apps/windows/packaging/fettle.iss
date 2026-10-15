@@ -61,10 +61,8 @@ Name: "it"; MessagesFile: "compiler:Languages\Italian.isl"; InfoBeforeFile: "pri
 [CustomMessages]
 en.RemoveData=Also remove what Fettle keeps on this PC: its settings, the remembered check and the list of links you shared?%n%nThe links themselves stay online until they expire. Without that list, Fettle can no longer delete them for you.
 it.RemoveData=Rimuovere anche ciò che Fettle conserva su questo PC: le impostazioni, l'ultimo controllo ricordato e l'elenco dei link condivisi?%n%nI link restano online fino alla scadenza. Senza quell'elenco, Fettle non potrà più eliminarli per te.
-en.RemoveDataAll=Also remove what Fettle keeps for each account that used it on this PC (%1 in total): their settings, remembered checks and lists of shared links?%n%nThe links themselves stay online until they expire. Without those lists, Fettle can no longer delete them.
-it.RemoveDataAll=Rimuovere anche ciò che Fettle conserva per ogni account che lo ha usato su questo PC (%1 in tutto): impostazioni, ultimi controlli ricordati ed elenchi dei link condivisi?%n%nI link restano online fino alla scadenza. Senza quegli elenchi, Fettle non potrà più eliminarli.
-en.RemoveDataLeft=Fettle couldn't remove these folders (a file in one may be in use). You can delete them yourself:
-it.RemoveDataLeft=Fettle non è riuscito a rimuovere queste cartelle (forse un file è in uso). Puoi eliminarle tu:
+en.RemoveDataOthers=Other accounts on this PC have Fettle data too. To be safe, Fettle doesn't delete files in another account's folders. Each person can delete their own folder, or you can:
+it.RemoveDataOthers=Anche altri account di questo PC hanno dati di Fettle. Per sicurezza, Fettle non elimina file nelle cartelle di un altro account. Ognuno può eliminare la propria cartella, oppure puoi farlo tu:
 en.UpdatesGroup=Updates:
 it.UpdatesGroup=Aggiornamenti:
 en.UpdateCheck=Check for a new version (only the version number is asked for; you can change this later in Settings)
@@ -128,7 +126,8 @@ begin
 end;
 
 // Every account's Fettle folder that exists, from Windows' list of user profiles (local and
-// Microsoft Entra accounts). An all-users uninstall runs as administrator, so it can reach them all.
+// Microsoft Entra accounts). An all-users uninstall runs as administrator and sees them all; it
+// removes only its own and names the rest.
 function AccountDataFolders: TArrayOfString;
 var
   Sids: TArrayOfString;
@@ -162,91 +161,38 @@ begin
   end;
 end;
 
-function GetFileAttributes(lpFileName: String): Cardinal;
-  external 'GetFileAttributesW@kernel32.dll stdcall';
-
-// Whether Path, or any folder above it, is a junction or a link.
-function ThroughALink(Path: String): Boolean;
-var
-  Attributes: Cardinal;
-begin
-  Result := False;
-  while Length(Path) > 3 do
-  begin
-    Attributes := GetFileAttributes(Path);
-    // $400: FILE_ATTRIBUTE_REPARSE_POINT; $FFFFFFFF: the path can't be read.
-    if (Attributes <> $FFFFFFFF) and ((Attributes and $400) <> 0) then
-    begin
-      Result := True;
-      Exit;
-    end;
-    Path := ExtractFileDir(Path);
-  end;
-end;
-
-// Deletes the files in Folder matching Pattern, never a folder and never anything below it.
-procedure DeleteMatching(Folder, Pattern: String);
-var
-  Found: TFindRec;
-begin
-  if FindFirst(Folder + '\' + Pattern, Found) then
-  try
-    repeat
-      if (Found.Attributes and FILE_ATTRIBUTE_DIRECTORY) = 0 then
-        DeleteFile(Folder + '\' + Found.Name);
-    until not FindNext(Found);
-  finally
-    FindClose(Found);
-  end;
-end;
-
-// Removes Fettle's own files from Folder, then the folder if that left it empty, and says whether
-// it's gone. An all-users uninstall runs this as administrator on folders each account controls, so
-// it deletes only files it names, one level deep, and leaves a folder reached through a junction alone.
-function RemoveFettleData(Folder: String): Boolean;
-begin
-  Result := False;
-  if ThroughALink(Folder) then
-    Exit;
-  DeleteFile(Folder + '\settings.json');
-  DeleteFile(Folder + '\last-report.json');
-  DeleteFile(Folder + '\links.json');
-  DeleteFile(Folder + '\links.lock');
-  DeleteFile(Folder + '\update.json');
-  DeleteMatching(Folder, 'fettle-deep-*.json');
-  DeleteMatching(Folder, '*.tmp');
-  RemoveDir(Folder);
-  Result := not DirExists(Folder);
-end;
-
 // Uninstalling asks whether to remove Fettle's data too (it lives in each user's own AppData, so the
-// installer never put it there). For one user, that user's folder; for all users, every account's,
-// naming any folder that couldn't be removed. A silent uninstall keeps it all.
+// installer never put it there). Only the uninstalling account's own folder is removed. An all-users
+// uninstall runs as administrator, and deleting in folders other accounts control could be turned
+// (a junction swapped in at the right moment) into deleting files anywhere, so it names those
+// folders instead, for their owners or the administrator to delete. A silent uninstall keeps it all.
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 var
-  Data, Left: String;
+  Data, Others: String;
   Folders: TArrayOfString;
   I: Integer;
 begin
   if (CurUninstallStep <> usPostUninstall) or UninstallSilent then
     Exit;
+  Data := ExpandConstant('{localappdata}\Fettle');
   if IsAdminInstallMode then
   begin
     Folders := AccountDataFolders;
-    if GetArrayLength(Folders) = 0 then
-      Exit;
-    if MsgBox(FmtMessage(CustomMessage('RemoveDataAll'), [IntToStr(GetArrayLength(Folders))]), mbConfirmation, MB_YESNO or MB_DEFBUTTON2) <> IDYES then
-      Exit;
-    Left := '';
+    Others := '';
     for I := 0 to GetArrayLength(Folders) - 1 do
-      if not RemoveFettleData(Folders[I]) then
-        Left := Left + #13#10 + Folders[I];
-    if Left <> '' then
-      MsgBox(CustomMessage('RemoveDataLeft') + #13#10 + Left, mbInformation, MB_OK);
+      if Lowercase(Folders[I]) <> Lowercase(Data) then
+        Others := Others + #13#10 + Folders[I];
+    if not DirExists(Data) and (Others = '') then
+      Exit;
+    if MsgBox(CustomMessage('RemoveData'), mbConfirmation, MB_YESNO or MB_DEFBUTTON2) <> IDYES then
+      Exit;
+    if DirExists(Data) then
+      DelTree(Data, True, True, True);
+    if Others <> '' then
+      MsgBox(CustomMessage('RemoveDataOthers') + #13#10 + Others, mbInformation, MB_OK);
   end
   else
   begin
-    Data := ExpandConstant('{localappdata}\Fettle');
     if DirExists(Data) then
       if MsgBox(CustomMessage('RemoveData'), mbConfirmation, MB_YESNO or MB_DEFBUTTON2) = IDYES then
         DelTree(Data, True, True, True);

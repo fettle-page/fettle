@@ -190,3 +190,11 @@ describe("the share page's cards and footer", () => {
     expect(rule(".foot p")).toMatch(/text-wrap:\s*balance/);
   });
 });
+
+describe("the seal's link to the source", () => {
+  // It read as plain text beside "Read the privacy page →", which has the link style and arrow.
+  it("looks like the other text links on the home page", () => {
+    expect(page("index.html")).toMatch(/<a class="text-link" href="https:\/\/github\.com\/fettle-page\/fettle">Read the source on GitHub →<\/a>/);
+    expect(page("it.html")).toMatch(/<a class="text-link" href="https:\/\/github\.com\/fettle-page\/fettle">Leggi il codice sorgente su GitHub →<\/a>/);
+  });
+});

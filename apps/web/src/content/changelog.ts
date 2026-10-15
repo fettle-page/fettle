@@ -64,6 +64,7 @@ export const releases: Release[] = [
         "On phones, the top bar keeps the Fettle logo at full size instead of shrinking it to a dot; the theme choice is at the bottom of the page there. On tablets, “How it works” no longer breaks onto two lines.",
         "The home page now describes battery health as the app does: how much the battery holds compared with new.",
         "Short things now stay together at the end of a line: a temperature and its °C, the privacy page's date, the download page's extra links and the footer's separators.",
+        "On a share link, the password card no longer leaves a gap under its message, headings no longer leave one word on their last line, and on a phone the footer's line sits centred over its button.",
       ],
       it: [
         "Il numero di download nella home e nella pagina di download ora compare anche alla prima visita, non solo dopo aver ricaricato: il sito lo chiede a GitHub una volta l'ora e conserva la risposta, invece di chiederlo quando qualcuno apre la pagina.",
@@ -108,6 +109,7 @@ export const releases: Release[] = [
         "Sul telefono, la barra in alto mostra il logo di Fettle a grandezza piena invece di ridurlo a un puntino; lì la scelta del tema è in fondo alla pagina. Sul tablet, “Come funziona” non va più a capo su due righe.",
         "La home ora descrive lo stato della batteria come l'app: la capacità rispetto a quando era nuova.",
         "Le cose brevi ora restano unite a fine riga: una temperatura e il suo °C, la data della pagina sulla privacy, i link in più della pagina di download e i separatori del piè di pagina.",
+        "In un link condiviso, il riquadro della password non lascia più uno spazio vuoto sotto il messaggio, i titoli non lasciano più una parola da sola sull'ultima riga, e sul telefono la frase del piè di pagina è centrata sopra il suo pulsante.",
       ],
     },
   },

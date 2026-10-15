@@ -175,3 +175,18 @@ describe("short things stay together at a line end", () => {
     expect(src("src/styles/site.css")).toMatch(/\.updated-date\s*\{\s*white-space:\s*nowrap;?\s*\}/);
   });
 });
+
+describe("the share page's cards and footer", () => {
+  const css = () => src("src/share/share.css").replace(/\/\*[\s\S]*?\*\//g, "");
+  const rule = (selector: string) => new RegExp(`(?:^|\\n)${selector.replace(/[.[\]()]/g, "\\$&")}\\s*\\{([^}]*)\\}`).exec(css())?.[1] ?? "";
+  it("adds no extra space under the password form's message (the card's padding is enough)", () => {
+    expect(rule(".unlock [role=\"status\"]")).toMatch(/margin:\s*0/);
+  });
+  it("balances card headings, so no word is left alone on the last line", () => {
+    expect(rule(".card h1")).toMatch(/text-wrap:\s*balance/);
+  });
+  it("centres the footer's line over its centred button", () => {
+    expect(rule(".foot p")).toMatch(/text-align:\s*center/);
+    expect(rule(".foot p")).toMatch(/text-wrap:\s*balance/);
+  });
+});

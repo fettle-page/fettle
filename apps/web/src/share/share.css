@@ -68,7 +68,7 @@ body { background: var(--t-page); color: var(--on-mat); font-family: var(--font-
   box-shadow: 0 1px 0 rgb(0 0 0 / 0.08), 0 18px 40px -18px rgb(0 0 0 / 0.55);
   font: 400 15px/1.55 var(--font-mono);
 }
-.card h1 { margin: 0 0 12px; font: 800 clamp(24px, 4vw, 30px)/1.1 var(--font-display); letter-spacing: -0.02em; }
+.card h1 { margin: 0 0 12px; font: 800 clamp(24px, 4vw, 30px)/1.1 var(--font-display); letter-spacing: -0.02em; text-wrap: balance; }
 .card p { margin: 0 0 16px; color: var(--color-ink-soft); }
 .card [role="status"] { color: var(--color-ink); font-weight: 600; }
 /* Empty, it takes no room but stays a live region (display: none would take it out of the accessibility tree). */
@@ -82,12 +82,13 @@ body { background: var(--t-page); color: var(--on-mat); font-family: var(--font-
 }
 .unlock input:focus-visible { outline: 2px solid var(--color-accent); outline-offset: 2px; }
 .unlock input[aria-invalid] { border-color: var(--color-accent-ink); }
+.unlock [role="status"] { margin: 0; } /* the card's own padding is the space below it */
 
 .foot {
   display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px 20px;
   padding: 0 5vw 40px; font: 500 13px/1.5 var(--font-mono); color: var(--on-mat);
 }
-.foot p { margin: 0; }
+.foot p { margin: 0; text-align: center; text-wrap: balance; } /* over the centred button on a phone */
 
 @media print {
   body, .mat { background: #fff; }

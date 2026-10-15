@@ -92,6 +92,15 @@ pub fn parse(body: &[u8], origin: &str) -> Option<Latest> {
     Some(Latest { version: version.into(), page_en: page("en", "/download"), page_it: page("it", "/it/download") })
 }
 
+/// The download page to open for a note about `latest`. A saved answer (update.json) is read back
+/// from the data folder, where anyone who can write there could have changed it, so its page is
+/// checked again: one not on `origin` gives way to the website's own download page.
+pub fn page_to_open(latest: &Latest, italian: bool, origin: &str) -> String {
+    let origin = origin.trim_end_matches('/');
+    let (page, own) = if italian { (&latest.page_it, "/it/download") } else { (&latest.page_en, "/download") };
+    if on_origin(page, origin) { page.clone() } else { format!("{origin}{own}") }
+}
+
 /// Whether `url` is on `origin` itself: the origin, then nothing or a path, in plain printable
 /// characters (so no look-alike letters, spaces, or a user name that makes the origin a disguise).
 fn on_origin(url: &str, origin: &str) -> bool {
@@ -112,6 +121,17 @@ mod tests {
 
     fn found(version: &str) -> Option<Latest> {
         Some(Latest { version: version.into(), page_en: "https://fettle.page/download".into(), page_it: "https://fettle.page/it/download".into() })
+    }
+
+    #[test]
+    fn a_saved_answer_still_only_opens_the_websites_own_pages() {
+        // update.json sits in the data folder (beside the exe in a portable copy), where someone
+        // else may have written it: its pages are checked again before one opens.
+        let saved = Latest { version: "9.9.9".into(), page_en: "https://evil.example/download".into(), page_it: "https://fettle.page.evil.example/it".into() };
+        assert_eq!(page_to_open(&saved, false, "https://fettle.page"), "https://fettle.page/download");
+        assert_eq!(page_to_open(&saved, true, "https://fettle.page"), "https://fettle.page/it/download");
+        let good = found("1.0.5").unwrap();
+        assert_eq!(page_to_open(&good, true, "https://fettle.page/"), "https://fettle.page/it/download");
     }
 
     #[test]

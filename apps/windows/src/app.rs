@@ -417,7 +417,7 @@ impl Fettle {
             }
             Effect::SaveUpdate(record) => store.save_update(&record),
             Effect::OpenUpdatePage => {
-                let page = self.0.state.borrow().update_note().map(|l| if self.lang() == Locale::It { l.page_it.clone() } else { l.page_en.clone() });
+                let page = self.0.state.borrow().update_note().map(|l| crate::update::page_to_open(l, self.lang() == Locale::It, &self.0.deps.share_origin));
                 if let Some(page) = page {
                     (self.0.deps.open_url)(&page);
                 }

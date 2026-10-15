@@ -10,7 +10,7 @@ use slint::{ModelRc, SharedString, VecModel};
 
 pub const SECTION_SOURCES: &[(&str, &[&str])] = &[
     ("system", &["cpu", "baseboard", "bios", "computer_system", "monitor_ids", "monitor_params"]),
-    ("storage", &["physical_disks", "logical_disks", "smart_predict_data", "nvme_health"]),
+    ("storage", &["physical_disks", "logical_disks", "partitions", "disk_drives", "smart_predict_data", "nvme_health"]),
     ("battery", &["battery_cimv2", "battery_static", "battery_full_capacity", "battery_cycle_count"]),
     ("memory", &["memory_modules", "memory_array"]),
     ("windows", &["os", "windows_registry", "secure_boot", "hotfixes"]),
@@ -52,6 +52,14 @@ pub fn blank(done: &[String], lang: Locale) -> (ModelRc<Row>, ModelRc<BlankSecti
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // A source no section waits for lets its section tick off before the scan has read it.
+    #[cfg(windows)]
+    #[test]
+    fn every_source_of_a_quick_check_belongs_to_a_section() {
+        let missing: Vec<String> = fettle_collect::sources::sources(false).into_iter().map(|(name, _)| name).filter(|n| !SECTION_SOURCES.iter().any(|(_, s)| s.contains(&n.as_str()))).collect();
+        assert!(missing.is_empty(), "{missing:?}");
+    }
 
     #[test]
     fn a_section_ticks_when_all_its_sources_are_done() {

@@ -33,6 +33,24 @@ pub fn any(key: &str, lang: Locale) -> String {
 mod tests {
     use super::*;
 
+    // The two checks are names, like "Deep check" in English: "Controllo approfondito" and
+    // "Controllo rapido" keep their capital wherever they appear, in the app's, the verdicts' and the
+    // receipt's copy alike.
+    #[test]
+    fn the_checks_names_keep_their_capitals() {
+        let root = concat!(env!("CARGO_MANIFEST_DIR"), "/../..");
+        let mut wrong = Vec::new();
+        for file in ["apps/windows/copy/en.json", "apps/windows/copy/it.json", "crates/fettle-verdicts/copy/en.json", "crates/fettle-verdicts/copy/it.json", "crates/fettle-receipt/copy/en.json", "crates/fettle-receipt/copy/it.json"] {
+            let copy: std::collections::BTreeMap<String, String> = serde_json::from_str(&std::fs::read_to_string(format!("{root}/{file}")).unwrap()).unwrap();
+            for (key, text) in copy {
+                if ["controllo approfondito", "controllo rapido", "deep check", "quick check"].iter().any(|n| text.contains(n)) {
+                    wrong.push(format!("{file} {key}: {text}"));
+                }
+            }
+        }
+        assert!(wrong.is_empty(), "{wrong:#?}");
+    }
+
     #[test]
     fn every_string_exists_in_both_languages() {
         let missing: Vec<_> = EN.keys().filter(|k| !IT.contains_key(*k)).chain(IT.keys().filter(|k| !EN.contains_key(*k))).collect();

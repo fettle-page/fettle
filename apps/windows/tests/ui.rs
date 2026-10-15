@@ -723,7 +723,7 @@ fn a_declined_deep_check_keeps_the_quick_receipt_and_says_so() {
     let button = ElementHandle::find_by_accessible_label(h.app.window(), "Run a Deep check").next().unwrap();
     assert_eq!(button.accessible_enabled(), Some(true));
     assert_eq!(again.accessible_enabled(), Some(true));
-    assert!(has(&h.app, "The Deep check was cancelled. This is still the quick check."));
+    assert!(has(&h.app, "The Deep check was cancelled. This is still the Quick check."));
     assert!(has(&h.app, "Fine so far, but Fettle couldn't read the disks' health."), "the quick receipt stays");
 }
 

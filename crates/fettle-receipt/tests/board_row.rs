@@ -27,3 +27,10 @@ fn a_board_name_the_maker_never_filled_in_is_not_shown() {
     assert_eq!(board_row("Default string EX-B650 TEST"), Some("EX-B650 TEST".into()));
     assert_eq!(board_row("Example Boards Ltd. EX-B650 TEST"), Some("Example Boards Ltd. EX-B650 TEST".into()));
 }
+
+#[test]
+fn a_generic_word_inside_a_real_board_name_stays() {
+    assert_eq!(board_row("Example Boards Ltd. None Edition"), Some("Example Boards Ltd. None Edition".into()));
+    assert_eq!(board_row("N/A"), None);
+    assert_eq!(board_row("Default string N/A"), None);
+}

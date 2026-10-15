@@ -3,7 +3,7 @@
 //! makes of each tracked dump.
 
 use crate::{Raw, SourceResult};
-use fettle_facts::placeholders::without_placeholders;
+use fettle_facts::placeholders::is_placeholder;
 use fettle_facts::*;
 use serde_json::Value;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -174,8 +174,9 @@ fn system(s: &Sources) -> Section<System> {
     }
     let cpu = s.first("cpu");
     let board = s.first("baseboard").and_then(|b| {
-        // Without what firmware writes when the maker never filled a part in ("Default string").
-        let part = |key| str_of(b, key).and_then(without_placeholders);
+        // Without what firmware writes when the maker never filled a part in ("Default string",
+        // "N/A"), each part judged as a whole: "None" inside a real name stays.
+        let part = |key| str_of(b, key).map(str::trim).filter(|p| !p.is_empty() && !is_placeholder(p));
         let joined = [part("Manufacturer"), part("Product")].into_iter().flatten().collect::<Vec<_>>().join(" ");
         (!joined.is_empty()).then_some(joined)
     });
@@ -864,6 +865,11 @@ mod tests {
         assert_eq!(board("To Be Filled By O.E.M.", "To Be Filled By O.E.M."), None);
         assert_eq!(board("Example Boards Ltd.", "Default string"), Some("Example Boards Ltd.".into()));
         assert_eq!(board("System manufacturer", "EX-B650 TEST"), Some("EX-B650 TEST".into()));
+        // Generic words count only as a whole field: "None" can be part of a real name.
+        assert_eq!(board("None", "EX-B650 TEST"), Some("EX-B650 TEST".into()));
+        assert_eq!(board("Example Boards Ltd.", " N/A "), Some("Example Boards Ltd.".into()));
+        assert_eq!(board("Example Boards Ltd.", "None Edition"), Some("Example Boards Ltd. None Edition".into()));
+        assert_eq!(board("Not Available", "none"), None);
         let none = system(&Sources(&raw(&[("cpu", err("timed out after 4000 ms"))])));
         assert_eq!((none.check.status, none.check.code, none.check.detail), (CheckStatus::Failed, Some(CheckCode::TimedOut), None));
     }

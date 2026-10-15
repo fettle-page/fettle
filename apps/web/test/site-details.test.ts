@@ -100,3 +100,20 @@ describe("the footer's theme picker", () => {
     expect(css).not.toMatch(/\.foot-theme legend\s*\{[^}]*float/);
   });
 });
+
+describe("the free / open source seal", () => {
+  // Firefox ignores textLength on a textPath, so each language's ring must come out about the length of
+  // the circle (520 units) by itself: English twice round with tighter spacing, Italian (longer) once.
+  it("fits each language's ring text round the circle without relying on textLength", () => {
+    const ring = (file: string) => /<text class="seal-ring seal-ring-(\w+)"><textPath[^>]*>([^<]*)<\/textPath>/.exec(page(file))!;
+    const en = ring("index.html");
+    const it_ = ring("it.html");
+    expect(en[1]).toBe("en");
+    expect(it_[1]).toBe("it");
+    expect(en[2].split("Free · open source · no tracking").length - 1).toBe(2);
+    expect(it_[2].split("Gratis · open source · nessun tracciamento").length - 1).toBe(1);
+    const css = src("src/styles/site.css");
+    expect(css).toMatch(/\.seal-ring-en\s*\{\s*letter-spacing:\s*-0\.08\d*em;?\s*\}/);
+    expect(css).toMatch(/\.seal-ring-it\s*\{\s*letter-spacing:\s*0\.18\d*em;?\s*\}/);
+  });
+});

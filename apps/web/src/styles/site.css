@@ -506,6 +506,9 @@ section.hero {
 .free { display: grid; grid-template-columns: auto 1fr; gap: clamp(28px, 5vw, 72px); align-items: center; }
 .seal { width: clamp(150px, 18vw, 220px); color: var(--t-accent); transform: rotate(-8deg); }
 .seal-ring { font: 700 15px var(--font-mono); letter-spacing: 0.12em; fill: currentColor; text-transform: uppercase; }
+/* Spacing that makes each ring about 520 units long on its own (components/Seal.astro); textLength trims the rest where supported. */
+.seal-ring-en { letter-spacing: -0.085em; }
+.seal-ring-it { letter-spacing: 0.185em; }
 .seal-mid { font: 900 40px var(--font-headline); letter-spacing: 0.02em; fill: currentColor; }
 
 /* ---------- FAQ ---------- */

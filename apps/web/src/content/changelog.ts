@@ -60,6 +60,7 @@ export const releases: Release[] = [
         "With more than four sections, the tabs under “The numbers” now take two rows instead of squeezing their names together.",
         "On a narrow phone, the share page's theme button no longer runs off the right edge of the screen in Italian.",
         "In Safari, the footer's theme choices now sit beside their label, as in other browsers, and on a phone they wrap neatly under each other.",
+        "The round “Free · open source” seal on the home page no longer overlaps its own words in Firefox, and in Italian it's no longer squashed.",
       ],
       it: [
         "Il numero di download nella home e nella pagina di download ora compare anche alla prima visita, non solo dopo aver ricaricato: il sito lo chiede a GitHub una volta l'ora e conserva la risposta, invece di chiederlo quando qualcuno apre la pagina.",
@@ -100,6 +101,7 @@ export const releases: Release[] = [
         "Con più di quattro sezioni, le schede sotto “I numeri” ora vanno su due righe invece di stringere i nomi uno contro l'altro.",
         "Su un telefono stretto, il pulsante del tema della pagina condivisa non esce più dal bordo destro dello schermo in italiano.",
         "In Safari, le scelte del tema nel piè di pagina ora stanno accanto alla loro etichetta, come negli altri browser, e sul telefono vanno a capo in ordine una sotto l'altra.",
+        "Il timbro rotondo “Gratis · open source” nella home non sovrappone più le parole in Firefox, e in italiano non è più schiacciato.",
       ],
     },
   },

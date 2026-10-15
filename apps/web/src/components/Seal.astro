@@ -8,7 +8,9 @@ interface Props {
 }
 
 const { locale } = Astro.props;
-const ring = home(locale).sealRing.repeat(2);
+// Each ring comes out about the circle's length by itself (site.css, .seal-ring-<locale>), because Firefox
+// ignores textLength on a textPath: English goes round twice, the longer Italian once.
+const ring = home(locale).sealRing.repeat(locale === "it" ? 1 : 2);
 const id = `seal-ring-${locale}`;
 ---
 
@@ -18,6 +20,6 @@ const id = `seal-ring-${locale}`;
   </defs>
   <circle cx="110" cy="110" r="104" fill="none" stroke="currentColor" stroke-width="4"></circle>
   <circle cx="110" cy="110" r="66" fill="none" stroke="currentColor" stroke-width="2"></circle>
-  <text class="seal-ring"><textPath href={`#${id}`} textLength="520">{ring}</textPath></text>
+  <text class={`seal-ring seal-ring-${locale}`}><textPath href={`#${id}`} textLength="520">{ring}</textPath></text>
   <text class="seal-mid" x="110" y="122" text-anchor="middle">MIT</text>
 </svg>

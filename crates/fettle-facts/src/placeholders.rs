@@ -6,6 +6,7 @@
 /// Compared without case, as whole words.
 const FIRMWARE: &[&str] = &[
     "to be filled by o.e.m.",
+    "to be filled by o.e.m",
     "to be filled by oem",
     "default string",
     "system manufacturer",
@@ -18,6 +19,8 @@ const FIRMWARE: &[&str] = &[
     "type2 - board vendor name1",
     "type2 - board product name1",
     "o.e.m.",
+    "o.e.m",
+    "oem",
 ];
 
 /// Placeholders only as a whole field: inside a name they can be real words ("None Edition").
@@ -73,6 +76,9 @@ mod tests {
         for p in ["Default string", "  TO BE FILLED BY O.E.M. ", "System Product Name", "N/A", "none"] {
             assert!(is_placeholder(p), "{p}");
         }
+        for p in ["OEM", "oem", "O.E.M", "o.e.m", "O.E.M.", "To be filled by O.E.M"] {
+            assert!(is_placeholder(p), "{p}");
+        }
         for real in ["", "Example Boards Ltd.", "Default", "EX-B650 TEST", "Default string 2"] {
             assert!(!is_placeholder(real), "{real}");
         }
@@ -86,6 +92,9 @@ mod tests {
         assert_eq!(without_placeholders("Type2 - Board Vendor Name1 EX-B650 TEST"), Some("EX-B650 TEST".into()));
         assert_eq!(without_placeholders("Example Boards Ltd. EX-B650 TEST"), Some("Example Boards Ltd. EX-B650 TEST".into()));
         assert_eq!(without_placeholders("   "), None);
+        assert_eq!(without_placeholders("OEM EX-B650 TEST"), Some("EX-B650 TEST".into()));
+        assert_eq!(without_placeholders("To Be Filled By O.E.M EX-B650 TEST"), Some("EX-B650 TEST".into()));
+        assert_eq!(without_placeholders("O.E.M OEM"), None);
     }
 
     #[test]

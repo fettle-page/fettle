@@ -477,6 +477,8 @@ export component LinksView inherits VerticalLayout {
             Button {
                 horizontal-stretch: 0;
                 text: Copy.tr("links.delete", Copy.lang);
+                // Which link: a screen reader would otherwise hear the same "Delete" for each.
+                label: Copy.tr("links.delete", Copy.lang) + " " + l.url;
                 enabled: !root.busy;
                 clicked => {
                     root.delete(l.id);

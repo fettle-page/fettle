@@ -617,7 +617,8 @@ fn a_shared_link_can_be_deleted_from_this_pc() {
     press(&h.app, "Back");
     press(&h.app, "Shared links · 1");
     assert!(has(&h.app, "My shared links"));
-    press(&h.app, "Delete");
+    // Each Delete names its link for a screen reader: they'd all just be "Delete" otherwise.
+    press(&h.app, "Delete https://fettle.page/r/m0123456789abcdefg");
     h.background.run_all(&h.app);
     assert!(has(&h.app, "Deleted. The link no longer works."));
     assert!(has(&h.app, "No shared links on this PC."));
@@ -796,19 +797,24 @@ fn escape_leaves_a_view_but_not_while_typing() {
 #[test]
 fn every_control_has_a_name_for_screen_readers() {
     use i_slint_backend_testing::AccessibleRole as R;
-    let h = harness(Locale::En);
-    press(&h.app, "Check this PC");
-    h.background.run_all(&h.app);
-    for view in ["Settings", "Back", "Share a link"] {
+    let (h, _) = share_harness();
+    let names_everything = |view: &str| {
         let controls = i_slint_backend_testing::ElementQuery::from_root(h.app.window())
             .match_descendants()
-            .match_predicate(|e| matches!(e.accessible_role(), Some(R::Button | R::Switch | R::Checkbox | R::Tab | R::TextInput)))
+            .match_predicate(|e| matches!(e.accessible_role(), Some(R::Button | R::Switch | R::Checkbox | R::RadioButton | R::Tab | R::TextInput)))
             .find_all();
-        assert!(!controls.is_empty());
+        assert!(!controls.is_empty(), "no controls in {view}");
         for c in controls {
-            assert!(c.accessible_label().is_some_and(|l| !l.trim().is_empty()), "a {:?} without a name before {view}", c.accessible_role());
+            assert!(c.accessible_label().is_some_and(|l| !l.trim().is_empty()), "a {:?} without a name in {view}", c.accessible_role());
         }
-        press(&h.app, view);
+    };
+    // Every view, checked once it's open: the receipt, Settings, Share (before and after a link is
+    // made), My shared links and the print preview.
+    names_everything("the receipt");
+    for (press_first, view) in [("Settings", "Settings"), ("Back", "the receipt again"), ("Share a link", "Share"), ("Create the link", "Share, link made"), ("Back", "the receipt"), ("Shared links · 1", "My shared links"), ("Back", "the receipt"), ("Print", "the print preview")] {
+        press(&h.app, press_first);
+        h.background.run_all(&h.app);
+        names_everything(view);
     }
 }
 
@@ -821,6 +827,25 @@ fn selected_tab(app: &Fettle) -> String {
         .and_then(|e| e.accessible_label())
         .map(|l| l.to_string())
         .unwrap_or_default()
+}
+
+#[test]
+fn arrow_keys_move_between_a_groups_choices() {
+    // Theme, language, update interval and link expiry are radio groups: the arrows choose.
+    let h = harness(Locale::En);
+    press(&h.app, "Settings");
+    let light = ElementHandle::find_by_accessible_label(h.app.window(), "Light").next().unwrap();
+    click(&h.app, &light);
+    key(&h.app, slint::platform::Key::RightArrow);
+    assert_eq!(checked(&h.app, "Dark"), Some(true));
+    key(&h.app, slint::platform::Key::End);
+    assert_eq!(checked(&h.app, "OLED"), Some(true));
+    key(&h.app, slint::platform::Key::RightArrow);
+    assert_eq!(checked(&h.app, "OLED"), Some(true), "the last choice stays the last");
+    key(&h.app, slint::platform::Key::LeftArrow);
+    assert_eq!(checked(&h.app, "Dark"), Some(true));
+    key(&h.app, slint::platform::Key::Home);
+    assert_eq!(h.app.window().global::<fettle_windows::Theme>().get_choice(), "system");
 }
 
 #[test]

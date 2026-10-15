@@ -408,7 +408,9 @@ export component Receipt inherits Rectangle {
         padding-left: 22px;
         padding-right: 22px;
         padding-bottom: 33px;
-        opacity: faded ? 0.5 : 1;
+        // Faded enough to read as the last check, not this one, but still readable: on the paper,
+        // ink stays above 5.5:1 and the soft grey above 3:1 in every theme.
+        opacity: faded ? 0.7 : 1;
         // Masthead: the wordmark and when.
         HorizontalLayout {
             alignment: space-between;

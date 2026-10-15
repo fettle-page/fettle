@@ -560,6 +560,10 @@ export component Choice inherits Rectangle {
     in property <[string]> labels;
     in property <[string]> values;
     in property <string> value;
+    // Where `value` is among `values` (0 when it isn't there). The groups have at most four choices.
+    pure function index-of-value() -> int {
+        return values[1] == value ? 1 : values[2] == value ? 2 : values[3] == value ? 3 : 0;
+    }
     callback chose(string);
     height: 32px;
     border-radius: 7px;
@@ -583,6 +587,13 @@ export component Choice inherits Rectangle {
             option-focus := Focusable {
                 activate => {
                     chose(values[i]);
+                }
+                // A radio group: the arrows choose the next or previous one (stopping at the ends,
+                // as Windows' do), Home and End the first and last.
+                arrow(step) => {
+                    let n = values.length;
+                    let at = root.index-of-value();
+                    chose(values[step == -1000 ? 0 : step == 1000 ? n - 1 : Math.clamp(at + step, 0, n - 1)]);
                 }
             }
             TouchArea {

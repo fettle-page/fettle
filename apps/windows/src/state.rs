@@ -97,14 +97,12 @@ impl Default for Settings {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ScanProblem {
     Failed,
-    Busy,
 }
 
 impl ScanProblem {
     pub fn key(&self) -> &'static str {
         match self {
             ScanProblem::Failed => "scan.failed",
-            ScanProblem::Busy => "scan.busy",
         }
     }
 }
@@ -169,7 +167,6 @@ pub enum Deep {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DeepError {
     Cancelled,
-    Busy,
     Failed,
     /// Fettle's folder can't take the helper's report (a network share, say): trying again won't help.
     Folder,
@@ -253,7 +250,6 @@ pub enum Event {
     /// The saved links as they are now, other windows' included.
     LinksLoaded(Vec<SavedLink>),
     Exported(Option<&'static str>),
-    ShareBusy(bool),
     /// What this PC remembers of the last update check, at launch.
     UpdateRecord(UpdateRecord),
     /// Every so often while the app is open: a day may have passed.
@@ -509,7 +505,6 @@ impl State {
             Event::DeepRefused(error) => {
                 self.deep = Deep::Problem(match error {
                     DeepError::Cancelled => "deep.cancelled",
-                    DeepError::Busy => "scan.busy",
                     DeepError::Failed => "deep.failed",
                     DeepError::Folder => "deep.folder",
                 });
@@ -646,10 +641,6 @@ impl State {
                 self.export = key;
                 vec![]
             }
-            Event::ShareBusy(busy) => {
-                self.share_busy = busy;
-                vec![]
-            }
             Event::SetUpdateEvery(every) => {
                 self.settings.update_every = every;
                 let mut effects = vec![self.save_settings()];
@@ -754,9 +745,9 @@ mod tests {
         s.update(Event::Start);
         s.update(Event::Finished(Ok(report("2026-10-09T10:00:00Z")), 0.7));
         s.update(Event::Start);
-        s.update(Event::Finished(Err(ScanProblem::Busy), 1.0));
+        s.update(Event::Finished(Err(ScanProblem::Failed), 1.0));
         assert_eq!((s.main_view(), s.mat()), (MainView::Result, Mat::Live));
-        assert_eq!(s.problem, Some(ScanProblem::Busy));
+        assert_eq!(s.problem, Some(ScanProblem::Failed));
         assert_eq!(s.update(Event::SaveAsked), vec![Effect::Save]);
         // The next check clears the problem.
         s.update(Event::Start);
@@ -802,11 +793,11 @@ mod tests {
     fn views_stay_put_while_a_link_is_being_created() {
         let mut s = checked_state();
         s.update(Event::Open(Panel::Share));
-        s.update(Event::ShareBusy(true));
+        s.update(Event::CreateLink { expires: Expiry::Week, password: None });
         s.update(Event::Open(Panel::Settings));
         s.update(Event::Back);
         assert_eq!(s.panel, Panel::Share);
-        s.update(Event::ShareBusy(false));
+        s.update(Event::LinkCreated(Ok(shared("abc"))));
         s.update(Event::Back);
         assert_eq!(s.panel, Panel::Main);
     }
@@ -845,9 +836,6 @@ mod tests {
         assert_eq!(s.update(Event::DeepAsked), vec![]);
         s.update(Event::DeepRefused(DeepError::Cancelled));
         assert_eq!(s.deep, Deep::Problem("deep.cancelled"));
-        s.update(Event::DeepAsked);
-        s.update(Event::DeepRefused(DeepError::Busy));
-        assert_eq!(s.deep, Deep::Problem("scan.busy"));
         // Trying again can't help when the folder itself won't do: it says so.
         s.update(Event::DeepAsked);
         s.update(Event::DeepRefused(DeepError::Folder));

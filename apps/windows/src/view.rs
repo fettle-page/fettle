@@ -347,7 +347,6 @@ pub fn apply(w: &AppWindow, s: &State, ctx: &Ctx, cache: &mut Cache) {
     changed(&mut cache.links, links.iter().map(|l| format!("{}={}", l.id, l.until)).collect::<Vec<_>>().join("|"), || w.set_links(model(links.clone())));
     w.set_links_label(t("title.links", lang, &[("count", Param::Int(s.links.len() as i64))]).into());
     w.set_links_status(s.links_status.map(|(k, _)| t(k, lang, &[("count", Param::Int(s.links_gone as i64))])).unwrap_or_default().into());
-    w.set_links_failed(s.links_status.is_some_and(|(_, failed)| failed));
     w.set_links_busy(s.deleting.is_some() || s.checking_links);
     w.set_links_checking(s.checking_links);
 

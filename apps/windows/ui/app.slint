@@ -198,7 +198,6 @@ export component AppWindow inherits Window {
     in property <string> share-note;
     in property <[LinkRow]> links;
     in property <string> links-status;
-    in property <bool> links-failed;
     in property <bool> links-busy;
     // "Shared links · 2", for screen readers (the header shows an icon and the count).
     in property <string> links-label;
@@ -563,7 +562,6 @@ export component AppWindow inherits Window {
                                 if root.view == "links": LinksView {
                                     links: root.links;
                                     status: root.links-status;
-                                    failed: root.links-failed;
                                     busy: root.links-busy;
                                     checking: root.links-checking;
                                     delete(id) => {

@@ -49,7 +49,7 @@ const en = {
   trayBattery: "How much charge it still holds compared with new.",
   trayMemory: "Sticks, slots, speed, and whether a second stick would help.",
   trayWindows: "Edition, security updates, Windows 11 readiness, restarts.",
-  trayStartup: "Everything that starts with Windows.",
+  trayStartup: "The apps that start with Windows.",
   trayGraphics: "Your graphics card and how old its driver is.",
   traySystem: "The parts list, so a technician knows what they're looking at.",
 
@@ -140,7 +140,7 @@ const it: Record<HomeKey, string> = {
   trayBattery: "Quanta carica tiene ancora rispetto a quando era nuova.",
   trayMemory: "Banchi, slot, velocità, e se un secondo banco aiuterebbe.",
   trayWindows: "Edizione, aggiornamenti di sicurezza, requisiti per Windows 11, riavvii.",
-  trayStartup: "Tutto ciò che parte insieme a Windows.",
+  trayStartup: "Le app che partono insieme a Windows.",
   trayGraphics: "La scheda video e quanto è vecchio il suo driver.",
   traySystem: "L'elenco dei componenti, così il tecnico sa cosa ha davanti.",
 

@@ -27,6 +27,7 @@ export const releases: Release[] = [
         "The FAQ and the home page now name the Copy button as the app shows it, instead of “Copy for Discord or Reddit”.",
         "The keyboard focus ring now shows on the site's label buttons (the menu, the theme button and Download) and on the share page's buttons. Their torn edges used to hide it.",
         "On a share link, entering the password or deleting the receipt now moves keyboard and screen-reader focus to what appears, an opened receipt's tab title names it, and a shared receipt page has a main heading for screen readers.",
+        "The home page now says Fettle lists the apps that start with Windows, not “everything”: it doesn't check services or scheduled tasks.",
       ],
       it: [
         "Il numero di download nella home e nella pagina di download ora compare anche alla prima visita, non solo dopo aver ricaricato: il sito lo chiede a GitHub una volta l'ora e conserva la risposta, invece di chiederlo quando qualcuno apre la pagina.",
@@ -34,6 +35,7 @@ export const releases: Release[] = [
         "Le domande frequenti e la home ora chiamano il pulsante Copia come lo mostra l'app, invece di “Copia per Discord o Reddit”.",
         "L'indicatore del focus da tastiera ora si vede sui pulsanti a etichetta del sito (il menu, il pulsante del tema e Scarica) e su quelli della pagina condivisa. Prima lo nascondevano i loro bordi strappati.",
         "In un link condiviso, dopo aver inserito la password o eliminato lo scontrino, il focus della tastiera e del lettore di schermo ora passa a ciò che compare, il titolo della scheda di uno scontrino aperto lo nomina, e la pagina di uno scontrino condiviso ha un titolo principale per i lettori di schermo.",
+        "La home ora dice che Fettle elenca le app che partono insieme a Windows, non “tutto ciò” che parte: non controlla i servizi né le attività pianificate.",
       ],
     },
   },

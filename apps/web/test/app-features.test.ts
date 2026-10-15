@@ -55,6 +55,12 @@ describe("the app's extra features on the site", () => {
     );
   });
 
+  it("the startup note claims only what the scan reads: apps, not services or scheduled tasks", () => {
+    // crates/fettle-collect/src/sources/startup.rs reads the Run and RunOnce keys and the Startup folders.
+    expect(home("en").trayStartup).toBe("The apps that start with Windows.");
+    expect(home("it").trayStartup).toBe("Le app che partono insieme a Windows.");
+  });
+
   it("the share answer says the app keeps a list of your links", () => {
     expect(faqs("en").find((f) => f.id === "share")!.a.join(" ")).toContain("My shared links");
     expect(faqs("it").find((f) => f.id === "share")!.a.join(" ")).toContain("I miei link condivisi");

@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { brain } from "@fettle/brain/node";
 import { stamp } from "@fettle/receipt-ui";
@@ -300,6 +300,35 @@ describe("SharePage · locked", () => {
     expect(await screen.findByText(text)).toBeTruthy();
     // Every try would only get the same answer until then.
     expect((screen.getByRole("button", { name: locale === "en" ? "Open receipt" : "Apri lo scontrino" }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  describe("once the day's wait is over", () => {
+    // Fake timers that still tick with real time, so findByText's own polling keeps working.
+    beforeEach(() => vi.useFakeTimers({ shouldAdvanceTime: true }));
+    afterEach(() => vi.useRealTimers());
+    const usedUp = async () => {
+      const view = render(<SharePage payload={locked} locale="en" fetcher={dayUsedUp(36_000)} />);
+      submit("nope");
+      expect(await screen.findByText("Too many tries for today. Try again in about 10 hours.")).toBeTruthy();
+      return view;
+    };
+    const button = () => screen.getByRole("button", { name: "Open receipt" }) as HTMLButtonElement;
+
+    it("switches Open receipt back on, without a reload", async () => {
+      await usedUp();
+      act(() => vi.advanceTimersByTime(36_000_000 - 60_000));
+      expect(button().disabled).toBe(true);
+      act(() => vi.advanceTimersByTime(60_000));
+      expect(button().disabled).toBe(false);
+      expect(screen.queryByText("Too many tries for today. Try again in about 10 hours.")).toBeNull();
+    });
+
+    it("leaves no timer running once the page is gone", async () => {
+      const { unmount } = await usedUp();
+      expect(vi.getTimerCount()).toBeGreaterThan(0);
+      unmount();
+      expect(vi.getTimerCount()).toBe(0);
+    });
   });
 
   it("says when Fettle can't be reached", async () => {

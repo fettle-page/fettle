@@ -306,6 +306,13 @@ function Locked({ id, locale, fetcher }: { id: string; locale: Locale; fetcher: 
       .catch(() => typed.current || setState({ status: "idle" }));
   });
 
+  // Once the wait the server gave has passed, the day's tries are back: switch Open receipt on again.
+  useEffect(() => {
+    if (state.status !== "limited_today") return;
+    const timer = setTimeout(() => setState({ status: "idle" }), state.seconds * 1000);
+    return () => clearTimeout(timer);
+  }, [state]);
+
   if (state.status === "open") return <Shared model={state.model} expiresAt={state.expiresAt} locale={locale} opened />;
   if (state.status === "missing") return <Missing locale={locale} focus />;
 
@@ -352,7 +359,7 @@ function Locked({ id, locale, fetcher }: { id: string; locale: Locale; fetcher: 
           aria-invalid={state.status === "wrong" || undefined}
           aria-describedby={message ? "unlock-message" : undefined}
         />
-        {/* Off once the day's tries are used up: every try would get the same answer until then. */}
+        {/* Off while the day's tries are used up: every try would get the same answer until they're back. */}
         <button className="tape" type="submit" disabled={state.status === "busy" || state.status === "limited_today"}>
           {t("locked.button")}
         </button>

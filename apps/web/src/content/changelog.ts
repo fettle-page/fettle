@@ -58,6 +58,7 @@ export const releases: Release[] = [
         "When the battery is worn, its next step now says what to do: replace the battery to get the runtime back.",
         "When Windows answered almost nothing, the side panel now says Fettle couldn't check much on this PC, instead of “Nothing to do right now”.",
         "With more than four sections, the tabs under “The numbers” now take two rows instead of squeezing their names together.",
+        "On a narrow phone, the share page's theme button no longer runs off the right edge of the screen in Italian.",
       ],
       it: [
         "Il numero di download nella home e nella pagina di download ora compare anche alla prima visita, non solo dopo aver ricaricato: il sito lo chiede a GitHub una volta l'ora e conserva la risposta, invece di chiederlo quando qualcuno apre la pagina.",
@@ -96,6 +97,7 @@ export const releases: Release[] = [
         "Quando la batteria è usurata, il passo successivo ora dice cosa fare: sostituisci la batteria per riavere l'autonomia di prima.",
         "Quando Windows non ha risposto quasi a nulla, il pannello laterale ora dice che Fettle non è riuscito a controllare quasi nulla su questo PC, invece di “Niente da fare per ora”.",
         "Con più di quattro sezioni, le schede sotto “I numeri” ora vanno su due righe invece di stringere i nomi uno contro l'altro.",
+        "Su un telefono stretto, il pulsante del tema della pagina condivisa non esce più dal bordo destro dello schermo in italiano.",
       ],
     },
   },

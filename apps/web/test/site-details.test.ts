@@ -76,3 +76,13 @@ describe("keyboard focus on the FAQ page's questions", () => {
     expect(rule).toMatch(/outline-offset:\s*[1-9]\d*px/);
   });
 });
+
+describe("the share page header on a narrow phone", () => {
+  // In Italian at 360 px, the logo, "Scontrino condiviso" and "Chiaro" don't fit on one line.
+  it("tightens its gaps rather than pushing the theme button off the screen, and keeps the logo whole", () => {
+    const css = src("src/share/share.css").replace(/\/\*[\s\S]*?\*\//g, "");
+    expect(/(?:^|\n)\.home\s*\{([^}]*)\}/.exec(css)?.[1]).toMatch(/flex-shrink:\s*0/);
+    const narrow = /@media \(max-width: 400px\)\s*\{\s*\.bar\s*\{([^}]*)\}/.exec(css)?.[1] ?? "";
+    expect(narrow).toMatch(/gap:\s*10px/);
+  });
+});

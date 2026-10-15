@@ -25,7 +25,9 @@ body { background: var(--t-page); color: var(--on-mat); font-family: var(--font-
 }
 
 .bar { display: flex; align-items: center; gap: 16px; padding: 36px 5vw 0; }
-.home { display: inline-flex; color: var(--on-mat); border-radius: 2px; }
+.home { display: inline-flex; flex-shrink: 0; color: var(--on-mat); border-radius: 2px; }
+/* On a narrow phone the Italian label and theme name need the room (the label folds onto two lines). */
+@media (max-width: 400px) { .bar { gap: 10px; } }
 .home:focus-visible { outline: 2px solid var(--t-accent); outline-offset: 4px; }
 .brand { height: 30px; width: auto; }
 

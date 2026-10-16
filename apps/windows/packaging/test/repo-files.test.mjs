@@ -148,7 +148,7 @@ describe("tracked files", () => {
     // Testers land on the new-issue page too: it points them to the tester reports form.
     assert.ok(config.includes("https://github.com/fettle-page/fettle/discussions/new?category=tester-reports"));
     const tester = readFileSync(join(root, ".github/DISCUSSION_TEMPLATE/tester-reports.yml"), "utf8");
-    for (const ask of ["Fettle version", "Windows version", "share link", "screenshot", "serial numbers", "product keys", "italiano"]) assert.ok(tester.includes(ask), ask);
+    for (const ask of ["Fettle version", "Windows version", "share link", "screenshot", "serial numbers", "product keys"]) assert.ok(tester.includes(ask), ask);
     const contributing = readFileSync(join(root, "CONTRIBUTING.md"), "utf8");
     for (const rule of ["npm test", "cargo test --workspace", "Italian", "SECURITY.md"]) assert.ok(contributing.includes(rule), rule);
   });

@@ -5,8 +5,6 @@ body:
       value: |
         Thanks for trying Fettle. Every report helps, including "it all looks right": that tells us a check works on one more kind of PC.
 
-        Puoi scrivere anche in italiano.
-
         Fettle already leaves serial numbers, the PC's name, your username and other private details out of its reports and share links. Even so, discussions are public: don't paste serial numbers, product keys or anything else private here. Please don't attach the saved report (the JSON file) either: its file name can hold your account name.
   - type: input
     id: share-link

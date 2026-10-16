@@ -1,5 +1,8 @@
 blank_issues_enabled: true
 contact_links:
+  - name: Tried Fettle and want to tell us how it went
+    url: https://github.com/fettle-page/fettle/discussions/new?category=tester-reports
+    about: Send a tester report, even if everything looks right. Open an issue only for something that's clearly broken.
   - name: Report a security problem
     url: https://github.com/fettle-page/fettle/security/advisories/new
     about: Please report security problems privately, not in a public issue. SECURITY.md has the details.

@@ -6,6 +6,7 @@ const ALLOWED_HIDDEN = [
   /^\.github\/workflows\/[\w.-]+\.ya?ml$/,
   /^\.github\/actions\/windows-deps\/action\.yml$/,
   /^\.github\/ISSUE_TEMPLATE\/(bug_report\.md|feature_request\.md|config\.yml)$/,
+  /^\.github\/DISCUSSION_TEMPLATE\/tester-reports\.yml$/,
   /^\.github\/pull_request_template\.md$/,
   /^apps\/web\/public\/\.well-known\/[\w.-]+$/,
 ];

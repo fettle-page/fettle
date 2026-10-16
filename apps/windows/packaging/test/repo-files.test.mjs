@@ -7,8 +7,8 @@ import { describe, it } from "node:test";
 import { readFileSync } from "node:fs";
 import { realLookingAutoLaunchCodes, realLookingEmails, realLookingProcessorIds, realLookingSerials, realLookingSids, unexpectedPaths } from "../repo-files.mjs";
 
-/** The contributor guide and GitHub's issue and pull request templates. */
-const COMMUNITY = ["CONTRIBUTING.md", ".github/ISSUE_TEMPLATE/bug_report.md", ".github/ISSUE_TEMPLATE/feature_request.md", ".github/ISSUE_TEMPLATE/config.yml", ".github/pull_request_template.md"];
+/** The contributor guide and GitHub's issue, discussion and pull request templates. */
+const COMMUNITY = ["CONTRIBUTING.md", ".github/ISSUE_TEMPLATE/bug_report.md", ".github/ISSUE_TEMPLATE/feature_request.md", ".github/ISSUE_TEMPLATE/config.yml", ".github/DISCUSSION_TEMPLATE/tester-reports.yml", ".github/pull_request_template.md"];
 
 // Test data must use obviously fake identifiers: a real account SID once slipped into a test.
 describe("account SIDs in tracked files", () => {
@@ -127,9 +127,9 @@ describe("tracked files", () => {
     assert.deepEqual(unexpectedPaths(actions), actions);
   });
 
-  it("allows exactly the contributor guide and the issue and pull request templates", () => {
+  it("allows exactly the contributor guide and the issue, discussion and pull request templates", () => {
     assert.deepEqual(unexpectedPaths(COMMUNITY), []);
-    const others = [".github/ISSUE_TEMPLATE/question.md", ".github/ISSUE_TEMPLATE/config.yaml", ".github/PULL_REQUEST_TEMPLATE/x.md", "docs/CONTRIBUTING.md", ".github/CONTRIBUTING.md"];
+    const others = [".github/ISSUE_TEMPLATE/question.md", ".github/ISSUE_TEMPLATE/config.yaml", ".github/PULL_REQUEST_TEMPLATE/x.md", "docs/CONTRIBUTING.md", ".github/CONTRIBUTING.md", ".github/DISCUSSION_TEMPLATE/general.yml", ".github/DISCUSSION_TEMPLATE/notes.md"];
     assert.deepEqual(unexpectedPaths(others), others);
   });
 
@@ -139,12 +139,16 @@ describe("tracked files", () => {
     for (const p of COMMUNITY) assert.doesNotMatch(readFileSync(join(root, p), "utf8"), /\b(AI|LLM|Claude|GPT|Copilot|superpowers|scope\.md|CLAUDE\.md)\b/i, p);
   });
 
-  it("the bug report asks for a share link or screenshot, not a pasted report, and security problems go to private reporting", () => {
+  it("the bug and tester reports ask for a share link or screenshot, not a pasted report, and security problems go to private reporting", () => {
     const root = join(import.meta.dirname, "../../../..");
     const bug = readFileSync(join(root, ".github/ISSUE_TEMPLATE/bug_report.md"), "utf8");
     for (const ask of ["Fettle version", "Windows version", "share link", "screenshot", "serial numbers", "product keys"]) assert.ok(bug.includes(ask), ask);
     const config = readFileSync(join(root, ".github/ISSUE_TEMPLATE/config.yml"), "utf8");
     assert.ok(config.includes("https://github.com/fettle-page/fettle/security/advisories/new"));
+    // Testers land on the new-issue page too: it points them to the tester reports form.
+    assert.ok(config.includes("https://github.com/fettle-page/fettle/discussions/new?category=tester-reports"));
+    const tester = readFileSync(join(root, ".github/DISCUSSION_TEMPLATE/tester-reports.yml"), "utf8");
+    for (const ask of ["Fettle version", "Windows version", "share link", "screenshot", "serial numbers", "product keys", "italiano"]) assert.ok(tester.includes(ask), ask);
     const contributing = readFileSync(join(root, "CONTRIBUTING.md"), "utf8");
     for (const rule of ["npm test", "cargo test --workspace", "Italian", "SECURITY.md"]) assert.ok(contributing.includes(rule), rule);
   });

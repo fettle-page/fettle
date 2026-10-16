@@ -1,0 +1,67 @@
+title: "Tester report: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for trying Fettle. Every report helps, including "it all looks right": that tells us a check works on one more kind of PC.
+
+        Puoi scrivere anche in italiano.
+
+        Fettle already leaves serial numbers, the PC's name, your username and other private details out of its reports and share links. Even so, discussions are public: don't paste serial numbers, product keys or anything else private here. Please don't attach the saved report (the JSON file) either: its file name can hold your account name.
+  - type: input
+    id: share-link
+    attributes:
+      label: The receipt's share link
+      description: 'In Fettle: "Share a link", then "Create the link" (in Italian: "Condividi con un link", then "Crea il link"). It shows us the same receipt you see, and you can delete it whenever you like. No link? Attach a screenshot of the receipt below instead.'
+      placeholder: https://fettle.page/r/...
+  - type: dropdown
+    id: verdict
+    attributes:
+      label: How did the receipt look to you?
+      options:
+        - Everything looks right
+        - Something looks wrong or unclear
+        - Something didn't work
+    validations:
+      required: true
+  - type: textarea
+    id: details
+    attributes:
+      label: What looks wrong, unclear or missing?
+      description: Which line, and what you think it should say. If it all looks right, you can leave this empty.
+  - type: input
+    id: pc
+    attributes:
+      label: What kind of PC is it?
+      description: Roughly, with nothing that identifies it.
+      placeholder: e.g. a 2019 laptop, a self-built desktop, an all-in-one
+    validations:
+      required: true
+  - type: input
+    id: windows
+    attributes:
+      label: Windows version
+      placeholder: e.g. Windows 11 24H2 (Settings > System > About)
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Fettle version
+      description: "Fettle's About panel shows it."
+      placeholder: e.g. 1.0.5
+  - type: dropdown
+    id: package
+    attributes:
+      label: Installer or portable zip?
+      options:
+        - Installer
+        - Portable zip
+        - Not sure
+  - type: checkboxes
+    id: private
+    attributes:
+      label: Before you post
+      options:
+        - label: I've checked that nothing private is in what I wrote or attached (no serial numbers, product keys or names).
+          required: true

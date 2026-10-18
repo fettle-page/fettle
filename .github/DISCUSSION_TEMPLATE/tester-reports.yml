@@ -27,14 +27,26 @@ body:
     attributes:
       label: What looks wrong, unclear or missing?
       description: Which line, and what you think it should say. If it all looks right, you can leave this empty.
-  - type: input
+  - type: dropdown
     id: pc
     attributes:
       label: What kind of PC is it?
-      description: Roughly, with nothing that identifies it.
-      placeholder: e.g. a 2019 laptop, a self-built desktop, an all-in-one
+      options:
+        - Laptop
+        - Desktop bought ready-made
+        - Self-built desktop
+        - All-in-one
+        - Mini PC
+        - 2-in-1 or tablet
+        - Other
     validations:
       required: true
+  - type: input
+    id: pc-details
+    attributes:
+      label: Anything else about it?
+      description: Roughly, with nothing that identifies it. You can leave this empty.
+      placeholder: e.g. about 6 years old, AMD, a USB drive plugged in
   - type: input
     id: windows
     attributes:

@@ -153,6 +153,13 @@ describe("tracked files", () => {
     for (const rule of ["npm test", "cargo test --workspace", "Italian", "SECURITY.md"]) assert.ok(contributing.includes(rule), rule);
   });
 
+  it("the tester form asks the kind of PC as a fixed choice, so reports can be counted by kind", () => {
+    const root = join(import.meta.dirname, "../../../..");
+    const tester = readFileSync(join(root, ".github/DISCUSSION_TEMPLATE/tester-reports.yml"), "utf8");
+    assert.match(tester, /- type: dropdown\n\s+id: pc\n/);
+    for (const kind of ["Laptop", "Self-built desktop", "All-in-one", "Mini PC", "Other"]) assert.ok(tester.includes(`- ${kind}\n`), kind);
+  });
+
   it("SECURITY.md gives the same contact as the site's security.txt", () => {
     const root = join(import.meta.dirname, "../../../..");
     const contact = /^Contact: mailto:(\S+)$/m.exec(readFileSync(join(root, "apps/web/public/.well-known/security.txt"), "utf8"))[1];

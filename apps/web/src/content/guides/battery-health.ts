@@ -20,22 +20,22 @@ const guide: Guide = {
     summary: "What battery wear is, how to read Windows' battery report, and when a new battery makes sense.",
     kicker: "Guide",
     h1: "How healthy is my laptop battery?",
-    intro: "Every laptop battery holds a little less charge as it ages. Windows keeps track of how much, and a short report shows it. Here's how to open it, which numbers to read, and what to do next.",
+    intro: "Every laptop battery holds a little less charge as it ages. Windows keeps track of how much and shows it in a report you can make from the Command Prompt.",
     sections: [
       {
         h: "What battery wear means",
         p: [
           "Windows knows two figures for a battery: the design capacity, what it was built to hold when new, and the full charge capacity, what it holds today when charged to 100%. Comparing the two tells you how worn it is.",
           "Laptop batteries are lithium-ion, and Microsoft calls them consumables: they lose capacity over time and with use. Every charge cycle wears them a little, and so does heat.",
-          "Some wear is normal. There's no single number at which a battery is finished: what matters is whether it still lasts as long as you need.",
+          "Some wear is normal, and there's no single number at which a battery is finished; it depends on how long you need it to last.",
         ],
       },
       {
         h: "Signs of a worn battery",
         p: [
           "The usual sign is less runtime: for the same kind of work, the laptop needs its charger sooner than it used to.",
-          "A busy app or a brighter screen can shorten the runtime too, so look at the numbers before blaming the battery.",
-          "Rarely, an old battery swells. If it visibly pushes the case out of shape, Microsoft's advice is to stop using the laptop and have the battery replaced.",
+          "A busy app or a brighter screen can shorten the runtime too, so check the numbers first.",
+          "Rarely, an old battery swells. If it visibly pushes the case out of shape, Microsoft says to stop using the laptop and have the battery replaced.",
         ],
       },
       {
@@ -67,11 +67,11 @@ const guide: Guide = {
       {
         h: "How Fettle shows it",
         p: [
-          "On a laptop, Fettle's receipt has a Battery section. Fettle reads the same two figures, design capacity and full charge capacity, and turns them into one line. It only reads: it doesn't change any battery or power setting.",
+          "On a laptop, Fettle's receipt has a Battery section. Fettle reads the same two figures, design capacity and full charge capacity, and turns them into one line, without changing any battery or power setting.",
           "At 80% or more, the line is marked OK and says, with your number: \"Your battery holds 87% of the capacity it had when new.\"",
           "Below 80% it's marked WATCH, and below 60% ACT. Both say \"Your battery holds 72% of the capacity it had when new, so expect less runtime than it used to give.\" and suggest: \"Replace the battery to get the runtime back.\" The percentage is rounded down and never shown above 100%, because a new battery can report a little more than its design capacity.",
           "Underneath are the numbers: Original capacity, Full charge and, when the battery reports them, Charge cycles. The cycle count is for reference; the verdict comes from capacity alone.",
-          "On a desktop or all-in-one without a battery, there's no Battery section. If the battery doesn't report its original capacity, Fettle doesn't guess: it says \"The battery didn't report its original capacity.\"",
+          "On a desktop or all-in-one without a battery, there's no Battery section. If the battery doesn't report its original capacity, the line says so: \"The battery didn't report its original capacity.\"",
         ],
       },
     ],
@@ -82,21 +82,21 @@ const guide: Guide = {
     summary: "Cos'è l'usura della batteria, come leggere il rapporto batteria di Windows e quando conviene cambiarla.",
     kicker: "Guida",
     h1: "La batteria del mio portatile è in salute?",
-    intro: "Con gli anni, ogni batteria di portatile tiene un po' meno carica. Windows tiene il conto di quanta ne ha persa e te lo mostra in un breve rapporto. Ecco come aprirlo, quali numeri leggere e cosa fare dopo.",
+    intro: "Con gli anni, ogni batteria di portatile tiene un po' meno carica. Windows tiene il conto di quanta ne ha persa e lo mostra in un rapporto che puoi creare dal Prompt dei comandi.",
     sections: [
       {
         h: "Cosa vuol dire usura della batteria",
         p: [
           "Windows conosce due valori della batteria: la capacità di progetto, cioè quanto doveva contenere da nuova, e la capacità a carica completa, cioè quanto contiene oggi quando è al 100%. Confrontandoli capisci quanto è usurata.",
           "Le batterie dei portatili sono agli ioni di litio e Microsoft le definisce materiali di consumo: perdono capacità con il tempo e con l'uso. Ogni ciclo di carica le consuma un po', e il calore anche.",
-          "Un po' di usura è normale. Non c'è una soglia oltre la quale la batteria è da buttare: conta se dura ancora quanto ti serve.",
+          "Un po' di usura è normale, e non c'è una soglia oltre la quale la batteria è da buttare: dipende da quanto ti serve che duri.",
         ],
       },
       {
         h: "Come si riconosce una batteria usurata",
         p: [
           "Il segnale più comune è meno autonomia: a parità di lavoro, il portatile chiede il caricabatterie prima di quanto faceva una volta.",
-          "Anche un'app che lavora molto o uno schermo più luminoso accorciano l'autonomia, quindi guarda i numeri prima di dare la colpa alla batteria.",
+          "Anche un'app che lavora molto o uno schermo più luminoso accorciano l'autonomia, quindi guarda prima i numeri.",
           "Di rado una batteria vecchia si gonfia. Se deforma visibilmente la scocca, Microsoft consiglia di smettere di usare il portatile e di far sostituire la batteria.",
         ],
       },
@@ -129,11 +129,11 @@ const guide: Guide = {
       {
         h: "Come lo mostra Fettle",
         p: [
-          "Su un portatile, lo scontrino di Fettle ha una sezione Batteria. Fettle legge gli stessi due valori, capacità di progetto e capacità a carica completa, e li riassume in una riga. Legge e basta: non cambia nessuna impostazione della batteria o del risparmio energia.",
+          "Su un portatile, lo scontrino di Fettle ha una sezione Batteria. Fettle legge gli stessi due valori, capacità di progetto e capacità a carica completa, e li riassume in una riga, senza cambiare nessuna impostazione della batteria o del risparmio energia.",
           "Dall'80% in su la riga è segnata OK e dice, con il tuo numero: \"Capacità della batteria: 87% di quella originale.\"",
           "Sotto l'80% è segnata OCCHIO, sotto il 60% AGISCI. In entrambi i casi dice \"Capacità della batteria: 72% di quella originale. Aspettati meno autonomia di quando era nuova.\" e consiglia: \"Sostituisci la batteria per riavere l'autonomia di prima.\" La percentuale è arrotondata per difetto e non supera mai il 100%, perché una batteria nuova può indicare un po' più della sua capacità di progetto.",
           "Sotto la riga ci sono i numeri: Capacità originale, Carica piena e, quando la batteria li comunica, Cicli di carica. I cicli sono solo un'informazione in più: il giudizio si basa soltanto sulla capacità.",
-          "Su un PC fisso o un all-in-one senza batteria, la sezione Batteria non c'è. Se la batteria non indica la sua capacità originale, Fettle non tira a indovinare e dice: \"La batteria non ha indicato la sua capacità originale.\"",
+          "Su un PC fisso o un all-in-one senza batteria, la sezione Batteria non c'è. Se la batteria non indica la sua capacità originale, la riga lo dice: \"La batteria non ha indicato la sua capacità originale.\"",
         ],
       },
     ],

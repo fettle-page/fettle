@@ -31,7 +31,7 @@ const guide: Guide = {
     summary: "What Windows 11 needs, how to check your PC with Microsoft's own tools, and what to do if it isn't ready.",
     kicker: "Guide",
     h1: "Is my PC ready for Windows 11?",
-    intro: "Windows 11 asks more of a PC than Windows 10: a processor on Microsoft's list, a TPM 2.0 security chip and Secure Boot. Here's what they mean, how to check them with Microsoft's own tools, and what to do if the PC falls short.",
+    intro: "Windows 11 asks more of a PC than Windows 10: a processor on Microsoft's list, a TPM 2.0 security chip and Secure Boot. Microsoft's PC Health Check app tells you whether your PC has them, and when it falls short, the cause is sometimes just a setting.",
     sections: [
       {
         h: "What Windows 11 needs",
@@ -74,9 +74,9 @@ const guide: Guide = {
       {
         h: "How Fettle shows it",
         p: [
-          "On Windows 10 only, the Windows section of Fettle's receipt adds notes on the processor, the TPM and Secure Boot. Fettle only reads: it changes no settings.",
+          "On Windows 10 only, the Windows section of Fettle's receipt adds notes on the processor, the TPM and Secure Boot. Fettle doesn't change any settings.",
           "It compares the processor's name with Microsoft's lists (roughly, Intel Core from the 8th generation on and AMD Ryzen from the 2000 series on) and says \"This processor is on Microsoft's list for Windows 11.\" or that it isn't. When the name doesn't settle it, as with Pentium, Celeron or Xeon, it says \"Fettle couldn't tell whether this processor is on Microsoft's list for Windows 11.\"",
-          "Windows only gives an app the TPM's details when the app runs as administrator, so the Quick check doesn't read the TPM: it says \"Fettle couldn't check the TPM security chip.\" and suggests \"Run a Deep check to see it.\" The optional Deep check then shows whether there's a TPM 2.0 or an older one. When it finds none, it says \"No TPM security chip found.\" and adds that most recent processors have one built in that can be turned on in the BIOS (fTPM or PTT): that's often the case with a TPM turned off in the firmware. If a TPM is there but reports no version, Fettle says it couldn't check rather than guess.",
+          "Windows only gives an app the TPM's details when the app runs as administrator, so the Quick check doesn't read the TPM: it says \"Fettle couldn't check the TPM security chip.\" and suggests \"Run a Deep check to see it.\" The optional Deep check then shows whether there's a TPM 2.0 or an older one. When it finds none, it says \"No TPM security chip found.\" and adds that most recent processors have one built in that can be turned on in the BIOS (fTPM or PTT): that's often the case with a TPM turned off in the firmware. If a TPM is there but reports no version, Fettle says it couldn't check it.",
           "Both checks read whether Secure Boot is on; if Windows doesn't report it, the line is left out. Fettle doesn't check memory, storage or graphics against the minimums: PC Health Check does.",
         ],
       },
@@ -88,7 +88,7 @@ const guide: Guide = {
     summary: "Cosa chiede Windows 11, come controllare il PC con gli strumenti di Microsoft e cosa fare se non è pronto.",
     kicker: "Guida",
     h1: "Il mio PC è pronto per Windows 11?",
-    intro: "Windows 11 chiede a un PC più di Windows 10: un processore nell'elenco di Microsoft, un chip di sicurezza TPM 2.0 e il Secure Boot. Ecco cosa significano, come controllarli con gli strumenti di Microsoft e cosa fare se il PC non ci arriva.",
+    intro: "Windows 11 chiede a un PC più di Windows 10: un processore nell'elenco di Microsoft, un chip di sicurezza TPM 2.0 e il Secure Boot. L'app Controllo integrità PC di Microsoft ti dice se il tuo PC li ha e, quando non ci arriva, a volte è solo questione di un'impostazione.",
     sections: [
       {
         h: "Cosa chiede Windows 11",
@@ -131,9 +131,9 @@ const guide: Guide = {
       {
         h: "Come lo mostra Fettle",
         p: [
-          "Solo su Windows 10, la sezione Windows dello scontrino di Fettle aggiunge note sul processore, sul TPM e sul Secure Boot. Fettle legge e basta: non cambia nessuna impostazione.",
+          "Solo su Windows 10, la sezione Windows dello scontrino di Fettle aggiunge note sul processore, sul TPM e sul Secure Boot. Fettle non cambia nessuna impostazione.",
           "Confronta il nome del processore con gli elenchi di Microsoft (in breve, Intel Core dall'ottava generazione in poi e AMD Ryzen dalla serie 2000 in poi) e dice \"Questo processore è nell'elenco di Microsoft per Windows 11.\" oppure che non c'è. Quando il nome non basta, come con i Pentium, i Celeron o gli Xeon, dice \"Fettle non è riuscito a capire se questo processore è nell'elenco di Microsoft per Windows 11.\"",
-          "Windows dà i dettagli del TPM a un'app solo se l'app viene eseguita come amministratore, quindi il Controllo rapido non legge il TPM: dice \"Fettle non è riuscito a controllare il chip di sicurezza TPM.\" e consiglia \"Avvia un Controllo approfondito per vederlo.\" Il Controllo approfondito, facoltativo, mostra poi se c'è un TPM 2.0 o uno più vecchio. Se non ne trova nessuno, dice \"Nessun chip di sicurezza TPM trovato.\" e aggiunge che la maggior parte dei processori recenti ne ha uno integrato da attivare nel BIOS (fTPM o PTT): spesso è proprio il caso di un TPM disattivato nel firmware. Se invece un TPM c'è ma non riporta la versione, Fettle dice che non è riuscito a controllarlo invece di tirare a indovinare.",
+          "Windows dà i dettagli del TPM a un'app solo se l'app viene eseguita come amministratore, quindi il Controllo rapido non legge il TPM: dice \"Fettle non è riuscito a controllare il chip di sicurezza TPM.\" e consiglia \"Avvia un Controllo approfondito per vederlo.\" Il Controllo approfondito, facoltativo, mostra poi se c'è un TPM 2.0 o uno più vecchio. Se non ne trova nessuno, dice \"Nessun chip di sicurezza TPM trovato.\" e aggiunge che la maggior parte dei processori recenti ne ha uno integrato da attivare nel BIOS (fTPM o PTT): spesso è proprio il caso di un TPM disattivato nel firmware. Se invece un TPM c'è ma non riporta la versione, Fettle dice che non è riuscito a controllarlo.",
           "Entrambi i controlli leggono se il Secure Boot è attivo; se Windows non lo riporta, la riga non compare. Fettle non confronta memoria, spazio di archiviazione e grafica con i minimi: lo fa Controllo integrità PC.",
         ],
       },

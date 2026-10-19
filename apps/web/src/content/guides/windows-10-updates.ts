@@ -15,7 +15,7 @@ const guide: Guide = {
     summary: "When Windows 10 support ended, what Extended Security Updates are, and how to check your PC.",
     kicker: "Guide",
     h1: "Is my Windows 10 PC still getting security updates?",
-    intro: "Microsoft's support for Windows 10 ended in October 2025, but many Windows 10 PCs can still get security updates for a while longer. Here's how to tell whether yours does, using Windows' own tools, and what to do if it doesn't.",
+    intro: "Microsoft's support for Windows 10 ended in October 2025, but many Windows 10 PCs can still get security updates for a while longer. You can check yours in Windows itself, and if it isn't getting them, you can usually enrol it in Extended Security Updates or move it to Windows 11.",
     sections: [
       {
         h: "When support ended",
@@ -55,7 +55,7 @@ const guide: Guide = {
       {
         h: "How Fettle shows it",
         p: [
-          "On Windows 10, the first line of the Windows section on Fettle's receipt says whether the PC gets security updates, until when, and what to do next. Fettle only reads: it doesn't enrol the PC, install updates or change anything.",
+          "On Windows 10, the first line of the Windows section on Fettle's receipt says whether the PC gets security updates, until when, and what to do next. Fettle won't enrol the PC or install updates for you, and it changes nothing else either.",
           "Fettle can't read the ESU enrolment itself, so it reads the build instead: since November 2025, every Windows 10 update past build 19045.6466 has come only through ESU. When the build is newer than that, the PC is getting ESU updates, and the line says (with your edition's name): \"Windows 10 Home gets security updates until 12 October 2027 through Extended Security Updates.\"",
           "If the PC is still on build 19045.6466 or older, the line says \"Windows 10 Home has missed the security updates released since November 2025.\" and suggests: \"Enrol in Extended Security Updates from Windows Update and install what it offers, or upgrade to Windows 11.\" An enrolled PC that hasn't installed the updates yet shows the same; Windows Update tells you which it is.",
           "If Windows doesn't report the part of the build after the dot (the update number), Fettle doesn't guess: it says the PC \"only gets security updates if it's enrolled in Extended Security Updates\" and asks you to check Windows Update. If it can't read the build at all, it says \"Fettle couldn't check Windows.\" On a version older than 22H2 it says the PC \"no longer gets security updates\". On a work or school PC it suggests asking whoever manages it.",
@@ -70,7 +70,7 @@ const guide: Guide = {
     summary: "Quando è finito il supporto di Windows 10, cosa sono gli Extended Security Updates e come controllare il tuo PC.",
     kicker: "Guida",
     h1: "Il mio PC con Windows 10 riceve ancora gli aggiornamenti di sicurezza?",
-    intro: "Il supporto di Windows 10 è terminato a ottobre 2025, ma molti PC con Windows 10 possono ricevere gli aggiornamenti di sicurezza ancora per un po'. Ecco come capire se il tuo li riceve, con gli strumenti di Windows, e cosa fare se non li riceve.",
+    intro: "Il supporto di Windows 10 è terminato a ottobre 2025, ma molti PC con Windows 10 possono ricevere gli aggiornamenti di sicurezza ancora per un po'. Puoi controllarlo direttamente in Windows e, se il tuo non li riceve, di solito puoi iscriverlo agli Extended Security Updates o passare a Windows 11.",
     sections: [
       {
         h: "Quando è finito il supporto",
@@ -110,7 +110,7 @@ const guide: Guide = {
       {
         h: "Come lo mostra Fettle",
         p: [
-          "Su Windows 10, la prima riga della sezione Windows dello scontrino di Fettle dice se il PC riceve aggiornamenti di sicurezza, fino a quando e cosa fare. Fettle legge e basta: non iscrive il PC, non installa aggiornamenti e non cambia nulla.",
+          "Su Windows 10, la prima riga della sezione Windows dello scontrino di Fettle dice se il PC riceve aggiornamenti di sicurezza, fino a quando e cosa fare. Fettle non iscrive il PC e non installa aggiornamenti al posto tuo, e non cambia nient'altro.",
           "Fettle non può leggere direttamente l'iscrizione agli ESU, quindi legge la build: da novembre 2025 ogni aggiornamento di Windows 10 oltre la build 19045.6466 arriva solo tramite gli ESU. Se la build è più recente, il PC sta ricevendo gli ESU e la riga dice (con il nome della tua edizione): \"Windows 10 Home riceve aggiornamenti di sicurezza grazie agli Extended Security Updates. Fine del supporto: 12 ottobre 2027.\"",
           "Se il PC è ancora alla build 19045.6466 o precedente, la riga dice \"Windows 10 Home non ha ricevuto gli aggiornamenti di sicurezza usciti da novembre 2025.\" e consiglia: \"Iscriviti agli Extended Security Updates da Windows Update e installa ciò che propone, oppure passa a Windows 11.\" Lo stesso vale per un PC già iscritto che non ha ancora installato gli aggiornamenti: Windows Update ti dice qual è il caso.",
           "Se Windows non riporta la parte della build dopo il punto (il numero dell'aggiornamento), Fettle non tira a indovinare: dice che il PC \"riceve aggiornamenti di sicurezza solo se è iscritto agli Extended Security Updates\" e ti chiede di controllare in Windows Update. Se non riesce a leggere affatto la build, dice \"Fettle non è riuscito a controllare Windows.\" Su una versione precedente alla 22H2 dice che il PC \"non riceve più aggiornamenti di sicurezza\". Su un PC di lavoro o di scuola consiglia di chiedere a chi lo gestisce.",

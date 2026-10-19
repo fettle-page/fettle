@@ -19,7 +19,7 @@ const guide: Guide = {
     summary: "The signs of a worn drive, how to check its health in Windows, and when to replace it.",
     kicker: "Guide",
     h1: "Is my SSD or hard drive wearing out?",
-    intro: "Drives wear out over the years, and many keep a record of their own health. Here's what to look for, how to check with Windows' own tools, and what to do next.",
+    intro: "Drives wear out over the years, and many keep a record of their own health. On most recent PCs, Windows shows the main figures from it in Settings.",
     sections: [
       {
         h: "What a worn drive looks like",
@@ -51,7 +51,7 @@ const guide: Guide = {
         h: "What the numbers mean",
         p: [
           "Estimated remaining life is how much of its rated life the SSD has left, by the manufacturer's estimate. At 0% the drive doesn't stop that day, but it's past what the maker planned for. Available spare is the reserve that replaces worn-out cells; Windows warns when it drops below the maker's threshold.",
-          "Hard drives and SATA SSDs keep a different record, called SMART. The counts that matter are reallocated sectors (worn spots already replaced with spare ones), pending sectors (spots the drive is struggling to read) and uncorrectable sectors (spots it couldn't read or repair). NVMe SSDs count media errors: reads or writes that went wrong. Windows has no screen that shows these counts for hard drives and SATA SSDs; Fettle's Deep check reads them, and it asks for administrator access first, which you can refuse.",
+          "Hard drives and SATA SSDs keep a different record, called SMART. The counts that matter are reallocated sectors (worn spots already replaced with spare ones), pending sectors (spots the drive is struggling to read) and uncorrectable sectors (spots it couldn't read or repair). NVMe SSDs count media errors: reads or writes that went wrong. Windows has no screen that shows these counts for hard drives and SATA SSDs; Fettle's Deep check reads them.",
           "A small number that stays the same is worth watching. One that keeps growing means the drive is getting worse.",
         ],
       },
@@ -80,7 +80,7 @@ const guide: Guide = {
     summary: "I segnali di un disco consumato, come controllarne lo stato in Windows e quando sostituirlo.",
     kicker: "Guida",
     h1: "Il mio SSD o disco rigido si sta consumando?",
-    intro: "Con gli anni i dischi si consumano, e molti tengono traccia del proprio stato. Ecco a cosa fare attenzione, come controllare con gli strumenti di Windows e cosa fare dopo.",
+    intro: "Con gli anni i dischi si consumano, e molti tengono traccia del proprio stato. Sulla maggior parte dei PC recenti, Windows ne mostra i valori principali nelle Impostazioni.",
     sections: [
       {
         h: "Come si riconosce un disco consumato",
@@ -112,7 +112,7 @@ const guide: Guide = {
         h: "Cosa significano i valori",
         p: [
           "La vita residua stimata è la parte di vita prevista che resta all'SSD, secondo la stima del produttore. Allo 0% il disco non si ferma quel giorno, ma ha superato la durata prevista. Il ricambio disponibile è la riserva che sostituisce le celle usurate; Windows avvisa quando scende sotto la soglia del produttore.",
-          "I dischi rigidi e gli SSD SATA tengono un registro diverso, chiamato SMART. I valori da guardare sono i settori riallocati (punti usurati già sostituiti con quelli di riserva), i settori in sospeso (punti che il disco fatica a leggere) e i settori non correggibili (punti che non è riuscito né a leggere né a riparare). Gli SSD NVMe contano invece gli errori di lettura o scrittura. Per i dischi rigidi e gli SSD SATA, Windows non ha una schermata che mostri questi valori; li legge il Controllo approfondito di Fettle, che prima chiede l'accesso da amministratore, e puoi rifiutare.",
+          "I dischi rigidi e gli SSD SATA tengono un registro diverso, chiamato SMART. I valori da guardare sono i settori riallocati (punti usurati già sostituiti con quelli di riserva), i settori in sospeso (punti che il disco fatica a leggere) e i settori non correggibili (punti che non è riuscito né a leggere né a riparare). Gli SSD NVMe contano invece gli errori di lettura o scrittura. Per i dischi rigidi e gli SSD SATA, Windows non ha una schermata che mostri questi valori; li legge il Controllo approfondito di Fettle.",
           "Un numero piccolo che resta fermo va tenuto d'occhio. Uno che continua a crescere vuol dire che il disco sta peggiorando.",
         ],
       },

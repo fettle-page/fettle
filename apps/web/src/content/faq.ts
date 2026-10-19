@@ -27,7 +27,7 @@ const en: Faq[] = [
     q: "Does it need administrator rights?",
     a: [
       "No. The Quick check runs as a regular user.",
-      "Disk health needs administrator access, so there's an optional Deep check that asks for it and explains why. Without it, the receipt says the disk health couldn't be checked, rather than guessing.",
+      "Disk health needs administrator access, so there's an optional Deep check that asks for it and explains why. Without it, the receipt says the disk health couldn't be checked.",
     ],
   },
   {
@@ -109,7 +109,7 @@ const it: Faq[] = [
     q: "Servono i diritti di amministratore?",
     a: [
       "No. Il Controllo rapido funziona come utente standard.",
-      "La salute dei dischi richiede l'accesso da amministratore, quindi c'è un Controllo approfondito facoltativo che lo chiede e spiega perché. Senza, lo scontrino dice che la salute del disco non è stata verificata, invece di tirare a indovinare.",
+      "La salute dei dischi richiede l'accesso da amministratore, quindi c'è un Controllo approfondito facoltativo che lo chiede e spiega perché. Senza, lo scontrino dice che la salute del disco non è stata verificata.",
     ],
   },
   {

@@ -3,10 +3,10 @@ import type { Locale } from "./paths.ts";
 
 const en = {
   title: "Fettle — a free check-up for Windows PCs",
-  description: "A free Windows check-up that takes a few seconds and prints a receipt you can actually read. Battery, disks, memory, Windows, startup. In plain words.",
+  description: "A free Windows check-up that takes a few seconds and prints a receipt you can actually read. It covers battery, disks, memory, Windows and startup apps.",
   h1a: "Is your PC in",
   h1b: "fine fettle?",
-  lede: "A free Windows check-up that takes a few seconds and prints a receipt you can actually read. Battery, disks, memory, Windows, startup. In plain words.",
+  lede: "A free Windows check-up that takes a few seconds and prints a receipt you can actually read. It covers battery, disks, memory, Windows and startup apps.",
   ctaDownload: "Download for Windows",
   ctaSample: "See a sample receipt",
   fine: "Free\u00a0· open source\u00a0· no tracking\u00a0· Windows 10 & 11",
@@ -54,7 +54,7 @@ const en = {
   traySystem: "The parts list, so a technician knows what they're looking at.",
 
   techKicker: "For technicians",
-  techH: "Hand the customer a receipt, not a lecture.",
+  techH: "Hand the customer a receipt that explains itself.",
   techP: "Run it on the bench, print it on A4 or Letter, or send a link. The customer reads the verdicts; you get the numbers.",
   tech1: "Print or save as PDF",
   tech2: "Share links that expire in 7 days, 30 days or 1 year",
@@ -95,10 +95,10 @@ export type HomeKey = keyof typeof en;
 
 const it: Record<HomeKey, string> = {
   title: "Fettle — il controllo gratuito per PC Windows",
-  description: "Un controllo gratuito per Windows che dura pochi secondi e stampa uno scontrino che si capisce davvero. Batteria, dischi, memoria, Windows, avvio. Parole semplici.",
+  description: "Un controllo gratuito per Windows che dura pochi secondi e stampa uno scontrino che si capisce davvero. Controlla batteria, dischi, memoria, Windows e app di avvio.",
   h1a: "Il tuo PC è",
   h1b: "in forma?",
-  lede: "Un controllo gratuito per Windows che dura pochi secondi e stampa uno scontrino che si capisce davvero. Batteria, dischi, memoria, Windows, avvio. Parole semplici.",
+  lede: "Un controllo gratuito per Windows che dura pochi secondi e stampa uno scontrino che si capisce davvero. Controlla batteria, dischi, memoria, Windows e app di avvio.",
   ctaDownload: "Scarica per Windows",
   ctaSample: "Guarda uno scontrino",
   fine: "Gratis\u00a0· open source\u00a0· nessun tracciamento\u00a0· Windows 10 e 11",
@@ -146,7 +146,7 @@ const it: Record<HomeKey, string> = {
   traySystem: "L'elenco dei componenti, così il tecnico sa cosa ha davanti.",
 
   techKicker: "Per i tecnici",
-  techH: "Consegna al cliente uno scontrino, non una lezione.",
+  techH: "Consegna al cliente uno scontrino che si spiega da solo.",
   techP: "Avvialo al banco, stampalo su A4 o Letter, oppure manda un link. Il cliente legge i verdetti; tu hai i numeri.",
   tech1: "Stampa o salva in PDF",
   tech2: "Link condivisi che scadono dopo 7 giorni, 30 giorni o 1 anno",

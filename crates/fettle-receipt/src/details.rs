@@ -4,7 +4,7 @@
 use crate::format::{bytes, int, iso_day, temp};
 use crate::memory::{channel_of, rated_from_part_number, slot_of};
 use crate::ui;
-use fettle_facts::{Battery, Bus, Facts, FormFactor, Graphics, Media, Memory, MemoryKind, Startup, Storage, Windows};
+use fettle_facts::{Battery, Bus, Chassis, Facts, FormFactor, Graphics, Media, Memory, MemoryKind, Startup, Storage, Windows};
 use fettle_verdicts::{Locale, Param, SectionId, fmt};
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
@@ -134,7 +134,7 @@ fn trimmed(s: Option<&String>) -> Option<&str> {
     s.map(|s| s.trim()).filter(|s| !s.is_empty())
 }
 
-fn memory(d: &Memory, locale: Locale) -> Vec<DetailGroup> {
+fn memory(d: &Memory, laptop: bool, locale: Locale) -> Vec<DetailGroup> {
     let modules = &d.modules;
     // Soldered memory (LPDDR) has no slots, and its chips' narrow channels don't mean what a
     // stick's do: four LPDDR5 channels are as wide as an ordinary desktop's two.
@@ -207,12 +207,14 @@ fn memory(d: &Memory, locale: Locale) -> Vec<DetailGroup> {
         })
     };
     // Some firmware reports fewer slots than the sticks it lists; a contradiction is shown as unknown.
+    // Laptop firmware often reports slots that aren't there, so a laptop shows only the ones in use.
     let slots = if soldered {
         Some(ui("d.soldered", locale, &[]))
     } else {
+        let used = ("used", Param::Int(modules.len() as i64));
         d.slots_total
             .filter(|t| *t > 0 && *t as usize >= modules.len())
-            .map(|t| ui("d.slots_used", locale, &[("used", Param::Int(modules.len() as i64)), ("total", Param::Int(t.into()))]))
+            .map(|t| if laptop { ui("d.slots_in_use", locale, &[used]) } else { ui("d.slots_used", locale, &[used, ("total", Param::Int(t.into()))]) })
     };
     let summary = DetailGroup { title: None, rows: rows_of(locale, vec![("d.total", binary_gb(Some(total))), ("d.slots", slots), ("d.channels", channel_text)]) };
     let mut list = sticks;
@@ -348,7 +350,7 @@ pub fn section_details(id: SectionId, facts: &Facts, locale: Locale) -> Vec<Deta
     match id {
         SectionId::Storage => data(&facts.storage).map(|d| storage(d, locale)),
         SectionId::Battery => data(&facts.battery).map(|d| battery(d, locale)),
-        SectionId::Memory => data(&facts.memory).map(|d| memory(d, locale)),
+        SectionId::Memory => data(&facts.memory).map(|d| memory(d, data(&facts.system).is_some_and(|s| s.chassis == Some(Chassis::Laptop)), locale)),
         SectionId::Windows => data(&facts.windows).map(|d| windows(d, locale)),
         SectionId::Startup => data(&facts.startup).map(|d| startup(d, locale)),
         SectionId::Graphics => data(&facts.graphics).map(|d| graphics(d, locale)),
@@ -402,7 +404,7 @@ mod tests {
         use fettle_facts::MemoryModule;
         for (kind, name) in [(MemoryKind::Ddr3, "DDR3"), (MemoryKind::Lpddr3, "LPDDR3"), (MemoryKind::Lpddr4, "LPDDR4"), (MemoryKind::Lpddr5, "LPDDR5"), (MemoryKind::Ddr4, "DDR4"), (MemoryKind::Ddr5, "DDR5")] {
             let d = Memory { modules: vec![MemoryModule { kind: Some(kind), ..Default::default() }], ..Default::default() };
-            let rows: Vec<_> = memory(&d, Locale::En).into_iter().flat_map(|g| g.rows).collect();
+            let rows: Vec<_> = memory(&d, false, Locale::En).into_iter().flat_map(|g| g.rows).collect();
             assert!(rows.iter().any(|r| r.value == name), "{name}: {rows:?}");
         }
     }

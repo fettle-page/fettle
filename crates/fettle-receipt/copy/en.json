@@ -42,6 +42,7 @@
   "d.stick": "Stick {n}",
   "d.slots": "Slots",
   "d.slots_used": "{used} of {total} used",
+  "d.slots_in_use": "{used} in use",
   "d.soldered": "none, soldered to the board",
   "d.speed": "Speed",
   "d.speed_max": "{now} MT/s (max {max})",

@@ -42,6 +42,7 @@
   "d.stick": "Banco {n}",
   "d.slots": "Slot",
   "d.slots_used": "{used} su {total} occupati",
+  "d.slots_in_use": "{used} in uso",
   "d.soldered": "nessuno, saldata sulla scheda madre",
   "d.speed": "Velocità",
   "d.speed_max": "{now} MT/s (massima {max})",

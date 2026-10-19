@@ -16,7 +16,7 @@ pub use render::{fill, render, template};
 pub use summary::summarize;
 pub use types::{Level, Line, MessageRef, Param, Receipt, SectionId, SectionVerdict, Summary};
 
-use fettle_facts::Facts;
+use fettle_facts::{Chassis, Facts};
 
 /// Recorded in each report, so a shared receipt can show the verdicts the user saw.
 pub const ENGINE_VERSION: &str = "1.0.5";
@@ -24,9 +24,10 @@ pub const ENGINE_VERSION: &str = "1.0.5";
 /// Turns raw facts into a receipt. Pure: the time (ms since 1970, for age rules) and whether the
 /// scan ran as administrator come in as arguments.
 pub fn evaluate(facts: &Facts, now_ms: i64, elevated: bool) -> Receipt {
+    let laptop = facts.system.as_ref().and_then(|s| s.data.as_ref()).is_some_and(|d| d.chassis == Some(Chassis::Laptop));
     let mut sections = vec![rules::storage::storage_rules(facts.storage.as_ref(), elevated)];
     sections.extend(rules::others::battery_rules(facts.battery.as_ref()));
-    sections.push(rules::others::memory_rules(facts.memory.as_ref()));
+    sections.push(rules::others::memory_rules(facts.memory.as_ref(), laptop));
     sections.push(rules::windows::windows_rules(facts.windows.as_ref(), now_ms, elevated, facts.system.as_ref().and_then(|s| s.data.as_ref()).and_then(|d| d.cpu_name.as_deref())));
     sections.push(rules::others::startup_rules(facts.startup.as_ref()));
     sections.push(rules::others::graphics_rules(facts.graphics.as_ref(), now_ms));

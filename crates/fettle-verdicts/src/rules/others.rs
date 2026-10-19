@@ -34,7 +34,7 @@ pub fn battery_rules(s: Option<&Section<Battery>>) -> Option<SectionVerdict> {
 
 // The "probably running below its rated speed" guess waits for a test on a machine with XMP/EXPO
 // off: WMI's Speed field didn't behave as assumed.
-pub fn memory_rules(s: Option<&Section<Memory>>) -> SectionVerdict {
+pub fn memory_rules(s: Option<&Section<Memory>>, laptop: bool) -> SectionVerdict {
     let problem = section_problem(SectionId::Memory, s.map(|s| &s.check));
     let data = s.and_then(|s| s.data.as_ref());
     let modules = data.map(|d| d.modules.as_slice()).unwrap_or(&[]);
@@ -44,9 +44,11 @@ pub fn memory_rules(s: Option<&Section<Memory>>) -> SectionVerdict {
     let bytes: f64 = modules.iter().map(|m| m.capacity_bytes.unwrap_or(0) as f64).sum();
     let gb = (bytes / 2f64.powi(30)).round() as i64;
     let mut lines = vec![line("memory", Level::Fine, "memory.fine", &[("gb", Param::Int(gb)), ("sticks", Param::Int(modules.len() as i64))], Action::Default)];
-    // LPDDR is soldered to the board: there's no second stick to add.
+    // LPDDR is soldered to the board: there's no second stick to add. Nor is there on many laptops
+    // whose firmware counts slots that aren't there (an ASUS X541UJ said 4 for soldered memory plus
+    // one slot, and its soldered memory reads as an ordinary stick), so laptops get no tip.
     let soldered = data.is_some_and(Memory::soldered);
-    if modules.len() == 1 && !soldered && data.and_then(|d| d.slots_total).unwrap_or(0) >= 2 {
+    if modules.len() == 1 && !soldered && !laptop && data.and_then(|d| d.slots_total).unwrap_or(0) >= 2 {
         lines.push(line("memory-channels", Level::Info, "memory.single_channel", &[], Action::Default));
     }
     SectionVerdict { section: SectionId::Memory, lines }

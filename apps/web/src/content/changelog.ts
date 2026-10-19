@@ -19,7 +19,7 @@ export function checkChangelog(entries: Release[]): void {
 export const releases: Release[] = [
   {
     version: "1.0.6",
-    date: null,
+    date: "2026-10-19",
     notes: {
       en: [
         "The site has a new Guides section: short, plain answers to common questions about a Windows PC, with the steps to check each one with Windows' own tools.",

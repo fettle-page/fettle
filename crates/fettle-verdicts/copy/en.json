@@ -81,7 +81,7 @@
   "windows.cpu_ready": "This processor is on Microsoft's list for Windows 11.",
   "windows.cpu_unsupported": "This processor isn't on Microsoft's list for Windows 11, so Windows Update won't offer the upgrade.",
   "windows.cpu_unknown": "Fettle couldn't tell whether this processor is on Microsoft's list for Windows 11.",
-  "windows.cpu_unsupported_w11": "This processor isn't on Microsoft's list for Windows 11. Windows runs, but Microsoft doesn't promise updates on PCs like this.",
+  "windows.cpu_unsupported_w11": "This processor isn't on Microsoft's list for Windows 11. Windows runs, but on PCs like this Microsoft doesn't promise to keep sending updates.",
   "windows.tpm_unknown": "Fettle couldn't check the TPM security chip.",
   "windows.no_tpm": "No TPM security chip found. Windows 11 needs TPM 2.0; most processors from the last few years have one built in that can be turned on in the BIOS (fTPM or PTT).",
   "windows.tpm_ready": "TPM 2.0 is present, as Windows 11 requires.",

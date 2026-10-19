@@ -594,7 +594,13 @@ section.hero {
 .prose h2 time { margin-left: 10px; font: 500 14px var(--font-mono); color: var(--color-ink-soft); letter-spacing: 0; }
 .prose p { margin: 0 0 12px; text-wrap: pretty; }
 .prose ul { margin: 0; padding-left: 1.1em; list-style: disc; } /* the reset drops markers; these lists want them */
+.prose ol { margin: 0 0 12px; padding-left: 1.4em; list-style: decimal; }
 .prose li { margin: 6px 0; }
+.prose .guide-list { padding-left: 0; list-style: none; }
+.prose .guide-list li + li { margin-top: 22px; }
+.prose .guide-list a { font-weight: 600; }
+.prose .guide-list p { margin: 4px 0 0; }
+.prose .guide-links { display: flex; flex-wrap: wrap; gap: 8px 24px; margin-top: 34px; }
 .prose li::marker { color: var(--color-mat); }
 .prose a:not(.btn) { color: var(--color-mat); }
 .prose a:focus-visible { outline-color: var(--color-mat); }

@@ -1,0 +1,11 @@
+---
+import { guides } from "../../content/guides.ts";
+import View from "../../views/Guide.astro";
+
+export function getStaticPaths() {
+  return guides.map((guide) => ({ params: { slug: guide.slug }, props: { guide } }));
+}
+const { guide } = Astro.props;
+---
+
+<View locale="en" guide={guide} />

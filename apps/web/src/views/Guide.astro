@@ -1,0 +1,43 @@
+---
+// One guide (content/guides/<slug>.ts): its sections, then the way to Fettle and back to the guides.
+import Doc from "../components/Doc.astro";
+import { guidesPage, type Guide } from "../content/guides.ts";
+import { localePath, type Locale } from "../i18n/paths.ts";
+import Base from "../layouts/Base.astro";
+
+interface Props {
+  locale: Locale;
+  guide: Guide;
+}
+const { locale, guide } = Astro.props;
+const c = guide[locale];
+const page = guidesPage[locale];
+---
+
+<Base locale={locale} path={`/guides/${guide.slug}`} title={c.title} description={c.description}>
+  <Doc kicker={c.kicker} title={c.h1} intro={c.intro}>
+    <article class="prose">
+      {
+        c.sections.map((s) => (
+          <section>
+            <h2>{s.h}</h2>
+            {s.p.map((p) => (
+              <p>{p}</p>
+            ))}
+            {s.steps && (
+              <ol>
+                {s.steps.map((step) => (
+                  <li>{step}</li>
+                ))}
+              </ol>
+            )}
+          </section>
+        ))
+      }
+      <p class="guide-links">
+        <a href={localePath(locale, "/download")}>{page.download}</a>
+        <a href={localePath(locale, "/guides")}>{page.back}</a>
+      </p>
+    </article>
+  </Doc>
+</Base>

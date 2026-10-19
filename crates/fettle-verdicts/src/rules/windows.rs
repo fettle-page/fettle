@@ -21,9 +21,16 @@ pub fn windows_rules(s: Option<&Section<Windows>>, now_ms: i64, elevated: bool, 
 
     if build < 22000 {
         lines.extend(readiness_lines(w, elevated, cpu_name));
-    } else if w.secure_boot == Some(false) {
-        // Windows 11 runs with Secure Boot off; say why turning it on helps, without calling it a fault.
-        lines.push(line("windows-secure-boot", Level::Info, "windows.secure_boot_off_w11", &[], Action::Default));
+    } else {
+        // Windows 11 installed on a processor Microsoft doesn't list: it runs, but Microsoft doesn't
+        // promise it updates. A note, not a fault; a listed or unknown processor says nothing.
+        if super::cpu::win11_cpu(cpu_name) == super::cpu::Win11Cpu::Unsupported {
+            lines.push(line("windows-cpu", Level::Info, "windows.cpu_unsupported_w11", &[], Action::Default));
+        }
+        if w.secure_boot == Some(false) {
+            // Windows 11 runs with Secure Boot off; say why turning it on helps, without calling it a fault.
+            lines.push(line("windows-secure-boot", Level::Info, "windows.secure_boot_off_w11", &[], Action::Default));
+        }
     }
     SectionVerdict { section: SectionId::Windows, lines }
 }
@@ -107,7 +114,8 @@ fn esu_state(w: &Windows, build: u32) -> Option<EsuState> {
     }
 }
 
-/// Windows 11 readiness, shown only on Windows 10. Informational: these aren't faults.
+/// Windows 11 readiness, shown only on Windows 10 (Windows 11 itself gets only the processor and
+/// Secure Boot notes in `windows_rules`). Informational: these aren't faults.
 fn readiness_lines(w: &Windows, elevated: bool, cpu_name: Option<&str>) -> Vec<Line> {
     let key = match super::cpu::win11_cpu(cpu_name) {
         super::cpu::Win11Cpu::Supported => "windows.cpu_ready",

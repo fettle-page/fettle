@@ -80,6 +80,7 @@
   "windows.cpu_ready": "Questo processore è nell'elenco di Microsoft per Windows 11.",
   "windows.cpu_unsupported": "Questo processore non è nell'elenco di Microsoft per Windows 11, quindi Windows Update non proporrà l'aggiornamento.",
   "windows.cpu_unknown": "Fettle non è riuscito a capire se questo processore è nell'elenco di Microsoft per Windows 11.",
+  "windows.cpu_unsupported_w11": "Questo processore non è nell'elenco di Microsoft per Windows 11. Windows funziona, ma Microsoft non garantisce gli aggiornamenti sui PC come questo.",
   "windows.tpm_unknown": "Fettle non è riuscito a controllare il chip di sicurezza TPM.",
   "windows.no_tpm": "Nessun chip di sicurezza TPM trovato. Windows 11 richiede il TPM 2.0; la maggior parte dei processori recenti ne ha uno integrato da attivare nel BIOS (fTPM o PTT).",
   "windows.tpm_ready": "Il TPM 2.0 è presente, come richiesto da Windows 11.",

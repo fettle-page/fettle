@@ -18,6 +18,7 @@ describe("the guides", () => {
         const other = g.it.sections[i]!;
         expect(other.p.length, `${g.slug} section ${i}`).toBe(s.p.length);
         expect(other.steps?.length, `${g.slug} section ${i} steps`).toBe(s.steps?.length);
+        expect(other.link?.href, `${g.slug} section ${i} link`).toBe(s.link?.href);
       });
       for (const c of [g.en, g.it]) {
         for (const field of [c.title, c.description, c.summary, c.kicker, c.h1, c.intro]) expect(field.trim().length, g.slug).toBeGreaterThan(2);
@@ -65,6 +66,21 @@ describe("each guide", () => {
       expect(links, file).toContain(`href="${prefix}/download"`);
       expect(links, file).toContain(`href="${prefix}/guides"`);
     }
+  });
+});
+
+describe("a link inside a guide", () => {
+  const links = guides.flatMap((g) => g.en.sections.flatMap((s, i) => (s.link ? [{ slug: g.slug, i, href: s.link.href }] : [])));
+
+  it("exists somewhere, so this test checks something", () => {
+    expect(links.length).toBeGreaterThan(0);
+  });
+
+  it.each(links)("$slug section $i points to a guide that exists, in each language", ({ slug, i, href }) => {
+    expect(guides.map((g) => `/guides/${g.slug}`), href).toContain(href);
+    const section = (html: string) => [...main(html).matchAll(/<section[^>]*>([\s\S]*?)<\/section>/g)][i]?.[1] ?? "";
+    expect(section(page(`guides/${slug}.html`))).toContain(`href="${href}"`);
+    expect(section(page(`it/guides/${slug}.html`))).toContain(`href="/it${href}"`);
   });
 });
 

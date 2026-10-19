@@ -14,11 +14,11 @@ import type { Guide } from "../guides.ts";
 const guide: Guide = {
   slug: "disk-health",
   en: {
-    title: "Is my SSD or hard drive failing? — Fettle",
+    title: "Is my SSD or hard drive wearing out? — Fettle",
     description: "How to tell whether an SSD or hard drive is wearing out, check its health with Windows' own tools, understand the numbers, and know when to replace it.",
     summary: "The signs of a worn drive, how to check its health in Windows, and when to replace it.",
     kicker: "Guide",
-    h1: "Is my SSD or hard drive failing?",
+    h1: "Is my SSD or hard drive wearing out?",
     intro: "Drives wear out over the years, and many keep a record of their own health. Here's what to look for, how to check with Windows' own tools, and what to do next.",
     sections: [
       {
@@ -51,7 +51,7 @@ const guide: Guide = {
         h: "What the numbers mean",
         p: [
           "Estimated remaining life is how much of its rated life the SSD has left, by the manufacturer's estimate. At 0% the drive doesn't stop that day, but it's past what the maker planned for. Available spare is the reserve that replaces worn-out cells; Windows warns when it drops below the maker's threshold.",
-          "Hard drives and SATA SSDs keep a different record, called SMART. The counts that matter are reallocated sectors (worn spots already replaced with spare ones), pending sectors (spots the drive is struggling to read) and uncorrectable sectors (spots it couldn't read or repair). NVMe SSDs count media errors: reads or writes that went wrong.",
+          "Hard drives and SATA SSDs keep a different record, called SMART. The counts that matter are reallocated sectors (worn spots already replaced with spare ones), pending sectors (spots the drive is struggling to read) and uncorrectable sectors (spots it couldn't read or repair). NVMe SSDs count media errors: reads or writes that went wrong. Windows has no screen that shows these counts for hard drives and SATA SSDs; Fettle's Deep check reads them, and it asks for administrator access first, which you can refuse.",
           "A small number that stays the same is worth watching. One that keeps growing means the drive is getting worse.",
         ],
       },
@@ -68,18 +68,18 @@ const guide: Guide = {
         p: [
           "The Storage section of Fettle's receipt has a line for each drive inside the PC, like \"Samsung 990 PRO looks healthy, 3% worn.\" Fettle counts the life used, where Windows counts the life left. Fettle only reads: it doesn't test, repair or change anything.",
           "Fettle reads an NVMe SSD's health without administrator rights. Windows shares a SATA drive's health only with an administrator, so there the Quick check says \"Run a Deep check to see it.\" The Deep check asks for administrator access, and you can say no. Some drives don't share their health with Windows at all, and USB drives aren't checked.",
-          "From 80% worn, an SSD gets a WATCH line: \"It still works, but back up anything important and plan a replacement in the next year or so.\" At 100% worn, or when a drive reports a problem with itself or has pending or uncorrectable sectors, the line is ACT and starts \"Back up anything important now.\" (A single pending sector on an SSD gets WATCH.) Replaced sectors and read or write errors get a WATCH line, as does a drive above 70 °C (55 °C for a hard drive).",
+          "From 80% worn, an SSD gets a WATCH line: \"It still works, but back up anything important and plan a replacement in the next year or so.\" At 100% worn, or when a drive reports a problem with itself or has pending or uncorrectable sectors, the line is ACT, and its Next step starts \"Back up anything important now\". (A single pending sector on an SSD gets WATCH.) Replaced sectors and read or write errors get a WATCH line, as does a drive above 70 °C (55 °C for a hard drive).",
           "Under 10% free, a drive is \"almost full\" (a drive other than C: only if less than about 50 GB is left). If everything else is fine but a drive's health couldn't be read, the receipt says \"Fine so far, but Fettle couldn't read the disks' health.\"",
         ],
       },
     ],
   },
   it: {
-    title: "Il mio SSD o disco rigido si sta guastando? — Fettle",
+    title: "Il mio SSD o disco rigido si sta consumando? — Fettle",
     description: "Come capire se un SSD o un disco rigido si sta consumando, controllarne lo stato con gli strumenti di Windows, leggere i valori e sapere quando sostituirlo.",
     summary: "I segnali di un disco consumato, come controllarne lo stato in Windows e quando sostituirlo.",
     kicker: "Guida",
-    h1: "Il mio SSD o disco rigido si sta guastando?",
+    h1: "Il mio SSD o disco rigido si sta consumando?",
     intro: "Con gli anni i dischi si consumano, e molti tengono traccia del proprio stato. Ecco a cosa fare attenzione, come controllare con gli strumenti di Windows e cosa fare dopo.",
     sections: [
       {
@@ -111,8 +111,8 @@ const guide: Guide = {
       {
         h: "Cosa significano i valori",
         p: [
-          "La vita residua stimata è la parte di vita prevista che resta all'SSD, secondo la stima del produttore. A 0% il disco non si ferma quel giorno, ma ha superato la durata prevista. Il ricambio disponibile è la riserva che sostituisce le celle usurate; Windows avvisa quando scende sotto la soglia del produttore.",
-          "I dischi rigidi e gli SSD SATA tengono un registro diverso, chiamato SMART. I contatori che contano sono i settori riallocati (punti usurati già sostituiti con quelli di riserva), i settori in sospeso (punti che il disco fatica a leggere) e i settori non correggibili (punti che non è riuscito né a leggere né a riparare). Gli SSD NVMe contano invece gli errori di lettura o scrittura.",
+          "La vita residua stimata è la parte di vita prevista che resta all'SSD, secondo la stima del produttore. Allo 0% il disco non si ferma quel giorno, ma ha superato la durata prevista. Il ricambio disponibile è la riserva che sostituisce le celle usurate; Windows avvisa quando scende sotto la soglia del produttore.",
+          "I dischi rigidi e gli SSD SATA tengono un registro diverso, chiamato SMART. I valori da guardare sono i settori riallocati (punti usurati già sostituiti con quelli di riserva), i settori in sospeso (punti che il disco fatica a leggere) e i settori non correggibili (punti che non è riuscito né a leggere né a riparare). Gli SSD NVMe contano invece gli errori di lettura o scrittura. Per i dischi rigidi e gli SSD SATA, Windows non ha una schermata che mostri questi valori; li legge il Controllo approfondito di Fettle, che prima chiede l'accesso da amministratore, e puoi rifiutare.",
           "Un numero piccolo che resta fermo va tenuto d'occhio. Uno che continua a crescere vuol dire che il disco sta peggiorando.",
         ],
       },
@@ -129,7 +129,7 @@ const guide: Guide = {
         p: [
           "Nella sezione Spazio di archiviazione dello scontrino, Fettle dedica una riga a ogni disco interno del PC, per esempio \"Samsung 990 PRO sembra in salute (usura 3%).\" Fettle conta la vita consumata, Windows quella che resta. Fettle legge e basta: non mette alla prova il disco, non lo ripara e non cambia nulla.",
           "Fettle legge lo stato di un SSD NVMe senza permessi di amministratore. Windows condivide lo stato di un disco SATA solo con un amministratore, quindi lì il Controllo rapido dice \"Avvia un Controllo approfondito per vederlo.\" Il Controllo approfondito chiede l'accesso da amministratore, e puoi rifiutare. Alcuni dischi non condividono affatto il loro stato con Windows, e le unità USB non vengono controllate.",
-          "Con usura da 80% in su, un SSD riceve una riga OCCHIO: \"Funziona ancora, ma fai un backup dei file importanti e pensa a sostituirlo entro un anno circa.\" Con usura 100%, o se un disco segnala un problema o ha settori in sospeso o non correggibili, la riga è AGISCI e inizia con \"Fai subito un backup dei file importanti\". (Un solo settore in sospeso su un SSD dà OCCHIO.) I settori sostituiti e gli errori di lettura o scrittura danno una riga OCCHIO, come un disco sopra 70 °C (55 °C per un disco rigido).",
+          "Da un'usura dell'80% in su, un SSD riceve una riga OCCHIO: \"Funziona ancora, ma fai un backup dei file importanti e pensa a sostituirlo entro un anno circa.\" Con un'usura del 100%, o se un disco segnala un problema o ha settori in sospeso o non correggibili, la riga è AGISCI, e sotto Cosa fare il consiglio inizia con \"Fai subito un backup dei file importanti\". (Un solo settore in sospeso su un SSD dà OCCHIO.) I settori sostituiti e gli errori di lettura o scrittura danno una riga OCCHIO, come un disco sopra 70 °C (55 °C per un disco rigido).",
           "Con meno di un decimo di spazio libero, un'unità risulta \"quasi piena\" (un'unità diversa da C: solo se le restano meno di circa 50 GB). Se tutto il resto è a posto ma lo stato di un disco non si è potuto leggere, lo scontrino dice \"Tutto a posto finora, ma Fettle non è riuscito a leggere lo stato dei dischi.\"",
         ],
       },

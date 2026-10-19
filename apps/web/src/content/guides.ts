@@ -7,8 +7,11 @@ import diskHealth from "./guides/disk-health.ts";
 import batteryHealth from "./guides/battery-health.ts";
 import windows11Ready from "./guides/windows-11-ready.ts";
 
-/** A part of a guide: a heading, paragraphs, then (optionally) numbered steps. */
-export type GuideSection = { h: string; p: string[]; steps?: string[] };
+/**
+ * A part of a guide: a heading, paragraphs, then (optionally) numbered steps and a link of its own.
+ * The link's href is a site path in English form, like "/guides/windows-10-updates"; the page adds /it.
+ */
+export type GuideSection = { h: string; p: string[]; steps?: string[]; link?: { href: string; label: string } };
 
 export type GuideCopy = {
   /** The browser tab title, "… — Fettle". */

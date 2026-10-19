@@ -95,7 +95,7 @@ const guide: Guide = {
       {
         h: "Come si riconosce una batteria usurata",
         p: [
-          "Il segnale più comune è meno autonomia: a parità di lavoro, il portatile chiede il caricabatterie prima di una volta.",
+          "Il segnale più comune è meno autonomia: a parità di lavoro, il portatile chiede il caricabatterie prima di quanto faceva una volta.",
           "Anche un'app che lavora molto o uno schermo più luminoso accorciano l'autonomia, quindi guarda i numeri prima di dare la colpa alla batteria.",
           "Di rado una batteria vecchia si gonfia. Se deforma visibilmente la scocca, Microsoft consiglia di smettere di usare il portatile e di far sostituire la batteria.",
         ],

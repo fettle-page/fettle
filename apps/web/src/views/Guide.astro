@@ -31,6 +31,11 @@ const page = guidesPage[locale];
                 ))}
               </ol>
             )}
+            {s.link && (
+              <p class="guide-section-link">
+                <a href={localePath(locale, s.link.href)}>{s.link.label}</a>
+              </p>
+            )}
           </section>
         ))
       }

@@ -6,10 +6,10 @@ use fettle_receipt::{Zone, receipt_for};
 use fettle_verdicts::Locale;
 use serde_json::{Value, json};
 
-fn slots(chassis: Option<&str>, modules: Value, locale: Locale) -> Vec<String> {
+fn slots_with(chassis: Option<&str>, modules: Value, total: Value, locale: Locale) -> Vec<String> {
     let mut report = json!({
         "schema_version": 1, "app_version": "1.0.5", "collected_at": "2026-10-15T10:00:00Z", "elevated": true,
-        "facts": { "memory": { "check": { "status": "ok" }, "data": { "modules": modules, "slots_total": 4 } } }
+        "facts": { "memory": { "check": { "status": "ok" }, "data": { "modules": modules, "slots_total": total } } }
     });
     if let Some(c) = chassis {
         report["facts"]["system"] = json!({ "check": { "status": "ok" }, "data": { "chassis": c } });
@@ -27,6 +27,10 @@ fn slots(chassis: Option<&str>, modules: Value, locale: Locale) -> Vec<String> {
         .filter(|r| r["label"] == "Slots" || r["label"] == "Slot")
         .map(|r| r["value"].as_str().unwrap_or_default().to_string())
         .collect()
+}
+
+fn slots(chassis: Option<&str>, modules: Value, locale: Locale) -> Vec<String> {
+    slots_with(chassis, modules, json!(4), locale)
 }
 
 fn sticks(kind: &str) -> Value {
@@ -51,4 +55,13 @@ fn other_pcs_keep_the_total() {
 #[test]
 fn soldered_memory_on_a_laptop_still_says_so() {
     assert_eq!(slots(Some("laptop"), sticks("lpddr4"), Locale::En), ["none, soldered to the board"]);
+}
+
+#[test]
+fn a_laptop_shows_the_slots_in_use_without_any_total_from_the_firmware() {
+    // No total, or one smaller than the sticks listed: the sticks in use are still known.
+    for total in [Value::Null, json!(0), json!(1)] {
+        assert_eq!(slots_with(Some("laptop"), sticks("ddr4"), total.clone(), Locale::En), ["2 in use"], "{total}");
+        assert!(slots_with(Some("desktop"), sticks("ddr4"), total.clone(), Locale::En).is_empty(), "{total}");
+    }
 }

@@ -96,3 +96,13 @@ fn a_hot_nvme_drive_is_not_called_failing() {
     let failing = judge(nvme(0x02 | 0x04), "2026-10-11T10:00:00Z", true);
     assert_eq!(find(&failing, "disk-0-critical").level, Level::ActSoon);
 }
+
+// Every NVMe drive is an SSD, even when Windows doesn't say what kind of drive it is.
+#[test]
+fn an_nvme_drive_of_unknown_type_counts_as_an_ssd() {
+    let disk = |media: Value| json!({ "storage": ok(json!({ "disks": [{ "bus": "nvme", "media": media, "model": "Example NVMe", "nvme": { "critical_warning": 0, "media_errors": 0 } }] })) });
+    for media in [json!("unknown"), Value::Null] {
+        let r = judge(disk(media.clone()), "2026-10-11T10:00:00Z", false);
+        assert_eq!(find(&r, "disk-0").headline.key, "storage.disk_fine_no_wear", "{media}");
+    }
+}

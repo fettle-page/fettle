@@ -207,14 +207,15 @@ fn memory(d: &Memory, laptop: bool, locale: Locale) -> Vec<DetailGroup> {
         })
     };
     // Some firmware reports fewer slots than the sticks it lists; a contradiction is shown as unknown.
-    // Laptop firmware often reports slots that aren't there, so a laptop shows only the ones in use.
+    // Laptop firmware often reports slots that aren't there, so a laptop shows only the ones in use,
+    // whatever total the firmware gives.
+    let used = ("used", Param::Int(modules.len() as i64));
     let slots = if soldered {
         Some(ui("d.soldered", locale, &[]))
+    } else if laptop {
+        Some(ui("d.slots_in_use", locale, &[used])).filter(|_| !modules.is_empty())
     } else {
-        let used = ("used", Param::Int(modules.len() as i64));
-        d.slots_total
-            .filter(|t| *t > 0 && *t as usize >= modules.len())
-            .map(|t| if laptop { ui("d.slots_in_use", locale, &[used]) } else { ui("d.slots_used", locale, &[used, ("total", Param::Int(t.into()))]) })
+        d.slots_total.filter(|t| *t > 0 && *t as usize >= modules.len()).map(|t| ui("d.slots_used", locale, &[used, ("total", Param::Int(t.into()))]))
     };
     let summary = DetailGroup { title: None, rows: rows_of(locale, vec![("d.total", binary_gb(Some(total))), ("d.slots", slots), ("d.channels", channel_text)]) };
     let mut list = sticks;

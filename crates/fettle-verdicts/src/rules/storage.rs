@@ -80,7 +80,8 @@ fn disk_lines(disk: &Disk, id: &str, elevated: bool) -> Vec<Line> {
     let model: Param = disk.model.clone().unwrap_or_else(|| "?".into()).into();
     let mut issues = Vec::new();
     let mut wear_pct: Option<u8> = None;
-    let ssd = disk.media == Some(Media::Ssd);
+    // Every NVMe drive is an SSD, even when Windows doesn't say what kind of drive it is.
+    let ssd = disk.media == Some(Media::Ssd) || (disk.media != Some(Media::Hdd) && disk.bus == Some(Bus::Nvme));
 
     if let Some(n) = disk.nvme.as_ref().filter(|n| has_nvme_health(n)) {
         // The drive's own verdict: any critical-warning bit, or spare capacity below its threshold.

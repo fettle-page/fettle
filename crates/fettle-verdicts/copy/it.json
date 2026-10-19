@@ -18,6 +18,7 @@
   "storage.couldnt_check": "Fettle non è riuscito a controllare i dischi.",
   "storage.disk_fine": "{model} sembra in salute.",
   "storage.disk_fine_wear": "{model} sembra in salute (usura {pct}%).",
+  "storage.disk_fine_no_wear": "{model} sembra in salute, ma non indica la propria usura.",
   "storage.ssd_wearing": "{model} si sta consumando (usura {pct}%).",
   "storage.ssd_wearing.action": "Funziona ancora, ma fai un backup dei file importanti e pensa a sostituirlo entro un anno circa.",
   "storage.ssd_worn": "{model} ha raggiunto la fine della sua vita prevista.",

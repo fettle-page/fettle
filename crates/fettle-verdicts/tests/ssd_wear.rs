@@ -60,6 +60,31 @@ fn a_hard_drive_smart_value_is_never_read_as_wear() {
     assert_eq!(find(&only, "disk-0-health").level, Level::CouldntCheck);
 }
 
+// Some SSDs report health but no wear (a Verbatim Vi550 S3 gave only reallocated sectors and its
+// temperature): the line says the wear is missing instead of a bare "looks healthy". Wear means
+// nothing on a hard drive, and a drive of unknown type isn't called an SSD.
+#[test]
+fn an_ssd_with_no_wear_value_says_so() {
+    let disk = |media: &str, smart: Value| json!({ "storage": ok(json!({ "disks": [{ "bus": "sata", "media": media, "model": "Vi550 S3", "smart": smart }] })) });
+    let key = |r: &Receipt| {
+        let l = find(r, "disk-0");
+        assert_eq!(l.level, Level::Fine);
+        l.headline.key.clone()
+    };
+
+    let no_wear = judge(disk("ssd", json!({ "reallocated_sectors": 0, "temperature_c": 35 })), "2026-10-11T10:00:00Z", true);
+    assert_eq!(key(&no_wear), "storage.disk_fine_no_wear");
+
+    let wear = judge(disk("ssd", json!({ "reallocated_sectors": 0, "temperature_c": 35, "life_used_pct": 3 })), "2026-10-11T10:00:00Z", true);
+    assert_eq!(key(&wear), "storage.disk_fine_wear");
+
+    let hdd = judge(disk("hdd", json!({ "reallocated_sectors": 0 })), "2026-10-11T10:00:00Z", true);
+    assert_eq!(key(&hdd), "storage.disk_fine");
+
+    let unknown = judge(disk("unknown", json!({ "reallocated_sectors": 0 })), "2026-10-11T10:00:00Z", true);
+    assert_eq!(key(&unknown), "storage.disk_fine");
+}
+
 // NVMe critical-warning bit 1 only says the drive is hot right now; the hot-disk line covers that.
 #[test]
 fn a_hot_nvme_drive_is_not_called_failing() {

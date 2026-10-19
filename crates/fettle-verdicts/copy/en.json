@@ -18,6 +18,7 @@
   "storage.couldnt_check": "Fettle couldn't check your disks.",
   "storage.disk_fine": "{model} looks healthy.",
   "storage.disk_fine_wear": "{model} looks healthy, {pct}% worn.",
+  "storage.disk_fine_no_wear": "{model} looks healthy, but it doesn't report its wear.",
   "storage.ssd_wearing": "{model} is {pct}% worn.",
   "storage.ssd_wearing.action": "It still works, but back up anything important and plan a replacement in the next year or so.",
   "storage.ssd_worn": "{model} has reached the end of its rated life.",

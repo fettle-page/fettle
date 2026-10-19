@@ -27,6 +27,7 @@ export const releases: Release[] = [
         "On Windows 10, the Secure Boot line no longer says Windows 11 needs it turned on: Windows 11 needs a PC that supports it.",
         "On Windows 11, the receipt now notes when the processor isn't on Microsoft's list, since Microsoft doesn't promise updates on PCs like that.",
         "On laptops, the receipt now shows how many memory slots are in use without a total, because laptop firmware often reports slots that aren't there, and no longer suggests adding a second stick.",
+        "When an SSD doesn't report how worn it is, the receipt now says so instead of only calling it healthy.",
       ],
       it: [
         "Il sito ha una nuova sezione Guide: risposte brevi e semplici alle domande più comuni su un PC Windows, con i passaggi per controllare ognuna con gli strumenti di Windows.",
@@ -34,6 +35,7 @@ export const releases: Release[] = [
         "Su Windows 10, la riga sul Secure Boot non dice più che Windows 11 lo vuole attivo: a Windows 11 serve un PC che lo supporti.",
         "Su Windows 11, lo scontrino ora segnala quando il processore non è nell'elenco di Microsoft, perché Microsoft non garantisce gli aggiornamenti sui PC come questo.",
         "Sui portatili, lo scontrino ora mostra quanti slot di memoria sono in uso senza indicarne il totale, perché il firmware dei portatili spesso segnala slot che non ci sono, e non consiglia più di aggiungere un secondo banco.",
+        "Quando un SSD non indica quanto è usurato, lo scontrino ora lo dice invece di limitarsi a dire che è in salute.",
       ],
     },
   },

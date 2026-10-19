@@ -135,8 +135,11 @@ fn disk_lines(disk: &Disk, id: &str, elevated: bool) -> Vec<Line> {
     if !issues.is_empty() {
         return issues;
     }
+    // An SSD whose health was read but which reports no wear says so; wear means nothing on a hard
+    // drive, and a drive of unknown type isn't assumed to be an SSD.
     vec![match wear_pct {
         Some(pct) => line(id, Level::Fine, "storage.disk_fine_wear", &[("model", model), ("pct", Param::Int(pct.into()))], Action::Default),
+        None if ssd => line(id, Level::Fine, "storage.disk_fine_no_wear", &[("model", model)], Action::Default),
         None => line(id, Level::Fine, "storage.disk_fine", &[("model", model)], Action::Default),
     }]
 }

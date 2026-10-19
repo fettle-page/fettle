@@ -25,7 +25,7 @@ export type Release = {
   signed: boolean;
 };
 
-export const release: Release = { repo: "https://github.com/fettle-page/fettle", contact: "hello@fettle.page", published: "1.0.5", signed: false };
+export const release: Release = { repo: "https://github.com/fettle-page/fettle", contact: "hello@fettle.page", published: "1.0.6", signed: false };
 
 // Owner and repo names: letters, digits, - _ and dots, but not only dots, and no ".git" on the end.
 const GITHUB_REPO = /^https:\/\/github\.com\/(?!\.+\/)[\w.-]+\/(?!\.+$)[\w.-]+$/;

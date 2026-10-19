@@ -23,9 +23,11 @@ export const releases: Release[] = [
     notes: {
       en: [
         "The site has a new Guides section: short, plain answers to common questions about a Windows PC, with the steps to check each one with Windows' own tools.",
+        "The download page now asks for testers, with a link to the tester report form and an email address for anyone without a GitHub account.",
       ],
       it: [
         "Il sito ha una nuova sezione Guide: risposte brevi e semplici alle domande più comuni su un PC Windows, con i passaggi per controllare ognuna con gli strumenti di Windows.",
+        "La pagina di download ora chiede aiuto per provare Fettle, con un link al modulo dei resoconti di prova e un indirizzo email per chi non ha un account GitHub.",
       ],
     },
   },

@@ -40,6 +40,14 @@ describe("pages", () => {
     if (releases.every((r) => r.date === null)) expect(text(page("changelog.html"))).toContain("No releases yet");
   });
 
+  it("ask for testers on the download page, with the tester form and the email address", () => {
+    for (const name of ["download.html", "it/download.html"]) {
+      const html = page(name);
+      expect(html, name).toContain(`href="${release.repo}/discussions/new?category=tester-reports"`);
+      expect(html, name).toContain(`href="mailto:${release.contact}"`);
+    }
+  });
+
   it("explain the share page's only browser storage", () => {
     expect(text(page("privacy.html"))).toMatch(/24-hour pass/);
     expect(text(page("it/privacy.html"))).toMatch(/24 ore/);

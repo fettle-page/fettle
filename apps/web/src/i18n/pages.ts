@@ -14,6 +14,8 @@ type Pages = {
     /** Once released: {version} is the app's version. */
     introReady: string; installer: string; portable: string; checksums: string; allReleases: string;
     needsH: string; needs: string[]; formatsH: string; formats: string[]; warningH: string; warning: string[]; signingLink: string;
+    /** The tester ask: {email} is the contact address. */
+    testH: string; test: string[]; testForm: string; testMail: string;
   };
   codeSigning: { title: string; description: string; kicker: string; h1: string; intro: string; unsigned: Section; signed: Section; sections: Section[]; privacyLink: string };
   /** Each language has its own 404 page (src/pages/404.astro and it/404.astro); the static assets serve the nearest one. */
@@ -105,6 +107,13 @@ const en: Pages = {
       "Your browser may warn first that the file \"isn't commonly downloaded\": in its downloads list, open the file's menu (…), choose \"Keep\", then \"Show more\" and \"Keep anyway\".",
     ],
     signingLink: "Code signing policy",
+    testH: "Help test Fettle",
+    test: [
+      "Fettle is new, and every PC is a little different. If you've run it, tell us how the receipt looked, even if it all looks right: that tells us a check works on one more kind of PC.",
+      "Old laptops, all-in-ones and anything unusual help most.",
+    ],
+    testForm: "Send a tester report (on GitHub)",
+    testMail: "No GitHub account? Write to {email}.",
   },
   codeSigning: {
     title: "Code signing policy — Fettle",
@@ -251,6 +260,13 @@ const it: Pages = {
       "Prima ancora, il browser potrebbe avvisarti che il file \"non viene scaricato comunemente\": nell'elenco dei download apri il menu del file (…), scegli \"Mantieni\", poi \"Mostra altro\" e \"Mantieni comunque\".",
     ],
     signingLink: "Policy di firma del codice",
+    testH: "Aiutaci a provare Fettle",
+    test: [
+      "Fettle è nuovo, e ogni PC è un po' diverso. Se l'hai provato, raccontaci com'era lo scontrino, anche se ti sembra tutto giusto: ci dice che un controllo funziona su un tipo di PC in più.",
+      "I portatili vecchi, gli all-in-one e i PC un po' insoliti sono i più utili.",
+    ],
+    testForm: "Invia un resoconto di prova (su GitHub, in inglese)",
+    testMail: "Non hai un account GitHub? Scrivi a {email}.",
   },
   codeSigning: {
     title: "Policy di firma del codice — Fettle",

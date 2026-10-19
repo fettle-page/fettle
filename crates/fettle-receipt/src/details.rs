@@ -213,7 +213,7 @@ fn memory(d: &Memory, laptop: bool, locale: Locale) -> Vec<DetailGroup> {
     let slots = if soldered {
         Some(ui("d.soldered", locale, &[]))
     } else if laptop {
-        Some(ui("d.slots_in_use", locale, &[used])).filter(|_| !modules.is_empty())
+        (!modules.is_empty()).then(|| ui("d.slots_in_use", locale, &[used]))
     } else {
         d.slots_total.filter(|t| *t > 0 && *t as usize >= modules.len()).map(|t| ui("d.slots_used", locale, &[used, ("total", Param::Int(t.into()))]))
     };

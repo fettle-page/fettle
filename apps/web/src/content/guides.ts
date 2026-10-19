@@ -3,6 +3,9 @@
 // add it to `guides` in the order the index should list it. The pages and the sitemap follow.
 import type { Locale } from "../i18n/paths.ts";
 import windows10Updates from "./guides/windows-10-updates.ts";
+import diskHealth from "./guides/disk-health.ts";
+import batteryHealth from "./guides/battery-health.ts";
+import windows11Ready from "./guides/windows-11-ready.ts";
 
 /** A part of a guide: a heading, paragraphs, then (optionally) numbered steps. */
 export type GuideSection = { h: string; p: string[]; steps?: string[] };
@@ -23,7 +26,7 @@ export type GuideCopy = {
 
 export type Guide = { slug: string } & Record<Locale, GuideCopy>;
 
-export const guides: Guide[] = [windows10Updates];
+export const guides: Guide[] = [windows10Updates, diskHealth, batteryHealth, windows11Ready];
 
 /** The guides page itself, and the links at the end of each guide. */
 export const guidesPage: Record<Locale, { title: string; description: string; kicker: string; h1: string; intro: string; download: string; back: string }> = {

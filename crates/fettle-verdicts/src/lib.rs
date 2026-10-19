@@ -19,7 +19,7 @@ pub use types::{Level, Line, MessageRef, Param, Receipt, SectionId, SectionVerdi
 use fettle_facts::{Chassis, Facts};
 
 /// Recorded in each report, so a shared receipt can show the verdicts the user saw.
-pub const ENGINE_VERSION: &str = "1.0.5";
+pub const ENGINE_VERSION: &str = "1.0.6";
 
 /// Turns raw facts into a receipt. Pure: the time (ms since 1970, for age rules) and whether the
 /// scan ran as administrator come in as arguments.

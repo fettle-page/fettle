@@ -84,7 +84,7 @@
   "windows.no_tpm": "No TPM security chip found. Windows 11 needs TPM 2.0; most processors from the last few years have one built in that can be turned on in the BIOS (fTPM or PTT).",
   "windows.tpm_ready": "TPM 2.0 is present, as Windows 11 requires.",
   "windows.tpm_old": "The TPM is older than version 2.0, which Windows 11 requires.",
-  "windows.secure_boot_on": "Secure Boot is on, as Windows 11 requires.",
+  "windows.secure_boot_on": "Secure Boot is on, so this PC supports it, as Windows 11 requires.",
   "windows.secure_boot_off": "Secure Boot is off. Windows 11 only needs a PC that supports it, but turning it on in the BIOS adds protection.",
   "windows.secure_boot_off_w11": "Secure Boot is off. Turning it on in the BIOS helps block malware that starts before Windows, and some games need it.",
   "startup.couldnt_check": "Fettle couldn't check startup apps.",

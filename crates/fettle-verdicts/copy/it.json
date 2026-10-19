@@ -84,7 +84,7 @@
   "windows.no_tpm": "Nessun chip di sicurezza TPM trovato. Windows 11 richiede il TPM 2.0; la maggior parte dei processori recenti ne ha uno integrato da attivare nel BIOS (fTPM o PTT).",
   "windows.tpm_ready": "Il TPM 2.0 è presente, come richiesto da Windows 11.",
   "windows.tpm_old": "Il TPM è precedente alla versione 2.0 richiesta da Windows 11.",
-  "windows.secure_boot_on": "Il Secure Boot è attivo, come richiesto da Windows 11.",
+  "windows.secure_boot_on": "Il Secure Boot è attivo, quindi il PC lo supporta, come richiesto da Windows 11.",
   "windows.secure_boot_off": "Il Secure Boot è disattivato. Windows 11 richiede solo un PC che lo supporti, ma attivarlo nel BIOS aggiunge protezione.",
   "windows.secure_boot_off_w11": "Il Secure Boot è disattivato. Attivarlo nel BIOS aiuta a bloccare i malware che partono prima di Windows, e alcuni giochi lo richiedono.",
   "startup.couldnt_check": "Fettle non è riuscito a controllare le app all'avvio.",

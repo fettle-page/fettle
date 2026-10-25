@@ -142,10 +142,9 @@ describe("workflows", () => {
     for (const name of ["cargo-audit", "npm audit"]) assert.ok(!workflow("release.yml").includes(name), `release.yml runs ${name}`);
   });
 
-  // rust-toolchain.toml can't name both a version and the MSVC host (rustup refuses it, and a PC whose
-  // default host is GNU can't build the app), so it says "stable" for local builds and the workflows
-  // pin the exact version.
-  it("ci.yml and release.yml build with the same exact Rust version, with the WebAssembly target", () => {
+  // rustup (1.29 and later) refuses a host in rust-toolchain.toml's channel, so the file names just the
+  // version; the workflows also pin the MSVC host through RUSTUP_TOOLCHAIN.
+  it("ci.yml, release.yml and rust-toolchain.toml use the same exact Rust version, with the WebAssembly target", () => {
     const pins = ["ci.yml", "release.yml"].map((name) => {
       const w = workflow(name);
       const pin = /^\s+RUSTUP_TOOLCHAIN: "(\d+\.\d+\.\d+)-x86_64-pc-windows-msvc"$/m.exec(w);
@@ -154,6 +153,8 @@ describe("workflows", () => {
       return pin[1];
     });
     assert.equal(pins[0], pins[1]);
+    const toolchain = readFileSync(join(root, "rust-toolchain.toml"), "utf8");
+    assert.match(toolchain, new RegExp(`^channel = "${pins[0].replaceAll(".", "\\.")}"$`, "m"), "rust-toolchain.toml names the workflows' version, with no host");
   });
 
   // There's no .nvmrc (repo-files refuses hidden files), so package.json's engines field is where the

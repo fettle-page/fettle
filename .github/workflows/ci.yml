@@ -17,7 +17,7 @@ concurrency:
 jobs:
   test:
     runs-on: windows-2025
-    # The exact Rust version for every cargo command here (rust-toolchain.toml says "stable" for local builds).
+    # The exact Rust version for every cargo command here (rust-toolchain.toml names the same version for local builds).
     env:
       RUSTUP_TOOLCHAIN: "1.99.0-x86_64-pc-windows-msvc"
     steps:

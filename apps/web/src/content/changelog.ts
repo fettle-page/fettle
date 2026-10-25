@@ -18,6 +18,18 @@ export function checkChangelog(entries: Release[]): void {
 
 export const releases: Release[] = [
   {
+    version: "1.0.7",
+    date: null,
+    notes: {
+      en: [
+        "The share server now uses an updated version of the library that checks uploaded reports, which fixes a way an oversized report could make it use too much memory.",
+      ],
+      it: [
+        "Il server di condivisione ora usa una versione aggiornata della libreria che controlla i resoconti caricati, che corregge un modo in cui un resoconto troppo grande poteva fargli usare troppa memoria.",
+      ],
+    },
+  },
+  {
     version: "1.0.6",
     date: "2026-10-19",
     notes: {

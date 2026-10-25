@@ -23,9 +23,11 @@ export const releases: Release[] = [
     notes: {
       en: [
         "The share server now uses an updated version of the library that checks uploaded reports, which fixes a way an oversized report could make it use too much memory.",
+        "The app's update check now uses an updated TLS library and list of certificates, so it no longer trusts a few certificates that have been withdrawn.",
       ],
       it: [
         "Il server di condivisione ora usa una versione aggiornata della libreria che controlla i resoconti caricati, che corregge un modo in cui un resoconto troppo grande poteva fargli usare troppa memoria.",
+        "Il controllo degli aggiornamenti dell'app ora usa una libreria TLS e un elenco di certificati aggiornati, così non si fida più di alcuni certificati che sono stati revocati.",
       ],
     },
   },

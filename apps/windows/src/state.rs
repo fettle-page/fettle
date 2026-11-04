@@ -3,6 +3,7 @@
 //! and no Windows here, so every rule is tested directly.
 
 use crate::share::{Expiry, Shared};
+pub use crate::store::SavedCheck;
 use crate::store::SavedLink;
 pub use crate::update::UpdateRecord;
 use fettle_facts::Report;
@@ -18,6 +19,10 @@ pub enum Panel {
     Settings,
     /// The receipt's pages as they'll print, before Windows' print dialog.
     Preview,
+    /// My checks: the checks saved on this PC.
+    Checks,
+    /// Two saved checks side by side (`State::compare`).
+    Compare,
 }
 
 /// What the main view shows.
@@ -26,14 +31,27 @@ pub enum MainView {
     Home,
     Checking,
     Result,
+    /// A past check opened from My checks (`State::opened`).
+    Past,
 }
 
-/// What lies on the mat: the blank receipt, this check's receipt, or the last one, faded.
+/// What lies on the mat: the blank receipt, this check's receipt, the last one (faded, at launch),
+/// or a past check opened from My checks (faded, with its own date).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Mat {
     Blank,
     Live,
     Last,
+    Past,
+}
+
+/// The technician's details for the top of printouts (only ever on paper). Empty fields are left out.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+#[serde(default)]
+pub struct Technician {
+    pub business: String,
+    pub name: String,
+    pub contact: String,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
@@ -70,7 +88,7 @@ impl UpdateEvery {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Settings {
-    /// Keep the last check on this PC and show it, faded, at the next launch.
+    /// Keep the last ten checks on this PC (My checks) and show the newest, faded, at the next launch.
     pub remember: bool,
     /// Ask the website whether a new version exists.
     pub updates: bool,
@@ -81,6 +99,8 @@ pub struct Settings {
     /// None: follow Windows.
     pub lang: Option<Locale>,
     pub theme: ThemeChoice,
+    /// Your details on printouts.
+    pub technician: Technician,
     /// Whether the user has chosen about the update check in Settings (or their settings say so).
     /// Until then "updates" isn't saved, so the PC's default (an all-users install's) still decides.
     #[serde(skip)]
@@ -89,7 +109,7 @@ pub struct Settings {
 
 impl Default for Settings {
     fn default() -> Self {
-        Settings { remember: true, updates: true, update_every: UpdateEvery::Daily, show_private: false, lang: None, theme: ThemeChoice::Auto, updates_chosen: false }
+        Settings { remember: true, updates: true, update_every: UpdateEvery::Daily, show_private: false, lang: None, theme: ThemeChoice::Auto, technician: Technician::default(), updates_chosen: false }
     }
 }
 
@@ -149,11 +169,20 @@ pub enum PrivateKind {
     Disk(Option<String>),
 }
 
-/// This run's check: the redacted report and how long it took.
+/// This run's check: the redacted report, how long it took, and the client and notes for its
+/// printout (also saved with its entry while Remember is on).
 #[derive(Debug, Clone, PartialEq)]
 pub struct Checked {
     pub report: Report,
     pub seconds: f64,
+    pub client: String,
+    pub notes: String,
+}
+
+impl Checked {
+    fn saved(&self) -> SavedCheck {
+        SavedCheck { report: self.report.clone(), client: self.client.clone(), notes: self.notes.clone() }
+    }
 }
 
 /// The Deep check button: idle, waiting for Windows' prompt, or what went wrong (an app string key).
@@ -180,7 +209,16 @@ pub struct State {
     pub problem: Option<ScanProblem>,
     pub done_sources: Vec<String>,
     pub current: Option<Checked>,
-    pub last: Option<Report>,
+    /// The checks saved on this PC, newest first (empty while Remember is off).
+    pub checks: Vec<SavedCheck>,
+    /// The past check opened from My checks (its id): it lies on the mat, and Save, Copy, Print and
+    /// Share act on it (`shown_report`).
+    pub opened: Option<String>,
+    /// The two checks being compared (their ids, older first when chosen that way). The comparison
+    /// itself is made where it's shown.
+    pub compare: Option<(String, String)>,
+    /// A logo for printouts is saved (the app reads the PNG when it needs it).
+    pub has_logo: bool,
     pub settings: Settings,
     pub share_busy: bool,
     /// The dock's last export message (an app string key), cleared by the next action.
@@ -210,7 +248,7 @@ pub struct State {
 #[derive(Debug, Clone, PartialEq)]
 pub enum Event {
     /// What was stored on this PC, at launch.
-    Loaded { settings: Settings, last: Option<Report>, links: Vec<SavedLink> },
+    Loaded { settings: Settings, checks: Vec<SavedCheck>, links: Vec<SavedLink>, has_logo: bool },
     Start,
     SourceDone(String),
     Finished(Result<Report, ScanProblem>, f64),
@@ -258,13 +296,41 @@ pub enum Event {
     UpdateChecked(UpdateRecord),
     /// Download the newer version (its page, in the app's language).
     OpenUpdate,
+    /// The saved checks as they are now, other windows' included.
+    ChecksLoaded(Vec<SavedCheck>),
+    /// Put this saved check (its id) on the mat.
+    OpenCheck(String),
+    /// Back to this run's receipt (or the first screen).
+    CloseCheck,
+    DeleteCheck(String),
+    /// Compare these two saved checks (ids).
+    CompareChecks(String, String),
+    /// After a check: compare it with the saved one before it.
+    CompareWithPrevious,
+    /// The printout's Client and Notes, for the check shown.
+    SetClient(String),
+    SetNotes(String),
+    /// Your details on printouts.
+    SetTechnician(Technician),
+    /// A logo for printouts, already prepared as a PNG.
+    SetLogo(Vec<u8>),
+    RemoveLogo,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Effect {
     RunScan,
-    SaveLast(Box<Report>),
-    ClearLast,
+    /// Save this check beside the ones already saved (other windows' included).
+    AddCheck(Box<SavedCheck>),
+    DeleteCheck(String),
+    /// Forget every saved check (Remember turned off).
+    ClearChecks,
+    /// Read the saved checks again (another window may have added or deleted some).
+    ReloadChecks,
+    /// Save the client and notes with this check's entry.
+    SaveCheckNotes { id: String, client: String, notes: String },
+    SaveLogo(Vec<u8>),
+    ClearLogo,
     SaveSettings(Settings),
     /// Run the Deep check: the elevated helper's scan, merged with the user's own.
     DeepCheck,
@@ -303,7 +369,10 @@ impl Default for State {
             problem: None,
             done_sources: Vec::new(),
             current: None,
-            last: None,
+            checks: Vec::new(),
+            opened: None,
+            compare: None,
+            has_logo: false,
             settings: Settings::default(),
             share_busy: false,
             export: None,
@@ -331,6 +400,7 @@ impl State {
     pub fn main_view(&self) -> MainView {
         match self.scan {
             Scan::Running => MainView::Checking,
+            _ if self.opened_check().is_some() => MainView::Past,
             Scan::Done if self.current.is_some() => MainView::Result,
             _ => MainView::Home,
         }
@@ -339,10 +409,102 @@ impl State {
     pub fn mat(&self) -> Mat {
         match self.main_view() {
             MainView::Checking => Mat::Blank,
+            MainView::Past => Mat::Past,
             MainView::Result => Mat::Live,
-            MainView::Home if self.last.is_some() => Mat::Last,
+            MainView::Home if self.last_check().is_some() => Mat::Last,
             MainView::Home => Mat::Blank,
         }
+    }
+
+    /// The newest saved check: the faded receipt at launch.
+    pub fn last_check(&self) -> Option<&Report> {
+        self.checks.first().map(|c| &c.report)
+    }
+
+    /// The past check opened from My checks, while it's still saved.
+    pub fn opened_check(&self) -> Option<&SavedCheck> {
+        let id = self.opened.as_deref()?;
+        self.checks.iter().find(|c| c.id() == id)
+    }
+
+    /// The receipt Save, Copy, Print and Share act on: the opened past check, else this run's.
+    pub fn shown_report(&self) -> Option<&Report> {
+        match self.opened_check() {
+            Some(c) => Some(&c.report),
+            None => self.current.as_ref().map(|c| &c.report),
+        }
+    }
+
+    /// The printout's Client and Notes for the receipt shown.
+    pub fn shown_notes(&self) -> (&str, &str) {
+        match (self.opened_check(), &self.current) {
+            (Some(c), _) => (&c.client, &c.notes),
+            (None, Some(c)) => (&c.client, &c.notes),
+            (None, None) => ("", ""),
+        }
+    }
+
+    /// A check by id: a saved one, or this run's.
+    pub fn check_report(&self, id: &str) -> Option<&Report> {
+        self.checks.iter().find(|c| c.id() == id).map(|c| &c.report).or(self.current.as_ref().map(|c| &c.report).filter(|r| r.collected_at == id))
+    }
+
+    /// After a check: the newest saved check made before it, for "Compare with the previous check".
+    pub fn previous_check(&self) -> Option<&SavedCheck> {
+        let current = self.current.as_ref()?;
+        let at = fettle_verdicts::fmt::parse_rfc3339(&current.report.collected_at)?;
+        self.checks.iter().find(|c| c.id() != current.report.collected_at && c.at().is_some_and(|t| t < at))
+    }
+
+    /// The two reports being compared, in the order chosen (`fettle_receipt::compare` sorts them).
+    pub fn compared(&self) -> Option<(&Report, &Report)> {
+        let (a, b) = self.compare.as_ref()?;
+        Some((self.check_report(a)?, self.check_report(b)?))
+    }
+
+    /// Ends a comparison whose checks are gone.
+    fn drop_stale_compare(&mut self) {
+        if self.compare.is_some() && self.compared().is_none() {
+            self.compare = None;
+            if self.panel == Panel::Compare {
+                self.panel = Panel::Main;
+            }
+        }
+    }
+
+    fn start_compare(&mut self, a: String, b: String) {
+        if self.share_busy || a == b || self.check_report(&a).is_none() || self.check_report(&b).is_none() {
+            return;
+        }
+        self.compare = Some((a, b));
+        self.panel = Panel::Compare;
+    }
+
+    /// Sets the Client or Notes of the receipt shown; saved with its entry when it has one.
+    fn set_notes(&mut self, client: Option<String>, notes: Option<String>) -> Vec<Effect> {
+        let Some(id) = self.opened_check().map(|c| c.id().to_string()).or(self.current.as_ref().map(|c| c.report.collected_at.clone())) else { return vec![] };
+        let apply = |c: &mut String, n: &mut String| {
+            if let Some(v) = &client {
+                *c = v.clone();
+            }
+            if let Some(v) = &notes {
+                *n = v.clone();
+            }
+        };
+        if let Some(cur) = self.current.as_mut().filter(|c| c.report.collected_at == id) {
+            apply(&mut cur.client, &mut cur.notes);
+        }
+        let Some(entry) = self.checks.iter_mut().find(|c| c.id() == id) else { return vec![] };
+        apply(&mut entry.client, &mut entry.notes);
+        vec![Effect::SaveCheckNotes { id, client: entry.client.clone(), notes: entry.notes.clone() }]
+    }
+
+    /// Saves a check in the list (and on this PC).
+    fn remember(&mut self, check: SavedCheck) -> Effect {
+        let mut checks = vec![check.clone()];
+        checks.append(&mut self.checks);
+        self.checks = crate::store::tidy_checks(checks);
+        Effect::AddCheck(Box::new(check))
     }
 
     /// A newer version to offer: only with updates on.
@@ -362,6 +524,8 @@ impl State {
         self.export = None;
         self.deep = Deep::Idle;
         self.private_shown = false;
+        // The new check takes the mat from a past one.
+        self.opened = None;
     }
 
     fn save_settings(&self) -> Effect {
@@ -370,11 +534,12 @@ impl State {
 
     pub fn update(&mut self, event: Event) -> Vec<Effect> {
         match event {
-            Event::Loaded { settings, last, links } => {
-                // A remembered check shows only while remembering is on.
-                self.last = if settings.remember { last } else { None };
+            Event::Loaded { settings, checks, links, has_logo } => {
+                // Saved checks show only while remembering is on.
+                self.checks = if settings.remember { crate::store::tidy_checks(checks) } else { Vec::new() };
                 self.settings = settings;
                 self.links = links;
+                self.has_logo = has_logo;
                 vec![]
             }
             Event::Start => {
@@ -394,12 +559,12 @@ impl State {
             }
             Event::Finished(Ok(report), seconds) => {
                 self.scan = Scan::Done;
-                self.current = Some(Checked { report: report.clone(), seconds });
+                let checked = Checked { report, seconds, client: String::new(), notes: String::new() };
                 let mut effects = Vec::new();
                 if self.settings.remember {
-                    self.last = Some(report.clone());
-                    effects.push(Effect::SaveLast(Box::new(report)));
+                    effects.push(self.remember(checked.saved()));
                 }
+                self.current = Some(checked);
                 if self.settings.show_private {
                     effects.push(Effect::LoadPrivate);
                 }
@@ -413,8 +578,9 @@ impl State {
                 vec![]
             }
             Event::Open(panel) => {
-                // A view can't be left while it's sending; Share needs a receipt to share.
-                if self.share_busy || (panel == Panel::Share && self.current.is_none()) {
+                // A view can't be left while it's sending; Share needs a receipt to share, Compare
+                // two checks (CompareChecks opens it).
+                if self.share_busy || (panel == Panel::Share && self.shown_report().is_none()) || (panel == Panel::Compare && self.compared().is_none()) {
                     return vec![];
                 }
                 if panel == Panel::Share {
@@ -426,13 +592,90 @@ impl State {
                     self.links_status = None;
                     return vec![Effect::ReloadLinks];
                 }
+                if panel == Panel::Checks {
+                    return vec![Effect::ReloadChecks];
+                }
                 vec![]
             }
             Event::Back => {
                 if !self.share_busy {
+                    if self.panel == Panel::Compare {
+                        self.compare = None;
+                    }
                     self.panel = Panel::Main;
                 }
                 vec![]
+            }
+            Event::ChecksLoaded(checks) => {
+                if self.settings.remember {
+                    self.checks = crate::store::tidy_checks(checks);
+                }
+                // Deleted in another window meanwhile: no longer shown or compared.
+                if self.opened_check().is_none() {
+                    self.opened = None;
+                }
+                self.drop_stale_compare();
+                vec![]
+            }
+            Event::OpenCheck(id) => {
+                // A running check is about to take the mat.
+                if self.scan == Scan::Running {
+                    return vec![];
+                }
+                if self.current.as_ref().is_some_and(|c| c.report.collected_at == id) {
+                    // This run's own check: just show it.
+                    self.opened = None;
+                } else if self.checks.iter().any(|c| c.id() == id) {
+                    self.opened = Some(id);
+                } else {
+                    return vec![];
+                }
+                self.panel = Panel::Main;
+                self.export = None;
+                vec![]
+            }
+            Event::CloseCheck => {
+                self.opened = None;
+                self.export = None;
+                vec![]
+            }
+            Event::DeleteCheck(id) => {
+                if !self.checks.iter().any(|c| c.id() == id) {
+                    return vec![];
+                }
+                self.checks.retain(|c| c.id() != id);
+                if self.opened.as_deref() == Some(id.as_str()) {
+                    self.opened = None;
+                }
+                self.drop_stale_compare();
+                vec![Effect::DeleteCheck(id)]
+            }
+            Event::CompareChecks(a, b) => {
+                self.start_compare(a, b);
+                vec![]
+            }
+            Event::CompareWithPrevious => {
+                if let (Some(before), Some(after)) = (self.previous_check().map(|c| c.id().to_string()), self.current.as_ref().map(|c| c.report.collected_at.clone())) {
+                    self.start_compare(before, after);
+                }
+                vec![]
+            }
+            Event::SetClient(client) => self.set_notes(Some(client), None),
+            Event::SetNotes(notes) => self.set_notes(None, Some(notes)),
+            Event::SetTechnician(technician) => {
+                self.settings.technician = technician;
+                vec![self.save_settings()]
+            }
+            Event::SetLogo(png) => {
+                if png.is_empty() {
+                    return vec![];
+                }
+                self.has_logo = true;
+                vec![Effect::SaveLogo(png)]
+            }
+            Event::RemoveLogo => {
+                self.has_logo = false;
+                vec![Effect::ClearLogo]
             }
             Event::SetLang(lang) => {
                 self.settings.lang = lang;
@@ -446,13 +689,15 @@ impl State {
                 self.settings.remember = on;
                 let mut effects = vec![self.save_settings()];
                 if on {
-                    if let Some(c) = &self.current {
-                        self.last = Some(c.report.clone());
-                        effects.push(Effect::SaveLast(Box::new(c.report.clone())));
+                    if let Some(check) = self.current.as_ref().map(Checked::saved) {
+                        effects.push(self.remember(check));
                     }
                 } else {
-                    self.last = None;
-                    effects.push(Effect::ClearLast);
+                    // Every saved check goes at once; this run's receipt stays on screen.
+                    self.checks.clear();
+                    self.opened = None;
+                    self.drop_stale_compare();
+                    effects.push(Effect::ClearChecks);
                 }
                 effects
             }
@@ -512,14 +757,14 @@ impl State {
             }
             // Print shows the pages first; printing happens from the preview.
             Event::PrintAsked => {
-                if self.current.is_none() {
+                if self.shown_report().is_none() {
                     return vec![];
                 }
                 self.panel = Panel::Preview;
                 vec![Effect::RenderPreview]
             }
             Event::PrintConfirmed => {
-                if self.panel != Panel::Preview || self.current.is_none() {
+                if self.panel != Panel::Preview || self.shown_report().is_none() {
                     return vec![];
                 }
                 self.panel = Panel::Main;
@@ -527,14 +772,14 @@ impl State {
                 vec![Effect::Print]
             }
             Event::SaveAsked | Event::CopyAsked => {
-                if self.current.is_none() {
+                if self.shown_report().is_none() {
                     return vec![];
                 }
                 self.export = None;
                 vec![if event == Event::SaveAsked { Effect::Save } else { Effect::Copy }]
             }
             Event::CreateLink { expires, password } => {
-                if self.share == ShareStatus::Sending || self.current.is_none() {
+                if self.share == ShareStatus::Sending || self.shown_report().is_none() {
                     return vec![];
                 }
                 self.share = ShareStatus::Sending;
@@ -709,24 +954,24 @@ mod tests {
         let mut s = State::default();
         s.update(Event::Start);
         let r = report("2026-10-09T10:00:00Z");
-        assert_eq!(s.update(Event::Finished(Ok(r.clone()), 0.7)), vec![Effect::SaveLast(Box::new(r.clone()))]);
+        assert_eq!(s.update(Event::Finished(Ok(r.clone()), 0.7)), vec![Effect::AddCheck(Box::new(saved(&r)))]);
         assert_eq!((s.main_view(), s.mat()), (MainView::Result, Mat::Live));
-        assert_eq!(s.last, Some(r));
+        assert_eq!(s.last_check(), Some(&r));
     }
 
     #[test]
     fn nothing_is_remembered_when_remember_is_off() {
         let mut s = State::default();
-        s.update(Event::Loaded { settings: Settings { remember: false, ..Settings::default() }, last: None, links: vec![] });
+        s.update(Event::Loaded { settings: Settings { remember: false, ..Settings::default() }, checks: vec![], links: vec![], has_logo: false });
         s.update(Event::Start);
         assert_eq!(s.update(Event::Finished(Ok(report("2026-10-09T10:00:00Z")), 0.7)), vec![]);
-        assert_eq!(s.last, None);
+        assert!(s.checks.is_empty());
     }
 
     #[test]
     fn a_failed_first_check_goes_back_home_and_says_so() {
         let mut s = State::default();
-        s.update(Event::Loaded { settings: Settings::default(), last: Some(report("2026-10-08T10:00:00Z")), links: vec![] });
+        s.update(Event::Loaded { settings: Settings::default(), checks: vec![saved(&report("2026-10-08T10:00:00Z"))], links: vec![], has_logo: false });
         s.update(Event::Start);
         s.update(Event::Finished(Err(ScanProblem::Failed), 1.0));
         assert_eq!(s.main_view(), MainView::Home);
@@ -738,7 +983,7 @@ mod tests {
     #[test]
     fn a_failed_re_check_keeps_this_runs_receipt_and_says_so() {
         let mut s = State::default();
-        s.update(Event::Loaded { settings: Settings { remember: false, ..Settings::default() }, last: None, links: vec![] });
+        s.update(Event::Loaded { settings: Settings { remember: false, ..Settings::default() }, checks: vec![], links: vec![], has_logo: false });
         s.update(Event::Start);
         s.update(Event::Finished(Ok(report("2026-10-09T10:00:00Z")), 0.7));
         s.update(Event::Start);
@@ -754,27 +999,40 @@ mod tests {
     #[test]
     fn coming_back_shows_the_last_receipt_faded() {
         let mut s = State::default();
-        s.update(Event::Loaded { settings: Settings::default(), last: Some(report("2026-10-08T10:00:00Z")), links: vec![] });
+        s.update(Event::Loaded { settings: Settings::default(), checks: vec![saved(&report("2026-10-08T10:00:00Z")), saved(&report("2026-10-01T10:00:00Z"))], links: vec![], has_logo: false });
         assert_eq!((s.main_view(), s.mat()), (MainView::Home, Mat::Last));
+        assert_eq!(s.last_check().map(|r| r.collected_at.as_str()), Some("2026-10-08T10:00:00Z"), "the newest");
+        assert_eq!(s.shown_report(), None, "the faded one isn't what Save would save");
     }
 
     #[test]
-    fn turning_remember_off_forgets_the_last_check_at_once() {
-        let mut s = checked_state();
+    fn turning_remember_off_forgets_every_check_at_once() {
+        let mut s = with_checks(&["2026-10-01T10:00:00Z"]);
+        s.update(Event::OpenCheck("2026-10-01T10:00:00Z".into()));
         let effects = s.update(Event::SetRemember(false));
-        assert!(effects.contains(&Effect::ClearLast), "{effects:?}");
+        assert!(effects.contains(&Effect::ClearChecks), "{effects:?}");
         assert!(effects.iter().any(|e| matches!(e, Effect::SaveSettings(st) if !st.remember)));
-        assert_eq!(s.last, None);
+        assert!(s.checks.is_empty());
+        assert_eq!((s.opened.clone(), s.mat()), (None, Mat::Live), "back to this run's receipt");
+        // While off, nothing is added, and loading another window's list keeps it empty.
+        s.update(Event::Start);
+        assert!(!s.update(Event::Finished(Ok(report("2026-10-09T12:00:00Z")), 0.7)).iter().any(|e| matches!(e, Effect::AddCheck(_))));
+        s.update(Event::ChecksLoaded(vec![saved(&report("2026-10-01T10:00:00Z"))]));
+        assert!(s.checks.is_empty());
     }
 
     #[test]
-    fn turning_remember_on_keeps_this_check() {
+    fn turning_remember_on_keeps_this_check_with_its_client_and_notes() {
         let mut s = State::default();
-        s.update(Event::Loaded { settings: Settings { remember: false, ..Settings::default() }, last: None, links: vec![] });
+        s.update(Event::Loaded { settings: Settings { remember: false, ..Settings::default() }, checks: vec![], links: vec![], has_logo: false });
         s.update(Event::Start);
         let r = report("2026-10-09T10:00:00Z");
         s.update(Event::Finished(Ok(r.clone()), 0.7));
-        assert!(s.update(Event::SetRemember(true)).contains(&Effect::SaveLast(Box::new(r))));
+        assert_eq!(s.update(Event::SetClient("Mario Rossi".into())), vec![], "in memory only while off");
+        assert_eq!(s.shown_notes(), ("Mario Rossi", ""));
+        let kept = SavedCheck { client: "Mario Rossi".into(), ..saved(&r) };
+        assert!(s.update(Event::SetRemember(true)).contains(&Effect::AddCheck(Box::new(kept))));
+        assert_eq!(s.checks.len(), 1);
     }
 
     #[test]
@@ -872,7 +1130,7 @@ mod tests {
     #[test]
     fn with_updates_off_nothing_is_asked() {
         let mut s = State::default();
-        s.update(Event::Loaded { settings: Settings { updates: false, ..Settings::default() }, last: None, links: vec![] });
+        s.update(Event::Loaded { settings: Settings { updates: false, ..Settings::default() }, checks: vec![], links: vec![], has_logo: false });
         assert_eq!(s.update(Event::UpdateRecord(UpdateRecord::default())), vec![]);
     }
 
@@ -925,7 +1183,7 @@ mod tests {
         assert_eq!((s.main_view(), s.mat()), (MainView::Result, Mat::Live));
         assert_eq!(s.current.as_ref().map(|c| c.report.clone()), Some(deep.clone()));
         assert_eq!(s.deep, Deep::Idle);
-        assert!(effects.contains(&Effect::SaveLast(Box::new(deep))), "{effects:?}");
+        assert!(effects.contains(&Effect::AddCheck(Box::new(saved(&deep)))), "{effects:?}");
         // A refused or failed one keeps the quick receipt and says why.
         s.update(Event::DeepAsked);
         s.update(Event::DeepFinished(Err(DeepError::Cancelled), 0.0));
@@ -1127,5 +1385,168 @@ mod tests {
         assert_eq!(s.export, Some("export.saved"));
         s.update(Event::Start);
         assert_eq!(s.export, None);
+    }
+
+    fn saved(r: &Report) -> SavedCheck {
+        SavedCheck { report: r.clone(), client: String::new(), notes: String::new() }
+    }
+
+    /// These checks saved from before, then this run's check (2026-10-09 at 10:00).
+    fn with_checks(ats: &[&str]) -> State {
+        let mut s = State::default();
+        s.update(Event::Loaded { settings: Settings::default(), checks: ats.iter().map(|at| saved(&report(at))).collect(), links: vec![], has_logo: false });
+        s.update(Event::Start);
+        s.update(Event::Finished(Ok(report("2026-10-09T10:00:00Z")), 0.7));
+        s
+    }
+
+    fn ids(s: &State) -> Vec<&str> {
+        s.checks.iter().map(|c| c.id()).collect()
+    }
+
+    #[test]
+    fn only_the_last_ten_checks_are_kept_newest_first() {
+        let mut s = State::default();
+        for hour in 10..22 {
+            s.update(Event::Start);
+            s.update(Event::Finished(Ok(report(&format!("2026-10-09T{hour}:00:00Z"))), 0.7));
+        }
+        assert_eq!(s.checks.len(), 10);
+        assert_eq!(s.checks[0].id(), "2026-10-09T21:00:00Z");
+        // A Deep check of the same moment (or the same check saved twice) is never listed twice.
+        s.update(Event::SetRemember(false));
+        s.update(Event::SetRemember(true));
+        s.update(Event::SetRemember(true));
+        assert_eq!(ids(&s), ["2026-10-09T21:00:00Z"]);
+    }
+
+    #[test]
+    fn opening_my_checks_reads_them_again_so_another_windows_checks_show() {
+        let mut s = with_checks(&[]);
+        assert_eq!(s.update(Event::Open(Panel::Checks)), vec![Effect::ReloadChecks]);
+        assert_eq!(s.panel, Panel::Checks);
+        s.update(Event::ChecksLoaded(vec![saved(&report("2026-10-09T10:00:00Z")), saved(&report("2026-10-09T09:00:00Z"))]));
+        assert_eq!(ids(&s), ["2026-10-09T10:00:00Z", "2026-10-09T09:00:00Z"]);
+    }
+
+    #[test]
+    fn an_opened_past_check_lies_faded_on_the_mat_and_the_exports_act_on_it() {
+        let old = report("2026-10-01T10:00:00Z");
+        let mut s = with_checks(&["2026-10-01T10:00:00Z"]);
+        s.update(Event::Open(Panel::Checks));
+        assert_eq!(s.update(Event::OpenCheck("2026-10-01T10:00:00Z".into())), vec![]);
+        assert_eq!((s.panel, s.main_view(), s.mat()), (Panel::Main, MainView::Past, Mat::Past));
+        assert_eq!(s.shown_report(), Some(&old));
+        assert_eq!(s.update(Event::SaveAsked), vec![Effect::Save]);
+        assert_eq!(s.update(Event::CopyAsked), vec![Effect::Copy]);
+        assert_eq!(s.update(Event::PrintAsked), vec![Effect::RenderPreview]);
+        s.update(Event::Back);
+        s.update(Event::Open(Panel::Share));
+        assert_eq!(s.panel, Panel::Share);
+        s.update(Event::Back);
+        // Closing it brings back this run's receipt; so does a new check.
+        s.update(Event::CloseCheck);
+        assert_eq!((s.main_view(), s.mat()), (MainView::Result, Mat::Live));
+        assert_eq!(s.shown_report().map(|r| r.collected_at.as_str()), Some("2026-10-09T10:00:00Z"));
+        s.update(Event::OpenCheck("2026-10-01T10:00:00Z".into()));
+        s.update(Event::Start);
+        assert_eq!((s.opened.clone(), s.mat()), (None, Mat::Blank));
+        // Opening this run's own check is just showing it; an unknown one does nothing.
+        let mut s = with_checks(&[]);
+        s.update(Event::OpenCheck("2026-10-09T10:00:00Z".into()));
+        s.update(Event::OpenCheck("never saved".into()));
+        assert_eq!((s.opened.clone(), s.mat()), (None, Mat::Live));
+    }
+
+    #[test]
+    fn a_past_check_can_be_saved_with_no_check_run_this_time() {
+        let mut s = State::default();
+        s.update(Event::Loaded { settings: Settings::default(), checks: vec![saved(&report("2026-10-01T10:00:00Z"))], links: vec![], has_logo: false });
+        assert_eq!(s.update(Event::SaveAsked), vec![], "the faded last check isn't opened yet");
+        s.update(Event::OpenCheck("2026-10-01T10:00:00Z".into()));
+        assert_eq!(s.update(Event::SaveAsked), vec![Effect::Save]);
+        assert!(matches!(s.update(Event::CreateLink { expires: Expiry::Week, password: None }).as_slice(), [Effect::Share { .. }]));
+    }
+
+    #[test]
+    fn a_check_is_deleted_from_the_list_and_the_mat() {
+        let mut s = with_checks(&["2026-10-01T10:00:00Z", "2026-10-02T10:00:00Z"]);
+        s.update(Event::OpenCheck("2026-10-01T10:00:00Z".into()));
+        assert_eq!(s.update(Event::DeleteCheck("2026-10-01T10:00:00Z".into())), vec![Effect::DeleteCheck("2026-10-01T10:00:00Z".into())]);
+        assert_eq!(ids(&s), ["2026-10-09T10:00:00Z", "2026-10-02T10:00:00Z"]);
+        assert_eq!((s.opened.clone(), s.mat()), (None, Mat::Live));
+        assert_eq!(s.update(Event::DeleteCheck("never saved".into())), vec![]);
+        // Deleting this run's own entry keeps its receipt on screen; it's just no longer saved.
+        s.update(Event::DeleteCheck("2026-10-09T10:00:00Z".into()));
+        assert_eq!(s.mat(), Mat::Live);
+    }
+
+    #[test]
+    fn after_a_check_the_previous_one_is_offered_for_comparing() {
+        let mut s = checked_state();
+        assert_eq!(s.previous_check(), None, "nothing earlier saved");
+        assert_eq!(s.update(Event::CompareWithPrevious), vec![]);
+        let mut s = with_checks(&["2026-10-01T10:00:00Z", "2026-10-05T10:00:00Z"]);
+        assert_eq!(s.previous_check().map(SavedCheck::id), Some("2026-10-05T10:00:00Z"));
+        s.update(Event::CompareWithPrevious);
+        assert_eq!(s.compare, Some(("2026-10-05T10:00:00Z".to_string(), "2026-10-09T10:00:00Z".to_string())));
+        assert_eq!(s.panel, Panel::Compare);
+        let (before, after) = s.compared().unwrap();
+        assert_eq!((before.collected_at.as_str(), after.collected_at.as_str()), ("2026-10-05T10:00:00Z", "2026-10-09T10:00:00Z"));
+        s.update(Event::Back);
+        assert_eq!((s.panel, s.compare.clone()), (Panel::Main, None));
+        // With no check run this time, nothing is "the previous" one.
+        let mut s = State::default();
+        s.update(Event::Loaded { settings: Settings::default(), checks: vec![saved(&report("2026-10-01T10:00:00Z"))], links: vec![], has_logo: false });
+        assert_eq!(s.previous_check(), None);
+    }
+
+    #[test]
+    fn two_saved_checks_can_be_compared() {
+        let mut s = with_checks(&["2026-10-01T10:00:00Z", "2026-10-05T10:00:00Z"]);
+        s.update(Event::Open(Panel::Checks));
+        s.update(Event::CompareChecks("2026-10-01T10:00:00Z".into(), "2026-10-05T10:00:00Z".into()));
+        assert_eq!((s.panel, s.compare.clone()), (Panel::Compare, Some(("2026-10-01T10:00:00Z".to_string(), "2026-10-05T10:00:00Z".to_string()))));
+        // Deleting one of them (in another window, say) ends the comparison.
+        s.update(Event::ChecksLoaded(vec![saved(&report("2026-10-05T10:00:00Z"))]));
+        assert_eq!((s.panel, s.compare.clone()), (Panel::Main, None));
+        // A check with itself, or one that isn't saved, can't be compared.
+        let mut s = with_checks(&["2026-10-01T10:00:00Z"]);
+        s.update(Event::CompareChecks("2026-10-01T10:00:00Z".into(), "2026-10-01T10:00:00Z".into()));
+        s.update(Event::CompareChecks("2026-10-01T10:00:00Z".into(), "gone".into()));
+        assert_eq!(s.compare, None);
+    }
+
+    #[test]
+    fn client_and_notes_go_with_the_check_shown() {
+        let mut s = with_checks(&["2026-10-01T10:00:00Z"]);
+        let effects = s.update(Event::SetClient("Mario Rossi".into()));
+        assert_eq!(effects, vec![Effect::SaveCheckNotes { id: "2026-10-09T10:00:00Z".into(), client: "Mario Rossi".into(), notes: String::new() }]);
+        s.update(Event::OpenCheck("2026-10-01T10:00:00Z".into()));
+        assert_eq!(s.shown_notes(), ("", ""), "the past check has its own");
+        let effects = s.update(Event::SetNotes("Fan cleaned".into()));
+        assert_eq!(effects, vec![Effect::SaveCheckNotes { id: "2026-10-01T10:00:00Z".into(), client: String::new(), notes: "Fan cleaned".into() }]);
+        assert_eq!((s.checks[1].notes.as_str(), s.checks[0].client.as_str()), ("Fan cleaned", "Mario Rossi"));
+        s.update(Event::CloseCheck);
+        assert_eq!(s.shown_notes(), ("Mario Rossi", ""));
+        // A new check starts with empty fields.
+        s.update(Event::Start);
+        s.update(Event::Finished(Ok(report("2026-10-09T11:00:00Z")), 0.7));
+        assert_eq!(s.shown_notes(), ("", ""));
+        assert_eq!(State::default().update(Event::SetClient("x".into())), vec![], "no check shown");
+    }
+
+    #[test]
+    fn technician_details_and_the_logo_are_saved() {
+        let mut s = State::default();
+        let me = Technician { business: "PC Rossi".into(), name: "Mario Rossi".into(), contact: "055 123456".into() };
+        assert!(matches!(s.update(Event::SetTechnician(me.clone())).as_slice(), [Effect::SaveSettings(st)] if st.technician == me));
+        assert_eq!(s.settings.technician, me);
+        assert_eq!(s.update(Event::SetLogo(vec![1, 2, 3])), vec![Effect::SaveLogo(vec![1, 2, 3])]);
+        assert!(s.has_logo);
+        assert_eq!(s.update(Event::RemoveLogo), vec![Effect::ClearLogo]);
+        assert!(!s.has_logo);
+        s.update(Event::Loaded { settings: Settings::default(), checks: vec![], links: vec![], has_logo: true });
+        assert!(s.has_logo);
     }
 }

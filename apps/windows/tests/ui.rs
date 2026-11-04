@@ -226,7 +226,7 @@ fn the_last_check_comes_back_faded_at_the_next_launch() {
     let first = harness_in(Locale::En, dir.clone());
     press(&first.app, "Check this PC");
     first.background.run_all(&first.app);
-    assert!(FileStore::new(dir.to_path_buf()).load_last().is_some(), "remembered on this PC");
+    assert_eq!(FileStore::new(dir.to_path_buf()).load_checks().len(), 1, "remembered on this PC");
     drop(first);
     let again = harness_in(Locale::En, dir);
     assert!(has(&again.app, "Last time: fine so far, but Fettle couldn't read the disks' health."));
@@ -307,12 +307,12 @@ fn turning_remember_off_deletes_the_stored_check() {
     let h = harness_in(Locale::En, dir.clone());
     press(&h.app, "Check this PC");
     h.background.run_all(&h.app);
-    assert!(FileStore::new(dir.to_path_buf()).load_last().is_some());
+    assert_eq!(FileStore::new(dir.to_path_buf()).load_checks().len(), 1);
     press(&h.app, "Settings");
     assert_eq!(checked(&h.app, "Remember the last check on this PC"), Some(true));
     press(&h.app, "Remember the last check on this PC");
     assert_eq!(checked(&h.app, "Remember the last check on this PC"), Some(false));
-    assert!(!dir.join("last-report.json").exists());
+    assert!(!dir.join("checks.json").exists());
 }
 
 #[test]
@@ -1436,7 +1436,7 @@ fn a_deep_checks_report_is_cleaned_again_with_the_users_own_names() {
     h.background.run_all(&h.app);
     press(&h.app, "Run a Deep check");
     h.background.run_all(&h.app);
-    let saved = std::fs::read_to_string(dir.join("last-report.json")).unwrap();
+    let saved = std::fs::read_to_string(dir.join("checks.json")).unwrap();
     assert!(saved.contains("Backup of <user> at <email>"), "the Deep check's report, cleaned with this account's names");
     assert!(!saved.contains("mario.rossi@example.com"));
 }

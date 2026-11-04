@@ -1,5 +1,6 @@
-//! What Fettle keeps on this PC, in `%LOCALAPPDATA%\Fettle\`: the settings, the last check (the
-//! same redacted report the receipt shows) and the share links it can still delete. A file that is
+//! What Fettle keeps on this PC, in `%LOCALAPPDATA%\Fettle\`: the settings, the last ten checks (the
+//! same redacted reports the receipts show, with the client and notes typed for each), the logo for
+//! printouts and the share links it can still delete. A file that is
 //! missing, broken, of the wrong shape or from a newer Fettle is ignored and replaced: it can never
 //! stop the app from opening.
 
@@ -18,12 +19,97 @@ pub struct SavedLink {
     pub expires_at: String,
 }
 
+/// How many checks this PC keeps: an 11th drops the oldest.
+pub const MAX_CHECKS: usize = 10;
+
+/// A check this PC keeps: its report, and the client and notes typed for its printout (only ever
+/// on paper, never in the report, a share or a saved JSON file).
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct SavedCheck {
+    pub report: Report,
+    #[serde(default)]
+    pub client: String,
+    #[serde(default)]
+    pub notes: String,
+}
+
+impl SavedCheck {
+    pub fn new(report: Report) -> SavedCheck {
+        SavedCheck { report, client: String::new(), notes: String::new() }
+    }
+
+    /// A check is known by when it was made.
+    pub fn id(&self) -> &str {
+        &self.report.collected_at
+    }
+
+    /// When it was made, in ms since 1970 (None: unreadable).
+    pub fn at(&self) -> Option<i64> {
+        fettle_verdicts::fmt::parse_rfc3339(&self.report.collected_at)
+    }
+}
+
+/// The saved checks as they're kept: each once (the first entry of an id wins), newest first, ten at most.
+pub fn tidy_checks(checks: Vec<SavedCheck>) -> Vec<SavedCheck> {
+    let mut kept: Vec<SavedCheck> = Vec::with_capacity(checks.len());
+    for c in checks {
+        if !kept.iter().any(|k| k.id() == c.id()) {
+            kept.push(c);
+        }
+    }
+    // Stable, so two of the same moment keep their order.
+    kept.sort_by_key(|c| std::cmp::Reverse(c.at().unwrap_or(i64::MIN)));
+    kept.truncate(MAX_CHECKS);
+    kept
+}
+
 pub trait Store {
     fn load_settings(&self) -> Settings;
     fn save_settings(&self, settings: &Settings);
-    fn load_last(&self) -> Option<Report>;
-    fn save_last(&self, report: &Report);
-    fn clear_last(&self);
+    /// The saved checks, newest first.
+    fn load_checks(&self) -> Vec<SavedCheck>;
+    fn save_checks(&self, checks: &[SavedCheck]);
+    /// Forgets every saved check.
+    fn clear_checks(&self);
+    /// Runs `f` while no other Fettle window can change the saved checks (best effort).
+    fn with_checks_locked(&self, f: &mut dyn FnMut()) {
+        f()
+    }
+    /// Adds a check (replacing a saved one of the same id). Read again first, as `add_link` does,
+    /// so another window's checks stay.
+    fn add_check(&self, check: &SavedCheck) {
+        self.with_checks_locked(&mut || {
+            let mut checks = vec![check.clone()];
+            checks.extend(self.load_checks());
+            self.save_checks(&tidy_checks(checks));
+        });
+    }
+    /// Forgets one check, keeping every other window's.
+    fn delete_check(&self, id: &str) {
+        self.with_checks_locked(&mut || {
+            let checks = self.load_checks();
+            let kept: Vec<SavedCheck> = checks.iter().filter(|c| c.id() != id).cloned().collect();
+            if kept.len() != checks.len() {
+                self.save_checks(&kept);
+            }
+        });
+    }
+    /// The client and notes for one saved check's printout.
+    fn set_check_notes(&self, id: &str, client: &str, notes: &str) {
+        self.with_checks_locked(&mut || {
+            let mut checks = self.load_checks();
+            if let Some(c) = checks.iter_mut().find(|c| c.id() == id) {
+                c.client = client.to_string();
+                c.notes = notes.to_string();
+                self.save_checks(&checks);
+            }
+        });
+    }
+    /// The logo for printouts, as the PNG saved (None: there's none).
+    fn load_logo(&self) -> Option<Vec<u8>>;
+    /// Saves the logo, already prepared as a PNG.
+    fn save_logo(&self, png: &[u8]);
+    fn clear_logo(&self);
     /// The links still alive at `now_ms`; expired ones are forgotten.
     fn load_links(&self, now_ms: i64) -> Vec<SavedLink>;
     fn save_links(&self, links: &[SavedLink]);
@@ -95,26 +181,51 @@ pub fn data_dir(exe_dir: Option<&Path>, local_app_data: Option<std::ffi::OsStrin
 }
 
 const SETTINGS: &str = "settings.json";
+/// Where Fettle 1.0 kept its one remembered check: moved into checks.json, then deleted.
 const LAST: &str = "last-report.json";
+const CHECKS: &str = "checks.json";
+/// The shape of checks.json; a newer one is from a newer Fettle and is ignored.
+const CHECKS_VERSION: u64 = 1;
+const LOGO: &str = "logo.png";
 const LINKS: &str = "links.json";
 const UPDATE: &str = "update.json";
 const LINKS_LOCK: &str = "links.lock";
+const CHECKS_LOCK: &str = "checks.lock";
 
 impl FileStore {
     fn read(&self, name: &str) -> Option<serde_json::Value> {
         serde_json::from_str(&std::fs::read_to_string(self.dir.join(name)).ok()?).ok()
     }
 
-    /// Best effort: a full disk or a locked file just means it isn't kept this time.
-    fn write(&self, name: &str, value: &impl Serialize) {
-        let Ok(text) = serde_json::to_string(value) else { return };
+    /// Best effort: a full disk or a locked file just means it isn't kept this time (false).
+    fn write(&self, name: &str, value: &impl Serialize) -> bool {
+        let Ok(text) = serde_json::to_string(value) else { return false };
+        self.write_bytes(name, text.as_bytes())
+    }
+
+    fn write_bytes(&self, name: &str, bytes: &[u8]) -> bool {
         let _ = std::fs::create_dir_all(&self.dir);
         // Written aside, then moved over the old file, so a crash never leaves half a file. The
         // temporary file is this process's own: another Fettle window may be saving at the same moment.
         let tmp = self.dir.join(format!("{name}.{}.tmp", std::process::id()));
-        if std::fs::write(&tmp, text).is_err() || std::fs::rename(&tmp, self.dir.join(name)).is_err() {
+        if std::fs::write(&tmp, bytes).is_err() || std::fs::rename(&tmp, self.dir.join(name)).is_err() {
             let _ = std::fs::remove_file(&tmp);
+            return false;
         }
+        true
+    }
+
+    /// Fettle 1.0's remembered check, if there is one, becomes the first saved check. The old file
+    /// goes once checks.json holds it, or at once when it can't be used.
+    fn move_last_check(&self) -> Vec<SavedCheck> {
+        if !self.dir.join(LAST).exists() {
+            return Vec::new();
+        }
+        let checks: Vec<SavedCheck> = self.read(LAST).and_then(usable_report).map(SavedCheck::new).into_iter().collect();
+        if checks.is_empty() || self.write(CHECKS, &checks_file(&checks)) {
+            self.remove(LAST);
+        }
+        checks
     }
 
     /// Holds `name` open with no sharing (and gone when closed), waiting up to two seconds for it.
@@ -144,6 +255,26 @@ impl FileStore {
     }
 }
 
+/// A report this version can turn into a receipt: not from a newer Fettle, its time readable.
+fn usable_report(value: serde_json::Value) -> Option<Report> {
+    if !value["schema_version"].as_u64().is_some_and(|n| n <= u64::from(SCHEMA_VERSION)) {
+        return None;
+    }
+    let report = serde_json::from_value::<Report>(value).ok()?;
+    fettle_receipt::receipt_for(&report, fettle_verdicts::Locale::En, fettle_receipt::Zone::Utc).is_ok().then_some(report)
+}
+
+/// One saved check as stored, or None when its report can't be used.
+fn usable_check(value: &serde_json::Value) -> Option<SavedCheck> {
+    let report = usable_report(value.get("report")?.clone())?;
+    let text = |name: &str| value.get(name).and_then(serde_json::Value::as_str).unwrap_or_default().to_string();
+    Some(SavedCheck { report, client: text("client"), notes: text("notes") })
+}
+
+fn checks_file(checks: &[SavedCheck]) -> serde_json::Value {
+    serde_json::json!({ "version": CHECKS_VERSION, "checks": checks })
+}
+
 /// One field of a JSON object, or the default when it's missing or of the wrong type.
 fn field<T: serde::de::DeserializeOwned>(object: &serde_json::Value, name: &str, default: T) -> T {
     object.get(name).and_then(|v| serde_json::from_value(v.clone()).ok()).unwrap_or(default)
@@ -160,6 +291,7 @@ impl Store for FileStore {
             show_private: field(&o, "show_private", d.show_private),
             lang: field(&o, "lang", d.lang),
             theme: field(&o, "theme", d.theme),
+            technician: field(&o, "technician", d.technician),
             updates_chosen: o.get("updates").is_some_and(serde_json::Value::is_boolean),
         }
     }
@@ -176,28 +308,42 @@ impl Store for FileStore {
         self.write(SETTINGS, &value);
     }
 
-    fn load_last(&self) -> Option<Report> {
-        if !self.dir.join(LAST).exists() {
-            return None;
+    /// A broken file, or one from a newer Fettle, is no checks; an entry this version can't use
+    /// is left out and the others kept.
+    fn load_checks(&self) -> Vec<SavedCheck> {
+        if !self.dir.join(CHECKS).exists() {
+            return self.move_last_check();
         }
-        let usable = self
-            .read(LAST)
-            .filter(|v| v["schema_version"].as_u64().is_some_and(|n| n <= u64::from(SCHEMA_VERSION)))
-            .and_then(|v| serde_json::from_value::<Report>(v).ok())
-            // A report this version can't turn into a receipt is forgotten too.
-            .filter(|r| fettle_receipt::receipt_for(r, fettle_verdicts::Locale::En, fettle_receipt::Zone::Utc).is_ok());
-        if usable.is_none() {
-            self.clear_last();
-        }
-        usable
+        let Some(file) = self.read(CHECKS).filter(|v| v["version"].as_u64().is_some_and(|n| (1..=CHECKS_VERSION).contains(&n))) else { return Vec::new() };
+        let entries = file["checks"].as_array().cloned().unwrap_or_default();
+        tidy_checks(entries.iter().filter_map(usable_check).collect())
     }
 
-    fn save_last(&self, report: &Report) {
-        self.write(LAST, report);
+    fn save_checks(&self, checks: &[SavedCheck]) {
+        self.write(CHECKS, &checks_file(checks));
     }
 
-    fn clear_last(&self) {
+    fn clear_checks(&self) {
+        self.remove(CHECKS);
         self.remove(LAST);
+    }
+
+    /// checks.lock, held like links.lock (gone when it's let go).
+    fn with_checks_locked(&self, f: &mut dyn FnMut()) {
+        let _lock = self.lock(CHECKS_LOCK);
+        f()
+    }
+
+    fn load_logo(&self) -> Option<Vec<u8>> {
+        std::fs::read(self.dir.join(LOGO)).ok().filter(|b| !b.is_empty())
+    }
+
+    fn save_logo(&self, png: &[u8]) {
+        self.write_bytes(LOGO, png);
+    }
+
+    fn clear_logo(&self) {
+        self.remove(LOGO);
     }
 
     fn load_links(&self, now_ms: i64) -> Vec<SavedLink> {
@@ -419,34 +565,147 @@ pub(crate) mod tests {
         assert_eq!(store.load_settings(), Settings { updates: false, updates_chosen: true, ..saved });
     }
 
-    #[test]
-    fn the_last_check_round_trips_and_clears() {
-        let dir = temp_dir();
-        let store = FileStore::new(dir.to_path_buf());
-        assert_eq!(store.load_last(), None);
-        let r = dump_report();
-        store.save_last(&r);
-        assert_eq!(store.load_last(), Some(r));
-        store.clear_last();
-        assert_eq!(store.load_last(), None);
+    fn check_at(at: &str) -> SavedCheck {
+        SavedCheck { report: Report { collected_at: at.into(), ..dump_report() }, client: String::new(), notes: String::new() }
+    }
+
+    fn ids(store: &FileStore) -> Vec<String> {
+        store.load_checks().into_iter().map(|c| c.id().to_string()).collect()
     }
 
     #[test]
-    fn a_broken_or_newer_last_check_is_forgotten() {
+    fn the_last_ten_checks_are_kept_newest_first_and_never_twice() {
+        let dir = temp_dir();
+        let store = FileStore::new(dir.to_path_buf());
+        assert!(store.load_checks().is_empty());
+        for day in 1..=12 {
+            store.add_check(&check_at(&format!("2026-10-{day:02}T10:00:00Z")));
+        }
+        let kept = ids(&store);
+        assert_eq!(kept.len(), 10, "{kept:?}");
+        assert_eq!(kept.first().map(String::as_str), Some("2026-10-12T10:00:00Z"));
+        assert_eq!(kept.last().map(String::as_str), Some("2026-10-03T10:00:00Z"), "the two oldest went");
+        // The same check again replaces its entry rather than adding a second one.
+        store.add_check(&SavedCheck { client: "Rossi".into(), ..check_at("2026-10-12T10:00:00Z") });
+        assert_eq!(ids(&store), kept);
+        assert_eq!(store.load_checks()[0].client, "Rossi");
+        // An older check added late still goes in its place by date.
+        store.add_check(&check_at("2026-10-05T12:00:00Z"));
+        let now = ids(&store);
+        assert_eq!((now[7].as_str(), now[9].as_str()), ("2026-10-05T12:00:00Z", "2026-10-04T10:00:00Z"));
+    }
+
+    #[test]
+    fn the_last_check_of_an_older_fettle_becomes_the_first_saved_check() {
         let dir = temp_dir();
         std::fs::create_dir_all(&dir).unwrap();
+        let r = dump_report();
+        std::fs::write(dir.join("last-report.json"), serde_json::to_string(&r).unwrap()).unwrap();
+        let store = FileStore::new(dir.to_path_buf());
+        assert_eq!(store.load_checks(), vec![SavedCheck { report: r, client: String::new(), notes: String::new() }]);
+        assert!(dir.join("checks.json").exists());
+        assert!(!dir.join("last-report.json").exists(), "moved, not copied");
+        assert_eq!(store.load_checks().len(), 1);
+        // One it can't use is just removed.
+        std::fs::remove_file(dir.join("checks.json")).unwrap();
         std::fs::write(dir.join("last-report.json"), "[1, 2").unwrap();
-        assert_eq!(FileStore::new(dir.to_path_buf()).load_last(), None);
+        assert!(store.load_checks().is_empty());
         assert!(!dir.join("last-report.json").exists());
-        let mut newer = serde_json::to_value(dump_report()).unwrap();
-        newer["schema_version"] = (SCHEMA_VERSION + 1).into();
-        std::fs::write(dir.join("last-report.json"), newer.to_string()).unwrap();
-        assert_eq!(FileStore::new(dir.to_path_buf()).load_last(), None);
-        // A report whose scan time can't be read can't make a receipt: forgotten too.
-        let mut odd = serde_json::to_value(dump_report()).unwrap();
-        odd["collected_at"] = "2026-02-32T10:00:00Z".into();
-        std::fs::write(dir.join("last-report.json"), odd.to_string()).unwrap();
-        assert_eq!(FileStore::new(dir.to_path_buf()).load_last(), None);
+    }
+
+    #[test]
+    fn a_broken_or_newer_checks_file_is_ignored() {
+        let dir = temp_dir();
+        std::fs::create_dir_all(&dir).unwrap();
+        let store = FileStore::new(dir.to_path_buf());
+        std::fs::write(dir.join("checks.json"), "[1, 2").unwrap();
+        assert!(store.load_checks().is_empty());
+        let good = serde_json::to_value(check_at("2026-10-09T10:00:00Z")).unwrap();
+        std::fs::write(dir.join("checks.json"), serde_json::json!({ "version": 2, "checks": [good] }).to_string()).unwrap();
+        assert!(store.load_checks().is_empty(), "from a newer Fettle");
+        // One bad entry (newer report, unreadable time, wrong shape) goes; the others stay.
+        let mut newer = good.clone();
+        newer["report"]["schema_version"] = (SCHEMA_VERSION + 1).into();
+        let mut odd = good.clone();
+        odd["report"]["collected_at"] = "2026-02-32T10:00:00Z".into();
+        let file = serde_json::json!({ "version": 1, "checks": [newer, odd, { "report": 7 }, good] });
+        std::fs::write(dir.join("checks.json"), file.to_string()).unwrap();
+        assert_eq!(ids(&store), ["2026-10-09T10:00:00Z"]);
+        // Old entries without client or notes load with them empty.
+        let file = serde_json::json!({ "version": 1, "checks": [{ "report": good["report"] }] });
+        std::fs::write(dir.join("checks.json"), file.to_string()).unwrap();
+        assert_eq!(store.load_checks()[0].notes, "");
+    }
+
+    #[test]
+    fn a_check_can_be_deleted_and_all_of_them_cleared() {
+        let dir = temp_dir();
+        let store = FileStore::new(dir.to_path_buf());
+        store.add_check(&check_at("2026-10-08T10:00:00Z"));
+        store.add_check(&check_at("2026-10-09T10:00:00Z"));
+        store.delete_check("2026-10-08T10:00:00Z");
+        assert_eq!(ids(&store), ["2026-10-09T10:00:00Z"]);
+        store.delete_check("not there");
+        assert_eq!(ids(&store).len(), 1);
+        store.clear_checks();
+        assert!(store.load_checks().is_empty());
+        assert!(!dir.join("checks.json").exists());
+    }
+
+    #[test]
+    fn client_and_notes_are_saved_with_their_own_check() {
+        let dir = temp_dir();
+        let store = FileStore::new(dir.to_path_buf());
+        store.add_check(&check_at("2026-10-08T10:00:00Z"));
+        store.add_check(&check_at("2026-10-09T10:00:00Z"));
+        store.set_check_notes("2026-10-08T10:00:00Z", "Mario Rossi", "New SSD fitted");
+        let checks = store.load_checks();
+        assert_eq!((checks[1].client.as_str(), checks[1].notes.as_str()), ("Mario Rossi", "New SSD fitted"));
+        assert_eq!((checks[0].client.as_str(), checks[0].notes.as_str()), ("", ""));
+    }
+
+    #[test]
+    fn two_windows_never_lose_each_others_checks() {
+        let dir = temp_dir();
+        let (a, b) = (FileStore::new(dir.to_path_buf()), FileStore::new(dir.to_path_buf()));
+        a.add_check(&check_at("2026-10-08T10:00:00Z"));
+        b.add_check(&check_at("2026-10-09T10:00:00Z"));
+        assert_eq!(ids(&a), ["2026-10-09T10:00:00Z", "2026-10-08T10:00:00Z"]);
+        b.delete_check("2026-10-08T10:00:00Z");
+        a.set_check_notes("2026-10-09T10:00:00Z", "Bianchi", "");
+        assert_eq!(b.load_checks()[0].client, "Bianchi");
+        assert!(!dir.join("checks.lock").exists(), "the lock goes when it's let go");
+    }
+
+    #[test]
+    fn the_logo_is_kept_beside_the_settings_and_can_be_removed() {
+        let dir = temp_dir();
+        let store = FileStore::new(dir.to_path_buf());
+        assert_eq!(store.load_logo(), None);
+        store.save_logo(b"\x89PNG not really");
+        assert_eq!(store.load_logo().as_deref(), Some(&b"\x89PNG not really"[..]));
+        assert!(dir.join("logo.png").exists());
+        store.clear_logo();
+        assert_eq!(store.load_logo(), None);
+    }
+
+    #[test]
+    fn technician_details_round_trip_and_older_settings_still_load() {
+        let dir = temp_dir();
+        std::fs::create_dir_all(&dir).unwrap();
+        // A settings file from 1.0, before there were any.
+        std::fs::write(dir.join("settings.json"), r#"{"remember":true,"theme":"dark"}"#).unwrap();
+        let store = FileStore::new(dir.to_path_buf());
+        let s = store.load_settings();
+        assert_eq!((s.theme, s.technician.clone()), (ThemeChoice::Dark, crate::state::Technician::default()));
+        let mine = crate::state::Technician { business: "PC Rossi".into(), name: "Mario".into(), contact: "055 123456".into() };
+        store.save_settings(&Settings { technician: mine.clone(), ..s });
+        assert_eq!(store.load_settings().technician, mine);
+        // Half a block, or the wrong type, keeps what it can.
+        std::fs::write(dir.join("settings.json"), r#"{"technician":{"business":"PC Rossi","name":3}}"#).unwrap();
+        assert_eq!(store.load_settings().technician, crate::state::Technician::default());
+        std::fs::write(dir.join("settings.json"), r#"{"technician":{"business":"PC Rossi"}}"#).unwrap();
+        assert_eq!(store.load_settings().technician.business, "PC Rossi");
     }
 
     #[test]

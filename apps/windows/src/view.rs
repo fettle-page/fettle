@@ -249,10 +249,14 @@ pub fn apply(w: &AppWindow, s: &State, ctx: &Ctx, cache: &mut Cache) {
             Panel::Share => "share",
             Panel::Links => "links",
             Panel::Preview => "preview",
+            // Not drawn yet (1.1's UI comes next).
+            Panel::Checks => "checks",
+            Panel::Compare => "compare",
             Panel::Main => match main {
                 MainView::Home => "home",
                 MainView::Checking => "checking",
                 MainView::Result => "result",
+                MainView::Past => "past",
             },
         }
         .into(),
@@ -261,21 +265,24 @@ pub fn apply(w: &AppWindow, s: &State, ctx: &Ctx, cache: &mut Cache) {
         match s.mat() {
             Mat::Blank => "blank",
             Mat::Live => "live",
-            Mat::Last => "last",
+            // Faded too, until the mat has its own label for a past check.
+            Mat::Last | Mat::Past => "last",
         }
         .into(),
     );
     w.set_alert(s.problem.map(|p| SharedString::from(t(p.key(), lang, &[]))).unwrap_or_default());
 
     let current = s.current.as_ref().and_then(|c| receipt_of(&c.report, lang, ctx).map(|r| (c, r)));
-    let last = s.last.as_ref().and_then(|r| receipt_of(r, lang, ctx).map(|m| (r, m)));
+    let last = s.last_check().and_then(|r| receipt_of(r, lang, ctx).map(|m| (r, m)));
+    let past = s.opened_check().and_then(|c| receipt_of(&c.report, lang, ctx));
 
-    // The receipt on the mat: this check's, or the last one.
-    match (s.mat(), &current, &last) {
-        (Mat::Live, Some((_, (_, m))), _) | (Mat::Last, _, Some((_, (_, m)))) => {
-            changed(&mut cache.receipt, format!("{:?}|{}|{}|{}", s.mat(), lang.code(), m.meta.collected_at, m.meta.when), || w.set_receipt(receipt_data(m, lang)));
-        }
-        _ => {}
+    // The receipt on the mat: this check's, the last one, or a past one opened from My checks.
+    let on_mat = match (s.mat(), &current, &last, &past) {
+        (Mat::Live, Some((_, (_, m))), _, _) | (Mat::Last, _, Some((_, (_, m))), _) | (Mat::Past, _, _, Some((_, m))) => Some(m),
+        _ => None,
+    };
+    if let Some(m) = on_mat {
+        changed(&mut cache.receipt, format!("{:?}|{}|{}|{}", s.mat(), lang.code(), m.meta.collected_at, m.meta.when), || w.set_receipt(receipt_data(m, lang)));
     }
 
     // Coming back: what the last check found and how long ago.
@@ -343,9 +350,9 @@ pub fn apply(w: &AppWindow, s: &State, ctx: &Ctx, cache: &mut Cache) {
         w.set_share_delete_link(shared.delete_url.clone().into());
         w.set_share_expires(t("share.expires", lang, &date_params(long_local_date(&shared.expires_at))).into());
     }
-    if let Some(c) = &s.current {
+    if let Some(shown) = s.shown_report() {
         // Exactly what would leave this PC: the redacted report and the engine version.
-        let outgoing = Report { engine_version: Some(fettle_verdicts::ENGINE_VERSION.to_string()), ..c.report.clone() };
+        let outgoing = Report { engine_version: Some(fettle_verdicts::ENGINE_VERSION.to_string()), ..shown.clone() };
         w.set_share_json(serde_json::to_string_pretty(&outgoing).unwrap_or_default().into());
     }
     w.set_share_note(s.share_note.map(|k| t(k, lang, &[])).unwrap_or_default().into());

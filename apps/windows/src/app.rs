@@ -176,7 +176,7 @@ impl Fettle {
     pub fn new(deps: Deps) -> Result<Fettle, slint::PlatformError> {
         let window = AppWindow::new()?;
         window.global::<Copy>().on_tr(|key, lang| copy::any(&key, Locale::from_tag(&lang)).into());
-        let loaded = Event::Loaded { settings: deps.store.load_settings(), last: deps.store.load_last(), links: deps.store.load_links((deps.now_ms)()) };
+        let loaded = Event::Loaded { settings: deps.store.load_settings(), checks: deps.store.load_checks(), links: deps.store.load_links((deps.now_ms)()), has_logo: deps.store.load_logo().is_some() };
         let inner = Rc::new(Inner { window, deps, state: RefCell::new(State::default()), queue: Arc::default(), pumping: RefCell::new(false), private: RefCell::new(None), view_cache: RefCell::default(), preview: RefCell::new(None), checking: Default::default(), _ticker: slint::Timer::default(), _scheme: slint::Timer::default() });
         APP.with(|a| *a.borrow_mut() = Rc::downgrade(&inner));
         let app = Fettle(inner);
@@ -279,8 +279,13 @@ impl Fettle {
                     post(Event::Finished(result.map_err(|_| ScanProblem::Failed), start.elapsed().as_secs_f64()));
                 }));
             }
-            Effect::SaveLast(report) => store.save_last(&report),
-            Effect::ClearLast => store.clear_last(),
+            Effect::AddCheck(check) => store.add_check(&check),
+            Effect::DeleteCheck(id) => store.delete_check(&id),
+            Effect::ClearChecks => store.clear_checks(),
+            Effect::ReloadChecks => self.post_now(Event::ChecksLoaded(store.load_checks())),
+            Effect::SaveCheckNotes { id, client, notes } => store.set_check_notes(&id, &client, &notes),
+            Effect::SaveLogo(png) => store.save_logo(&png),
+            Effect::ClearLogo => store.clear_logo(),
             Effect::SaveSettings(settings) => store.save_settings(&settings),
             Effect::LoadPrivate => {
                 let read = self.0.deps.private.clone();
@@ -298,7 +303,7 @@ impl Fettle {
                 self.post_now(Event::Exported(Some(if copied == Some(true) { "export.copied" } else { "export.failed" })));
             }
             Effect::Share { expires, password } => {
-                let Some(report) = self.0.state.borrow().current.as_ref().map(|c| c.report.clone()) else { return };
+                let Some(report) = self.0.state.borrow().shown_report().cloned() else { return };
                 // What leaves this PC: the redacted report, plus the engine version so the shared
                 // page shows the same verdicts.
                 let report = Report { engine_version: Some(fettle_verdicts::ENGINE_VERSION.to_string()), ..report };
@@ -429,9 +434,10 @@ impl Fettle {
         self.0.state.borrow().lang(self.0.deps.system_lang)
     }
 
-    /// Runs `f` with this check's report and its receipt (language and time zone as on screen).
+    /// Runs `f` with the shown check's report (an opened past one, else this run's) and its receipt
+    /// (language and time zone as on screen).
     fn with_receipt<T>(&self, f: impl FnOnce(&Report, &fettle_receipt::ReceiptModel) -> T) -> Option<T> {
-        let report = self.0.state.borrow().current.as_ref()?.report.clone();
+        let report = self.0.state.borrow().shown_report()?.clone();
         let at = fettle_verdicts::fmt::parse_rfc3339(&report.collected_at)?;
         let (_, model) = fettle_receipt::receipt_for(&report, self.lang(), fettle_receipt::Zone::Offset((self.0.deps.zone)(at))).ok()?;
         Some(f(&report, &model))

@@ -4,7 +4,7 @@
 use crate::format::{bytes, int, iso_day, temp};
 use crate::memory::{channel_of, rated_from_part_number, slot_of};
 use crate::ui;
-use fettle_facts::{Battery, Bus, Chassis, Facts, FormFactor, Graphics, Media, Memory, MemoryKind, Startup, Storage, Windows};
+use fettle_facts::{Battery, Bus, Disk, Chassis, Facts, FormFactor, Graphics, Media, Memory, MemoryKind, Startup, Storage, Windows};
 use fettle_verdicts::{Locale, Param, SectionId, fmt};
 use serde::{Deserialize, Serialize};
 use std::cmp::Ordering;
@@ -46,7 +46,7 @@ fn pct<T: Into<f64>>(n: Option<T>) -> Option<String> {
 }
 
 /// Memory and VRAM are sold in binary sizes: 16 GiB is "16 GB" on the box.
-fn binary_gb(n: Option<f64>) -> Option<String> {
+pub(crate) fn binary_gb(n: Option<f64>) -> Option<String> {
     let n = n.filter(|n| *n > 0.0)?;
     Some(if n < 2f64.powi(30) { format!("{} MB", (n / 2f64.powi(20)).round()) } else { format!("{} GB", (n / 2f64.powi(30)).round()) })
 }
@@ -55,28 +55,38 @@ fn u64f(n: Option<u64>) -> Option<f64> {
     n.map(|v| v as f64)
 }
 
+/// "NVMe SSD", "SATA HDD", or as much of it as is known.
+pub(crate) fn disk_kind(disk: &Disk) -> String {
+    let bus = match disk.bus {
+        Some(Bus::Nvme) => Some("NVMe"),
+        Some(Bus::Sata) => Some("SATA"),
+        Some(Bus::Usb) => Some("USB"),
+        _ => None,
+    };
+    let media = match disk.media {
+        Some(Media::Ssd) => Some("SSD"),
+        Some(Media::Hdd) => Some("HDD"),
+        _ => None,
+    };
+    [bus, media].into_iter().flatten().collect::<Vec<_>>().join(" ")
+}
+
+/// How worn a disk is, in percent of its rated life.
+pub(crate) fn disk_wear(disk: &Disk) -> Option<u8> {
+    // SMART's life-used value is wear only on an SSD (on some hard drives it means something else).
+    let smart_wear = disk.smart.as_ref().and_then(|s| s.life_used_pct).filter(|_| disk.media == Some(Media::Ssd));
+    disk.nvme.as_ref().and_then(|n| n.percentage_used).or(smart_wear)
+}
+
 fn storage(d: &Storage, locale: Locale) -> Vec<DetailGroup> {
     let mut list: Vec<DetailGroup> = d
         .disks
         .iter()
         .map(|disk| {
-            let bus = match disk.bus {
-                Some(Bus::Nvme) => Some("NVMe"),
-                Some(Bus::Sata) => Some("SATA"),
-                Some(Bus::Usb) => Some("USB"),
-                _ => None,
-            };
-            let media = match disk.media {
-                Some(Media::Ssd) => Some("SSD"),
-                Some(Media::Hdd) => Some("HDD"),
-                _ => None,
-            };
-            let kind = [bus, media].into_iter().flatten().collect::<Vec<_>>().join(" ");
+            let kind = disk_kind(disk);
             let n = disk.nvme.as_ref();
             let s = disk.smart.as_ref();
-            // SMART's life-used value is wear only on an SSD (on some hard drives it means something else).
-            let smart_wear = s.and_then(|s| s.life_used_pct).filter(|_| disk.media == Some(Media::Ssd));
-            let wear = n.and_then(|n| n.percentage_used).or(smart_wear);
+            let wear = disk_wear(disk);
             let t = n.and_then(|n| n.temperature_c).or_else(|| s.and_then(|s| s.temperature_c));
             let hours = n.and_then(|n| n.power_on_hours).or_else(|| s.and_then(|s| s.power_on_hours))
                 // Over 100 years: other counters packed into the value (seen on SandForce SSDs), not hours.
@@ -391,7 +401,7 @@ mod tests {
     // (79,869,211,876,947): a value no drive can have isn't shown.
     #[test]
     fn impossible_power_on_hours_are_not_shown() {
-        use fettle_facts::{Disk, SmartSummary};
+        use fettle_facts::SmartSummary;
         let rows = |hours: u64| {
             let disk = Disk { smart: Some(SmartSummary { power_on_hours: Some(hours), ..Default::default() }), ..Default::default() };
             storage(&Storage { disks: vec![disk], ..Default::default() }, Locale::En).into_iter().flat_map(|g| g.rows).collect::<Vec<_>>()

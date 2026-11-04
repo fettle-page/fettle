@@ -1,6 +1,7 @@
 //! The receipt for a report, in English or Italian: the model, details, formats and markdown,
 //! pinned by the parity corpus in `tests/parity`.
 
+mod compare;
 pub mod copy;
 pub mod details;
 pub mod format;
@@ -8,6 +9,7 @@ mod markdown;
 pub mod memory;
 mod model;
 
+pub use compare::{Change, CompareGroup, CompareLabels, CompareRow, Comparison, compare, compare_markdown};
 pub use copy::ui;
 pub use details::{DetailGroup, DetailRow};
 pub use format::Zone;

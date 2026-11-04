@@ -83,5 +83,22 @@
   "d.board": "Board",
   "d.bios": "BIOS",
   "d.yes": "on",
-  "d.no": "off"
+  "d.no": "off",
+  "compare.title": "Before and after",
+  "compare.before": "Before",
+  "compare.after": "After",
+  "compare.better": "better",
+  "compare.worse": "worse",
+  "compare.nothing_changed": "Nothing changed between these two checks.",
+  "compare.different_pc": "These two checks look like they're from different PCs.",
+  "compare.disk": "Disk",
+  "compare.disk_added": "{name} (added)",
+  "compare.disk_removed": "{name} (removed)",
+  "compare.battery_health": "Original capacity left",
+  "compare.sticks": "Memory sticks",
+  "compare.esu": "Extended Security Updates",
+  "compare.esu.enrolled": "enrolled",
+  "compare.esu.not_enrolled": "not enrolled",
+  "compare.esu.unknown": "not known",
+  "compare.startup_apps": "Apps that start with Windows"
 }

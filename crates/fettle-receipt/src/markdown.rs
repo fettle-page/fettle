@@ -8,7 +8,7 @@ const MAX: usize = 2000;
 
 /// Text from the PC (models, names) can hold markdown or Discord mentions (`@everyone`, `<@123>`); a
 /// backslash keeps it literal on both sites.
-fn esc(s: &str) -> String {
+pub(crate) fn esc(s: &str) -> String {
     let mut out = String::with_capacity(s.len());
     for c in s.chars() {
         if r"\*_~`|<>^[]@".contains(c) {
@@ -20,7 +20,7 @@ fn esc(s: &str) -> String {
 }
 
 /// Length as JavaScript's `.length` counts it.
-fn utf16_len(s: &str) -> usize {
+pub(crate) fn utf16_len(s: &str) -> usize {
     s.encode_utf16().count()
 }
 

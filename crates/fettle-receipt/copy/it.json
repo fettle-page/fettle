@@ -83,5 +83,22 @@
   "d.board": "Scheda madre",
   "d.bios": "BIOS",
   "d.yes": "attivo",
-  "d.no": "disattivato"
+  "d.no": "disattivato",
+  "compare.title": "Prima e dopo",
+  "compare.before": "Prima",
+  "compare.after": "Dopo",
+  "compare.better": "meglio",
+  "compare.worse": "peggio",
+  "compare.nothing_changed": "Non è cambiato niente tra questi due controlli.",
+  "compare.different_pc": "Questi due controlli sembrano di due PC diversi.",
+  "compare.disk": "Disco",
+  "compare.disk_added": "{name} (aggiunto)",
+  "compare.disk_removed": "{name} (rimosso)",
+  "compare.battery_health": "Capacità originale rimasta",
+  "compare.sticks": "Banchi di memoria",
+  "compare.esu": "Extended Security Updates",
+  "compare.esu.enrolled": "iscritto",
+  "compare.esu.not_enrolled": "non iscritto",
+  "compare.esu.unknown": "non si sa",
+  "compare.startup_apps": "App che si avviano con Windows"
 }

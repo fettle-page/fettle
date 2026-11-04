@@ -47,10 +47,10 @@ describe("the app's extra features on the site", () => {
       expect(answer, locale).toContain(`"${app["export.filter_json"]}"`);
       expect(answer, locale).toContain(locale === "en" ? `press ${app["export.json"]} and choose` : `premi ${app["export.json"]} e scegli`);
     }
-    expect(faqs("en").find((f) => f.id === "forum")!.a.at(-1)).toBe(
+    expect(faqs("en").find((f) => f.id === "forum")!.a[1]).toBe(
       "If someone who knows PCs asks for the details, you can also save the full report as JSON and send them the file: press Save and choose \"Report for experts (JSON)\" as the file type.",
     );
-    expect(faqs("it").find((f) => f.id === "forum")!.a.at(-1)).toBe(
+    expect(faqs("it").find((f) => f.id === "forum")!.a[1]).toBe(
       "Se qualcuno esperto di PC ti chiede i dettagli, puoi anche salvare il report completo in JSON e mandargli il file: premi Salva e scegli \"Report per esperti (JSON)\" come tipo di file.",
     );
   });

@@ -243,8 +243,8 @@ describe("the download count", () => {
     expect(res.headers.get("content-type")).toContain("text/html");
   });
 
-  it("runs the Worker first only on the four pages that show it (and the API, share pages and redirects)", () => {
+  it("runs the Worker first only on the four pages that show it (and the API, share pages, the open-a-report pages and redirects)", () => {
     const config = JSON.parse(raw.replace(/^\s*\/\/.*$/gm, ""));
-    expect(config.assets.run_worker_first).toEqual(["/api/*", "/r/*", "/", "/it", "/download", "/it/download", "/*/", "/*.html"]);
+    expect(config.assets.run_worker_first).toEqual(["/api/*", "/r/*", "/", "/it", "/download", "/it/download", "/open", "/it/open", "/*/", "/*.html"]);
   });
 });

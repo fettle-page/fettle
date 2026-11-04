@@ -5,11 +5,12 @@
   "license": "MIT",
   "type": "module",
   "sideEffects": false,
-  "description": "The Rust receipt (crates/fettle-wasm) for the website build and the share Worker; copy lookups for both.",
+  "description": "The Rust receipt (crates/fettle-wasm) for the website build, the share Worker and the open-a-report page; copy lookups for all three.",
   "exports": {
     ".": "./src/index.ts",
     "./node": "./src/node.ts",
     "./worker": "./src/worker.ts",
+    "./browser": "./src/browser.ts",
     "./package.json": "./package.json",
     "./core": "./src/core.ts",
     "./fettle.wasm": "./dist/fettle.wasm"

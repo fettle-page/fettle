@@ -1,4 +1,4 @@
-// Browser-safe: locales, copy lookups and types. The wasm loaders are `@fettle/brain/node` and `/worker`.
+// Browser-safe: locales, copy lookups and types. The wasm loaders are `@fettle/brain/node`, `/worker` and `/browser`.
 export { acceptedLanguages, LOCALES, localeOf, pickLocale, toLocale, type Locale } from "./locale.ts";
 export { text } from "./text.ts";
 export { uiText } from "./ui-text.ts";

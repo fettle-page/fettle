@@ -1,0 +1,46 @@
+---
+// /open: a report saved from the app, opened in the browser and drawn as its receipt. The file is
+// read here and never uploaded. Up front only the picker's script loads (src/open/main.ts); the
+// checks, React and the Rust receipt (WebAssembly) come once a file is picked (src/open/show.tsx).
+// The Worker adds 'wasm-unsafe-eval' to this page's CSP alone (worker/src/open.ts).
+import Base from "../layouts/Base.astro";
+import type { Locale } from "../i18n/paths.ts";
+import { openText, type OpenKey } from "../open/copy.ts";
+
+interface Props {
+  locale: Locale;
+}
+const { locale } = Astro.props;
+const c = (key: OpenKey) => openText(locale, key);
+---
+
+<Base locale={locale} path="/open" title={c("title")} description={c("description")}>
+  <div class="doc wrap">
+    <header class="doc-head">
+      <p class="kicker">{c("kicker")}</p>
+      <h1>{c("h1")}</h1>
+      <p class="body">{c("intro")}</p>
+    </header>
+    <div class="doc-sheet open-sheet" data-open-drop>
+      <p class="open-promise">{c("promise")}</p>
+      <div class="open-pick" data-open-pick hidden>
+        <label class="btn btn-primary open-button">
+          <input class="sr-only" type="file" accept=".json,application/json" data-open-input />
+          <span data-open-label>{c("pick")}</span>
+        </label>
+        <span class="open-drop">{c("drop")}</span>
+      </div>
+      <noscript><p class="open-message is-error">{c("noscript")}</p></noscript>
+      <p class="open-message" role="status" data-open-message></p>
+      <p class="open-how">{c("how")}</p>
+    </div>
+  </div>
+  <section class="open-result wrap" data-open-result hidden aria-labelledby="open-receipt-title">
+    <h2 class="sr-only" id="open-receipt-title" tabindex="-1">{c("receipt")}</h2>
+    <div class="open-receipt" data-open-receipt></div>
+  </section>
+</Base>
+
+<script>
+  import "../open/main.ts";
+</script>

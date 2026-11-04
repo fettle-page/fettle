@@ -1,5 +1,6 @@
 import { DOWNLOAD_PAGES, refreshDownloadCount, withDownloadCount } from "./downloads.ts";
 import { apiError } from "./http.ts";
+import { OPEN_PAGES, openPage } from "./open.ts";
 import { createReport, deleteReport, getReport, unlockReport } from "./reports.ts";
 import { sharePage } from "./share.ts";
 
@@ -55,6 +56,7 @@ export default {
     if (redirect) return redirect;
     if (pathname === "/r" || pathname.startsWith("/r/")) return sharePage(request, env);
     if (DOWNLOAD_PAGES.has(pathname)) return withDownloadCount(request, env, ctx);
+    if (OPEN_PAGES.has(pathname)) return openPage(request, env);
     return env.ASSETS.fetch(request);
   },
   // Hourly (wrangler.jsonc's Cron Trigger): the download count, asked of GitHub here so no page has to.

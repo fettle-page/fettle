@@ -2,8 +2,11 @@
 // Every answer must stay true for the released app.
 import type { Locale } from "../i18n/paths.ts";
 
-/** `contact`: the answer ends with the contact address, once there is one (src/release.ts). */
-export type Faq = { id: string; q: string; a: string[]; contact?: true };
+/**
+ * `contact`: the answer ends with the contact address, once there is one (src/release.ts).
+ * `link`: a page on this site the answer points to (a path without the language prefix).
+ */
+export type Faq = { id: string; q: string; a: string[]; contact?: true; link?: { href: string; label: string } };
 
 /** Printed in full on the landing page's questions slip; the More questions slip lists the rest. */
 export const PRINTED_QUESTIONS: readonly string[] = ["admin", "changes", "mac"];
@@ -62,7 +65,9 @@ const en: Faq[] = [
     a: [
       "Yes. Press Copy and the receipt goes on your clipboard as text, ready to paste into Discord, Reddit or a forum. Like everything Fettle makes, it leaves out serial numbers, the PC's name, your name, username and email address, and network addresses.",
       "If someone who knows PCs asks for the details, you can also save the full report as JSON and send them the file: press Save and choose \"Report for experts (JSON)\" as the file type.",
+      "Whoever gets the file can see its receipt in a browser, with nothing to install: the file is read on their computer and isn't uploaded.",
     ],
+    link: { href: "/open", label: "Open a saved report" },
   },
   {
     id: "temps",
@@ -144,7 +149,9 @@ const it: Faq[] = [
     a: [
       "Sì. Premi Copia e lo scontrino finisce negli appunti come testo, pronto da incollare su Discord, Reddit o un forum. Come tutto ciò che crea Fettle, non include numeri di serie, nome del PC, il tuo nome, nome utente, indirizzo email né indirizzi di rete.",
       "Se qualcuno esperto di PC ti chiede i dettagli, puoi anche salvare il report completo in JSON e mandargli il file: premi Salva e scegli \"Report per esperti (JSON)\" come tipo di file.",
+      "Chi riceve il file può vederne lo scontrino nel browser, senza installare nulla: il file viene letto sul suo computer e non viene caricato.",
     ],
+    link: { href: "/open", label: "Apri un report salvato" },
   },
   {
     id: "temps",

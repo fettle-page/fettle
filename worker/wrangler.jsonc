@@ -9,7 +9,8 @@
   // Hourly, off the top of the hour: asks GitHub for the download count and stores it in R2 (src/downloads.ts).
   "triggers": { "crons": ["17 * * * *"] },
   "preview_urls": false,
-  "assets": { "directory": "../apps/web/dist", "binding": "ASSETS", "run_worker_first": ["/api/*", "/r/*", "/", "/it", "/download", "/it/download", "/*/", "/*.html"], "not_found_handling": "404-page" },
+  // The Worker runs first on the API, share pages, the download count's pages, /open (its CSP allows WebAssembly) and redirects.
+  "assets": { "directory": "../apps/web/dist", "binding": "ASSETS", "run_worker_first": ["/api/*", "/r/*", "/", "/it", "/download", "/it/download", "/open", "/it/open", "/*/", "/*.html"], "not_found_handling": "404-page" },
   // Created in R2's EU jurisdiction: shared receipts are stored only in EU data centres.
   "r2_buckets": [{ "binding": "REPORTS", "bucket_name": "fettle-reports", "jurisdiction": "eu" }],
   // Per data centre, so these only bound cost and floods. The global password-guess cap is UnlockGuard.

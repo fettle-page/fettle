@@ -28,7 +28,7 @@ export const releases: Release[] = [
       ],
       it: [
         "Il sito ora può aprire un report salvato dall'app in JSON e mostrarne lo scontrino, nella nuova pagina Apri un report salvato. Il browser legge il file sul tuo computer: non viene caricato.",
-        "Il server di condivisione ora usa una versione aggiornata della libreria che controlla i resoconti caricati, che corregge un modo in cui un resoconto troppo grande poteva fargli usare troppa memoria.",
+        "Il server di condivisione ora usa una versione aggiornata della libreria che controlla i report caricati, che corregge un modo in cui un report troppo grande poteva fargli usare troppa memoria.",
         "Il controllo degli aggiornamenti dell'app ora usa una libreria TLS e un elenco di certificati aggiornati, così non si fida più di alcuni certificati che sono stati revocati.",
       ],
     },

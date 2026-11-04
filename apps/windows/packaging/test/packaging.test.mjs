@@ -126,6 +126,13 @@ describe("fettle.iss: uninstalling for all users", () => {
     assert.doesNotMatch(iss, /RemoveDataAll|RemoveDataLeft/);
     assert.match(iss, /if IsAdminInstallMode then/);
   });
+
+  // The whole folder goes (DelTree above), so the question names everything in it since 1.1.
+  it("says the saved checks and the logo go with the data", () => {
+    assert.match(iss, /^en\.RemoveData=.*saved checks.*logo/m);
+    assert.match(iss, /^it\.RemoveData=.*controlli salvati.*logo/m);
+    assert.doesNotMatch(iss, /remembered check|ultimo controllo ricordato/);
+  });
 });
 
 describe("build.mjs", () => {

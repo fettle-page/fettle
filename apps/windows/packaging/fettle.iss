@@ -59,8 +59,8 @@ Name: "en"; MessagesFile: "compiler:Default.isl"; InfoBeforeFile: "privacy\priva
 Name: "it"; MessagesFile: "compiler:Languages\Italian.isl"; InfoBeforeFile: "privacy\privacy-it.txt"
 
 [CustomMessages]
-en.RemoveData=Also remove what Fettle keeps on this PC: its settings, the remembered check and the list of links you shared?%n%nThe links themselves stay online until they expire. Without that list, Fettle can no longer delete them for you.
-it.RemoveData=Rimuovere anche ciò che Fettle conserva su questo PC: le impostazioni, l'ultimo controllo ricordato e l'elenco dei link condivisi?%n%nI link restano online fino alla scadenza. Senza quell'elenco, Fettle non potrà più eliminarli per te.
+en.RemoveData=Also remove what Fettle keeps on this PC: its settings, your saved checks, the logo for printouts and the list of links you shared?%n%nThe links themselves stay online until they expire. Without that list, Fettle can no longer delete them for you.
+it.RemoveData=Rimuovere anche ciò che Fettle conserva su questo PC: le impostazioni, i controlli salvati, il logo per le stampe e l'elenco dei link condivisi?%n%nI link restano online fino alla scadenza. Senza quell'elenco, Fettle non potrà più eliminarli per te.
 en.RemoveDataOthers=Fettle also keeps data in these folders. To be safe, uninstalling for all users only removes the data of the account doing the uninstall. Each person can delete their own folder, or you can:
 it.RemoveDataOthers=Fettle conserva dati anche in queste cartelle. Per sicurezza, la disinstallazione per tutti gli utenti rimuove solo i dati dell'account che disinstalla. Ognuno può eliminare la propria cartella, oppure puoi farlo tu:
 en.UpdatesGroup=Updates:

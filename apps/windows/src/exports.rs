@@ -3,7 +3,8 @@
 
 use crate::app::{Clipboard, Dialogs};
 use crate::copy::t;
-use crate::print::{layout::PageSize, pdf};
+use crate::print::layout::{Letterhead, PageSize};
+use crate::print::pdf;
 use fettle_facts::Report;
 use fettle_receipt::ReceiptModel;
 use fettle_verdicts::Locale;
@@ -32,15 +33,15 @@ impl crate::app::Printer for RealPrinter {
         #[cfg(not(windows))]
         false
     }
-    fn print(&self, owner: &slint::Window, model: &ReceiptModel) -> Result<bool, String> {
+    fn print(&self, owner: &slint::Window, model: &ReceiptModel, head: &Letterhead) -> Result<bool, String> {
         #[cfg(windows)]
         {
             let hwnd = crate::win::hwnd(owner).ok_or("no window")?;
-            crate::print::gdi::print(hwnd, model)
+            crate::print::gdi::print(hwnd, model, head)
         }
         #[cfg(not(windows))]
         {
-            let _ = (owner, model);
+            let _ = (owner, model, head);
             Err("printing needs Windows".into())
         }
     }
@@ -49,14 +50,14 @@ impl crate::app::Printer for RealPrinter {
 /// The width of a preview page on screen, in logical pixels.
 pub const PREVIEW_WIDTH: f32 = 520.0;
 
-/// The receipt's pages as images for the print preview, drawn by the same code that prints them,
-/// sharp at the window's `scale`.
-pub fn preview_pages(model: &ReceiptModel, size: PageSize, scale: f32) -> Vec<slint::Image> {
+/// The receipt's pages (the letterhead on page 1) as images for the print preview, drawn by the same
+/// code that prints them, sharp at the window's `scale`.
+pub fn preview_pages(model: &ReceiptModel, head: &Letterhead, size: PageSize, scale: f32) -> Vec<slint::Image> {
     #[cfg(windows)]
     {
         use slint::{Rgba8Pixel, SharedPixelBuffer};
         let per_point = PREVIEW_WIDTH * scale / size.points().0;
-        crate::print::layout::pages(model, size)
+        crate::print::layout::pages(model, size, head)
             .iter()
             .map(|ops| {
                 let (w, h, px) = crate::print::gdi::render_page(ops, size, per_point);
@@ -70,7 +71,7 @@ pub fn preview_pages(model: &ReceiptModel, size: PageSize, scale: f32) -> Vec<sl
     }
     #[cfg(not(windows))]
     {
-        let _ = (model, size, scale);
+        let _ = (model, head, size, scale);
         Vec::new()
     }
 }
@@ -118,6 +119,22 @@ impl Clipboard for RealClipboard {
     }
 }
 
+/// The letterhead for printouts: the technician's details from Settings, the logo (only one that
+/// still reads, see `logo::readable`), and the shown check's client and notes, labelled in `lang`.
+/// For paper only: never for Copy, saved JSON or shared links.
+pub fn letterhead(technician: &crate::state::Technician, (client, notes): (&str, &str), logo: Option<Vec<u8>>, lang: Locale) -> Letterhead {
+    Letterhead {
+        business: technician.business.clone(),
+        name: technician.name.clone(),
+        contact: technician.contact.clone(),
+        logo_png: logo.and_then(crate::print::logo::readable),
+        client: client.to_string(),
+        notes: notes.to_string(),
+        client_label: t("print.client", lang, &[]),
+        notes_label: t("print.notes", lang, &[]),
+    }
+}
+
 /// The print job's name, as the printer queue shows it, in the receipt's language.
 pub fn job_name(model: &ReceiptModel) -> String {
     t("export.job_name", model.locale, &[])
@@ -153,23 +170,24 @@ fn write_json(path: &Path, report: &Report) -> std::io::Result<()> {
     std::fs::write(path, serde_json::to_string_pretty(&report).map_err(std::io::Error::other)?)
 }
 
-fn write_pdf(path: &Path, model: &ReceiptModel) -> std::io::Result<()> {
-    let bytes = pdf::render(model, paper_size()).map_err(std::io::Error::other)?;
+fn write_pdf(path: &Path, model: &ReceiptModel, head: &Letterhead) -> std::io::Result<()> {
+    let bytes = pdf::render(model, paper_size(), head).map_err(std::io::Error::other)?;
     std::fs::write(path, bytes)
 }
 
-/// Asks where, then writes the receipt as a PDF, or the (already redacted) report as JSON when a
-/// .json name is chosen. The dock's message: None when cancelled.
-pub fn save(dialogs: &dyn Dialogs, owner: &slint::Window, report: &Report, model: &ReceiptModel, lang: Locale) -> Option<&'static str> {
-    save_as(dialogs, owner, report, model, lang, true)
+/// Asks where, then writes the receipt as a PDF (with the letterhead), or the (already redacted)
+/// report as JSON when a .json name is chosen (never the letterhead). The dock's message: None when
+/// cancelled.
+pub fn save(dialogs: &dyn Dialogs, owner: &slint::Window, report: &Report, model: &ReceiptModel, head: &Letterhead, lang: Locale) -> Option<&'static str> {
+    save_as(dialogs, owner, report, model, head, lang, true)
 }
 
 /// Save offering the PDF only (Print's stand-in when Windows can't print).
-pub fn save_pdf(dialogs: &dyn Dialogs, owner: &slint::Window, report: &Report, model: &ReceiptModel, lang: Locale) -> Option<&'static str> {
-    save_as(dialogs, owner, report, model, lang, false)
+pub fn save_pdf(dialogs: &dyn Dialogs, owner: &slint::Window, report: &Report, model: &ReceiptModel, head: &Letterhead, lang: Locale) -> Option<&'static str> {
+    save_as(dialogs, owner, report, model, head, lang, false)
 }
 
-fn save_as(dialogs: &dyn Dialogs, owner: &slint::Window, report: &Report, model: &ReceiptModel, lang: Locale, json: bool) -> Option<&'static str> {
+fn save_as(dialogs: &dyn Dialogs, owner: &slint::Window, report: &Report, model: &ReceiptModel, head: &Letterhead, lang: Locale, json: bool) -> Option<&'static str> {
     let mut filters = vec![(t("export.filter_pdf", lang, &[]), vec!["pdf".to_string()])];
     if json {
         filters.push((t("export.filter_json", lang, &[]), vec!["json".to_string()]));
@@ -179,7 +197,7 @@ fn save_as(dialogs: &dyn Dialogs, owner: &slint::Window, report: &Report, model:
     let written = if json && ext.as_deref() == Some("json") {
         write_json(&path, report)
     } else {
-        write_pdf(&pdf_path(path), model)
+        write_pdf(&pdf_path(path), model, head)
     };
     Some(if written.is_ok() { "export.saved" } else { "export.failed" })
 }
@@ -253,6 +271,20 @@ mod tests {
         ] {
             assert!(!openable(url), "{url}");
         }
+    }
+
+    #[test]
+    fn the_letterhead_comes_from_settings_and_the_check_with_labels_in_the_language() {
+        let tech = crate::state::Technician { business: "Example Repairs".into(), name: "Alex".into(), contact: "help@example.test".into() };
+        let png = crate::print::logo::tests::png(20, 10);
+        let head = letterhead(&tech, ("Sample Client", "Fan replaced"), Some(png.clone()), Locale::It);
+        assert_eq!((head.business.as_str(), head.name.as_str(), head.contact.as_str()), ("Example Repairs", "Alex", "help@example.test"));
+        assert_eq!((head.client.as_str(), head.notes.as_str()), ("Sample Client", "Fan replaced"));
+        assert_eq!((head.client_label.as_str(), head.notes_label.as_str()), ("Cliente", "Note"));
+        assert_eq!(head.logo_png, Some(png));
+        assert_eq!(letterhead(&tech, ("", ""), None, Locale::En).client_label, "Client");
+        // A logo.png that no longer reads (or grew past 2 MB) prints as none.
+        assert_eq!(letterhead(&tech, ("", ""), Some(b"junk".to_vec()), Locale::En).logo_png, None);
     }
 
     #[test]

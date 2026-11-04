@@ -1,7 +1,7 @@
 //! Printing: Windows' print dialog, then the receipt drawn on the printer page by page with GDI,
 //! from the same layout as the PDF. The brand fonts are loaded for this app only.
 
-use super::layout::{DISPLAY, Face, MONO, MONO_BOLD, Op, PageSize, PathStep, Rgb, pages, wordmark_paths};
+use super::layout::{DISPLAY, Face, Letterhead, MONO, MONO_BOLD, Op, PageSize, PathStep, Rgb, pages, wordmark_paths};
 use fettle_receipt::ReceiptModel;
 use std::cell::RefCell;
 use std::collections::HashMap;
@@ -184,6 +184,19 @@ impl Painter {
                             let _ = DeleteObject(brush.into());
                         }
                     }
+                    Op::Image { x, y, w, h: ih, png } => {
+                        // The picture on white (paper has no transparency), stretched into its box.
+                        let Some((pw, ph, px)) = super::logo::pixels_on_white(&png.0) else { continue };
+                        let (a, b) = (self.p(*x, *y), self.p(x + w, y + ih));
+                        let info = BITMAPINFO {
+                            bmiHeader: BITMAPINFOHEADER { biSize: std::mem::size_of::<BITMAPINFOHEADER>() as u32, biWidth: pw as i32, biHeight: -(ph as i32), biPlanes: 1, biBitCount: 32, ..Default::default() },
+                            ..Default::default()
+                        };
+                        let previous = SetStretchBltMode(h, HALFTONE);
+                        let _ = SetBrushOrgEx(h, 0, 0, None);
+                        StretchDIBits(h, a.0, a.1, b.0 - a.0, b.1 - a.1, 0, 0, pw as i32, ph as i32, Some(px.as_ptr().cast()), &info, DIB_RGB_COLORS, SRCCOPY);
+                        SetStretchBltMode(h, STRETCH_BLT_MODE(previous));
+                    }
                     Op::Rotate { cx, cy, degrees, ops } => {
                         // The inner ops are in points around the centre, drawn at 10 units a point
                         // and scaled, turned and moved into place by the world transform.
@@ -285,8 +298,9 @@ pub fn printing_available() -> bool {
     }
 }
 
-/// Windows' print dialog, then every page on the chosen printer. Ok(false) when cancelled.
-pub fn print(owner: HWND, model: &ReceiptModel) -> Result<bool, String> {
+/// Windows' print dialog, then every page on the chosen printer, the letterhead on page 1.
+/// Ok(false) when cancelled.
+pub fn print(owner: HWND, model: &ReceiptModel, head: &Letterhead) -> Result<bool, String> {
     use windows::Win32::Foundation::{GlobalFree, HGLOBAL};
     use windows::Win32::Storage::Xps::{AbortDoc, DOCINFOW, EndDoc, EndPage, StartDocW, StartPage};
     use windows::Win32::UI::Controls::Dialogs::*;
@@ -327,7 +341,7 @@ pub fn print(owner: HWND, model: &ReceiptModel) -> Result<bool, String> {
             return outcome;
         }
         let mut ok = true;
-        for page in pages(model, size) {
+        for page in pages(model, size, head) {
             ok = StartPage(hdc) > 0;
             if ok {
                 draw_page(&device, &page);
@@ -347,7 +361,11 @@ pub fn print(owner: HWND, model: &ReceiptModel) -> Result<bool, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::print::layout::{Face, MARGIN, PageSize, pages};
+    use crate::print::layout::{Face, Letterhead, MARGIN, PageSize};
+
+    fn pages(m: &ReceiptModel, size: PageSize) -> Vec<Vec<Op>> {
+        crate::print::layout::pages(m, size, &Letterhead::default())
+    }
     use fettle_verdicts::Locale;
 
     /// An A4 page at 96 dpi in memory, white, drawn on, then read back as 32-bit pixels.
@@ -388,6 +406,22 @@ mod tests {
         assert_eq!(start_doc_outcome(-1, 1223), Some(Ok(false)));
         assert_eq!(start_doc_outcome(-1, 5), Some(Err("the printer refused the job".into())));
         assert_eq!(start_doc_outcome(7, 0), None);
+    }
+
+    #[test]
+    fn the_logo_is_drawn_on_the_page() {
+        let model = crate::print::layout::tests::dump_model(Locale::En);
+        let head = Letterhead { logo_png: Some(crate::print::logo::tests::png(400, 100)), ..Letterhead::default() };
+        let first = &crate::print::layout::pages(&model, PageSize::A4, &head)[0];
+        let Some(Op::Image { x, y, w, h, .. }) = first.iter().find(|op| matches!(op, Op::Image { .. })) else { panic!("no logo") };
+        let s = 96.0 / 72.0;
+        let (px0, py0, px1, py1) = ((x * s) as i32, (y * s) as i32, ((x + w) * s) as i32, ((y + h) * s) as i32);
+        let (pw, _, px) = render_page(first);
+        // The made-up logo is red in its top-left quarter and see-through (white on paper) elsewhere.
+        let at = |x: i32, y: i32| px[(y * pw + x) as usize] & 0x00FF_FFFF;
+        let red = at(px0 + (px1 - px0) / 4, py0 + (py1 - py0) / 4);
+        assert!(red >> 16 > 0xB0 && (red & 0xFF) < 0x60, "{red:06X}");
+        assert_eq!(at(px0 + (px1 - px0) * 3 / 4, py0 + (py1 - py0) * 3 / 4), 0xFFFFFF);
     }
 
     #[test]

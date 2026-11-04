@@ -5,7 +5,7 @@
 use fettle_facts::Report;
 use fettle_verdicts::Locale;
 use fettle_windows::app::{Background, Clipboard, Dialogs, Job, Printer, Scanner};
-use fettle_windows::print::layout::PageSize;
+use fettle_windows::print::layout::{Letterhead, PageSize};
 use fettle_windows::share::{Http, Response};
 use fettle_windows::state::{PrivateCard, PrivateKind};
 use fettle_windows::store::{FileStore, Store};
@@ -476,12 +476,14 @@ fn copy_puts_the_markdown_on_the_clipboard() {
     assert_eq!(dock_status(&e.h.app), "Copied. Paste it where you're asking for help.");
 }
 
+/// Keeps each receipt's summary and the letterhead it was printed with.
 #[derive(Default)]
-struct FakePrinter(RefCell<Vec<String>>);
+struct FakePrinter(RefCell<Vec<String>>, RefCell<Vec<Letterhead>>);
 
 impl Printer for FakePrinter {
-    fn print(&self, _owner: &slint::Window, model: &fettle_receipt::ReceiptModel) -> Result<bool, String> {
+    fn print(&self, _owner: &slint::Window, model: &fettle_receipt::ReceiptModel, head: &Letterhead) -> Result<bool, String> {
         self.0.borrow_mut().push(model.summary.clone());
+        self.1.borrow_mut().push(head.clone());
         Ok(true)
     }
 }
@@ -493,7 +495,7 @@ impl Printer for NoPrinting {
     fn available(&self) -> bool {
         false
     }
-    fn print(&self, _owner: &slint::Window, _model: &fettle_receipt::ReceiptModel) -> Result<bool, String> {
+    fn print(&self, _owner: &slint::Window, _model: &fettle_receipt::ReceiptModel, _head: &Letterhead) -> Result<bool, String> {
         panic!("never asked to print");
     }
 }
@@ -547,6 +549,26 @@ fn print_sends_the_receipt_to_the_printer() {
     assert_eq!(*printer.0.borrow(), vec!["Tutto a posto finora, ma Fettle non è riuscito a leggere lo stato dei dischi.".to_string()], "the receipt, in the app's language");
 }
 
+#[test]
+fn print_puts_the_technicians_details_on_the_page() {
+    let dir = temp_dir();
+    let store = FileStore::new(dir.to_path_buf());
+    let technician = fettle_windows::state::Technician { business: "Example Repairs".into(), name: "Alex Sample".into(), contact: "help@example.test".into() };
+    store.save_settings(&fettle_windows::state::Settings { technician: technician.clone(), ..Default::default() });
+    let printer = Rc::new(FakePrinter::default());
+    let p = printer.clone();
+    let h = harness_with(Locale::It, dir, move |deps| deps.printer = p);
+    press(&h.app, "Controlla questo PC");
+    h.background.run_all(&h.app);
+    press(&h.app, "Stampa");
+    press(&h.app, "Stampa…");
+    let heads = printer.1.borrow();
+    let head = heads.first().expect("printed");
+    assert_eq!((head.business.as_str(), head.name.as_str(), head.contact.as_str()), ("Example Repairs", "Alex Sample", "help@example.test"));
+    assert_eq!((head.client_label.as_str(), head.notes_label.as_str()), ("Cliente", "Note"));
+    assert_eq!(head.logo_png, None, "no logo chosen");
+}
+
 fn preview_pages(app: &Fettle) -> Vec<slint::Image> {
     use slint::Model;
     app.window().get_preview_pages().iter().collect()
@@ -567,7 +589,7 @@ fn the_preview_uses_the_paper_windows_is_set_up_for() {
 /// How many pages the dump's receipt prints on, as the printer lays them out.
 fn printed_pages(paper: PageSize) -> usize {
     let model = fettle_receipt::receipt_for(&dump_report(), Locale::En, fettle_receipt::Zone::Offset(120)).unwrap().1;
-    fettle_windows::print::layout::pages(&model, paper).len()
+    fettle_windows::print::layout::pages(&model, paper, &Letterhead::default()).len()
 }
 
 #[test]

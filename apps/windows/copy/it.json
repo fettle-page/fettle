@@ -147,5 +147,10 @@
   "theme.oled": "OLED",
   "about.fonts": "Caratteri: Bricolage Grotesque e IBM Plex Mono (OFL)",
   "export.filter_pdf": "Scontrino (PDF)",
-  "export.filter_json": "Report per esperti (JSON)"
+  "export.filter_json": "Report per esperti (JSON)",
+  "print.client": "Cliente",
+  "print.notes": "Note",
+  "settings.logo.e.type": "Scegli un'immagine PNG o JPEG per il logo.",
+  "settings.logo.e.too_big": "L'immagine supera i 2 MB. Scegline una più piccola.",
+  "settings.logo.e.unreadable": "Fettle non è riuscito ad aprire l'immagine. Provane un'altra, oppure salvala di nuovo come PNG."
 }

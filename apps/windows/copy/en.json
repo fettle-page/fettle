@@ -147,5 +147,10 @@
   "theme.oled": "OLED",
   "about.fonts": "Fonts: Bricolage Grotesque and IBM Plex Mono (OFL)",
   "export.filter_pdf": "Receipt (PDF)",
-  "export.filter_json": "Report for experts (JSON)"
+  "export.filter_json": "Report for experts (JSON)",
+  "print.client": "Client",
+  "print.notes": "Notes",
+  "settings.logo.e.type": "Choose a PNG or JPEG picture for the logo.",
+  "settings.logo.e.too_big": "That picture is over 2 MB. Choose a smaller one.",
+  "settings.logo.e.unreadable": "Fettle couldn't open that picture. Try another one, or save it again as PNG."
 }

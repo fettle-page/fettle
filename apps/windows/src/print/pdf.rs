@@ -1,11 +1,11 @@
 //! The print layout as a vector PDF: real text with the brand fonts embedded, so it can be searched
 //! and copied, and looks the same printed from any viewer.
 
-use super::layout::{DISPLAY, Face, MONO, MONO_BOLD, Op, PageSize, PathStep, Rgb, display_width, pages, wordmark_paths};
+use super::layout::{DISPLAY, Face, Letterhead, MONO, MONO_BOLD, Op, PageSize, PathStep, Rgb, display_width, pages, wordmark_paths};
 use fettle_receipt::ReceiptModel;
 use krilla::Document;
 use krilla::color::rgb;
-use krilla::geom::{PathBuilder, Point, Rect, Transform};
+use krilla::geom::{PathBuilder, Point, Rect, Size, Transform};
 use krilla::num::NormalizedF32;
 use krilla::page::PageSettings;
 use krilla::paint::{Fill, Stroke, StrokeDash};
@@ -97,6 +97,14 @@ fn draw(s: &mut Surface, fonts: &Fonts, ops: &[Op]) {
                     }
                 }
             }
+            Op::Image { x, y, w, h, png } => {
+                // A logo that won't decode is left out rather than failing the whole PDF.
+                if let (Ok(image), Some(size)) = (krilla::image::Image::from_png(png.0.to_vec().into(), true), Size::from_wh(*w, *h)) {
+                    s.push_transform(&Transform::from_translate(*x, *y));
+                    s.draw_image(image, size);
+                    s.pop();
+                }
+            }
             Op::Rotate { cx, cy, degrees, ops } => {
                 s.push_transform(&Transform::from_translate(*cx, *cy));
                 s.push_transform(&Transform::from_rotate(*degrees));
@@ -108,8 +116,8 @@ fn draw(s: &mut Surface, fonts: &Fonts, ops: &[Op]) {
     }
 }
 
-/// The receipt as a PDF on pages of `size`.
-pub fn render(m: &ReceiptModel, size: PageSize) -> Result<Vec<u8>, String> {
+/// The receipt as a PDF on pages of `size`, under the letterhead on page 1.
+pub fn render(m: &ReceiptModel, size: PageSize, head: &Letterhead) -> Result<Vec<u8>, String> {
     let fonts = Fonts {
         display: Font::new(DISPLAY.to_vec().into(), 0).ok_or("display font")?,
         mono: Font::new(MONO.to_vec().into(), 0).ok_or("mono font")?,
@@ -117,7 +125,7 @@ pub fn render(m: &ReceiptModel, size: PageSize) -> Result<Vec<u8>, String> {
     };
     let (w, h) = size.points();
     let mut doc = Document::new();
-    for ops in pages(m, size) {
+    for ops in pages(m, size, head) {
         let mut page = doc.start_page_with(PageSettings::from_wh(w, h).ok_or("page size")?);
         let mut s = page.surface();
         draw(&mut s, &fonts, &ops);
@@ -136,9 +144,24 @@ mod tests {
 
     #[test]
     fn a_receipt_becomes_a_pdf() {
-        let bytes = render(&crate::print::layout::tests::dump_model(Locale::En), PageSize::A4).expect("a PDF");
+        let bytes = render(&crate::print::layout::tests::dump_model(Locale::En), PageSize::A4, &Letterhead::default()).expect("a PDF");
         assert!(bytes.starts_with(b"%PDF"), "{:?}", &bytes[..8]);
         assert!(bytes.len() > 4_000);
+    }
+
+    #[test]
+    fn a_receipt_with_a_logo_becomes_a_pdf_with_the_picture_in_it() {
+        let model = crate::print::layout::tests::dump_model(Locale::It);
+        let head = Letterhead { business: "Esempio Riparazioni".into(), logo_png: Some(crate::print::logo::tests::png(400, 100)), client: "Rossi".into(), client_label: "Cliente".into(), ..Letterhead::default() };
+        let plain = render(&model, PageSize::A4, &Letterhead::default()).unwrap();
+        let bytes = render(&model, PageSize::A4, &head).expect("a PDF");
+        assert!(bytes.starts_with(b"%PDF"));
+        let has = |b: &[u8], what: &[u8]| b.windows(what.len()).any(|w| w == what);
+        assert!(has(&bytes, b"/Subtype /Image") || has(&bytes, b"/Subtype/Image"), "the logo is an image in the PDF");
+        assert!(!has(&plain, b"/Subtype /Image") && !has(&plain, b"/Subtype/Image"));
+        // A logo that won't decode still makes a PDF, without it.
+        let broken = Letterhead { logo_png: Some(b"\x89PNG\r\n\x1a\nbroken".to_vec()), ..head };
+        assert!(render(&model, PageSize::A4, &broken).is_ok_and(|b| b.starts_with(b"%PDF")));
     }
 
     /// To look at the paper: `FETTLE_SHOTS=<folder> cargo test -p fettle-windows -- --ignored pdf_to_look_at`
@@ -148,12 +171,12 @@ mod tests {
     #[ignore]
     fn pdf_to_look_at() {
         let dir = PathBuf::from(std::env::var("FETTLE_SHOTS").expect("FETTLE_SHOTS"));
-        std::fs::write(dir.join("dump.pdf"), render(&crate::print::layout::tests::dump_model(Locale::En), PageSize::A4).unwrap()).unwrap();
+        std::fs::write(dir.join("dump.pdf"), render(&crate::print::layout::tests::dump_model(Locale::En), PageSize::A4, &Letterhead::default()).unwrap()).unwrap();
         if let Ok(path) = std::env::var("FETTLE_REPORT") {
             let report = serde_json::from_str(&std::fs::read_to_string(path).unwrap()).unwrap();
             for (lang, name) in [(Locale::En, "report.pdf"), (Locale::It, "report-it.pdf")] {
                 let (_, m) = receipt_for(&report, lang, Zone::Offset(120)).unwrap();
-                std::fs::write(dir.join(name), render(&m, PageSize::A4).unwrap()).unwrap();
+                std::fs::write(dir.join(name), render(&m, PageSize::A4, &Letterhead::default()).unwrap()).unwrap();
             }
         }
     }
@@ -168,7 +191,7 @@ mod tests {
             let report = serde_json::from_value(case["report"].clone()).unwrap();
             for lang in [Locale::En, Locale::It] {
                 if let Ok((_, m)) = receipt_for(&report, lang, Zone::Utc) {
-                    assert!(render(&m, PageSize::Letter).is_ok_and(|b| b.starts_with(b"%PDF")));
+                    assert!(render(&m, PageSize::Letter, &Letterhead::default()).is_ok_and(|b| b.starts_with(b"%PDF")));
                     count += 1;
                 }
             }

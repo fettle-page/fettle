@@ -41,7 +41,8 @@ pub trait Printer {
     fn available(&self) -> bool {
         true
     }
-    fn print(&self, owner: &slint::Window, model: &fettle_receipt::ReceiptModel) -> Result<bool, String>;
+    /// `head`: the technician's details and the client's notes, on page 1.
+    fn print(&self, owner: &slint::Window, model: &fettle_receipt::ReceiptModel, head: &crate::print::layout::Letterhead) -> Result<bool, String>;
 }
 
 /// The Deep check: Windows' prompt (owned by this window handle), then the elevated scan and how
@@ -295,7 +296,8 @@ impl Fettle {
             }
             Effect::ForgetPrivate => *self.0.private.borrow_mut() = None,
             Effect::Save => {
-                let outcome = self.with_receipt(|report, model| crate::exports::save(&*self.0.deps.dialogs, self.0.window.window(), report, model, self.lang()));
+                let head = self.letterhead();
+                let outcome = self.with_receipt(|report, model| crate::exports::save(&*self.0.deps.dialogs, self.0.window.window(), report, model, &head, self.lang()));
                 self.post_now(Event::Exported(outcome.flatten()));
             }
             Effect::Copy => {
@@ -355,7 +357,8 @@ impl Fettle {
                 }));
             }
             Effect::Print if !self.0.deps.printer.available() => {
-                let saved = self.with_receipt(|report, model| crate::exports::save_pdf(&*self.0.deps.dialogs, self.0.window.window(), report, model, self.lang()));
+                let head = self.letterhead();
+                let saved = self.with_receipt(|report, model| crate::exports::save_pdf(&*self.0.deps.dialogs, self.0.window.window(), report, model, &head, self.lang()));
                 self.post_now(Event::Exported(Some(match saved.flatten() {
                     Some("export.saved") => "export.print_off_saved",
                     None => "export.print_off",
@@ -363,7 +366,8 @@ impl Fettle {
                 })));
             }
             Effect::Print => {
-                let printed = self.with_receipt(|_, model| self.0.deps.printer.print(self.0.window.window(), model));
+                let head = self.letterhead();
+                let printed = self.with_receipt(|_, model| self.0.deps.printer.print(self.0.window.window(), model, &head));
                 // Printing says nothing when it works (the printer does); a failure says so.
                 self.post_now(Event::Exported(match printed {
                     Some(Ok(_)) => None,
@@ -401,7 +405,8 @@ impl Fettle {
             Effect::RenderPreview => {
                 let paper = (self.0.deps.paper)();
                 let scale = self.0.window.window().scale_factor();
-                let pages = self.with_receipt(|_, model| crate::exports::preview_pages(model, paper, scale)).unwrap_or_default();
+                let head = self.letterhead();
+                let pages = self.with_receipt(|_, model| crate::exports::preview_pages(model, &head, paper, scale)).unwrap_or_default();
                 let generation = self.0.preview.borrow().as_ref().map_or(0, |p| p.generation) + 1;
                 *self.0.preview.borrow_mut() = Some(view::Preview { pages, paper, printing: self.0.deps.printer.available(), generation });
             }
@@ -432,6 +437,13 @@ impl Fettle {
 
     fn lang(&self) -> Locale {
         self.0.state.borrow().lang(self.0.deps.system_lang)
+    }
+
+    /// What prints above the receipt: the technician's details, the logo, and the shown check's client
+    /// and notes. Paper only (print, PDF, the preview).
+    fn letterhead(&self) -> crate::print::layout::Letterhead {
+        let state = self.0.state.borrow();
+        crate::exports::letterhead(&state.settings.technician, state.shown_notes(), self.0.deps.store.load_logo(), self.lang())
     }
 
     /// Runs `f` with the shown check's report (an opened past one, else this run's) and its receipt

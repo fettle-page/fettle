@@ -3,4 +3,5 @@
 #[cfg(windows)]
 pub mod gdi;
 pub mod layout;
+pub mod logo;
 pub mod pdf;

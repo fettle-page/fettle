@@ -56,6 +56,34 @@ pub enum Face {
 /// A rectangle's outline: its colour, width and, if dashed, (on, off) lengths.
 pub type Stroke = (Rgb, f32, Option<(f32, f32)>);
 
+/// A PNG's bytes, shared between the pages' ops (shown by its size, not its bytes).
+#[derive(Clone, PartialEq)]
+pub struct Png(pub std::sync::Arc<[u8]>);
+
+impl std::fmt::Debug for Png {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "Png({} bytes)", self.0.len())
+    }
+}
+
+/// The technician's details and the client's notes, at the top of page 1 above the receipt: the
+/// logo on the left, then the business (bold), the name and the contact line, then "Client: …" and
+/// "Notes: …". Paper only (print, PDF, the print preview): never in Copy, saved JSON or a shared
+/// link. Empty fields are left out, and with all of them empty the pages are exactly the receipt's.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct Letterhead {
+    pub business: String,
+    pub name: String,
+    pub contact: String,
+    /// logo.png, as `print::logo::prepare` made it.
+    pub logo_png: Option<Vec<u8>>,
+    pub client: String,
+    pub notes: String,
+    /// "Client" and "Notes" in the receipt's language (app strings `print.client`, `print.notes`).
+    pub client_label: String,
+    pub notes_label: String,
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum Op {
     /// Text on a baseline at (x, y); `spacing` is extra space after each character.
@@ -67,6 +95,8 @@ pub enum Op {
     Wordmark { x: f32, y: f32, h: f32 },
     /// `ops` drawn around (cx, cy), turned by `degrees` (the inked stamp).
     Rotate { cx: f32, cy: f32, degrees: f32, ops: Vec<Op> },
+    /// A picture (the technician's logo) with its top-left at (x, y), `w` × `h`.
+    Image { x: f32, y: f32, w: f32, h: f32, png: Png },
 }
 
 impl Op {
@@ -79,6 +109,7 @@ impl Op {
             Op::Wordmark { x, y, h } => Op::Wordmark { x, y: y + dy, h },
             // Inner ops are relative to the centre, so only the centre moves.
             Op::Rotate { cx, cy, degrees, ops } => Op::Rotate { cx, cy: cy + dy, degrees, ops },
+            Op::Image { x, y, w, h, png } => Op::Image { x, y: y + dy, w, h, png },
         }
     }
 }
@@ -423,6 +454,71 @@ fn footer(c: &Col, m: &ReceiptModel) -> Block {
     Block { h: top + band + 4.0, ops }
 }
 
+/// The logo's box on paper: at most 18 mm high and a third of the column wide.
+const LOGO_H: f32 = 51.0;
+
+/// The letterhead's blocks, before the receipt's: the technician's details beside the logo, then the
+/// client and the notes a line at a time (long notes run on to the next page), then a rule. None at
+/// all when everything is empty.
+fn letterhead_blocks(c: &Col, head: &Letterhead) -> Vec<Block> {
+    let mut out = Vec::new();
+    let mut ops = Vec::new();
+    let (mut text_x, mut logo_h) = (0.0, 0.0f32);
+    if let Some((png, (iw, ih))) = head.logo_png.as_deref().and_then(|png| super::logo::size(png).map(|s| (png, s))) {
+        let k = (LOGO_H / ih as f32).min(c.w / 3.0 / iw as f32);
+        let (w, h) = (iw as f32 * k, ih as f32 * k);
+        ops.push(Op::Image { x: c.x0, y: 0.0, w, h, png: Png(png.into()) });
+        text_x = w + 2.0 * CH;
+        logo_h = h;
+    }
+    let width = c.w - text_x;
+    let mut y = 0.0;
+    let business = head.business.trim();
+    if !business.is_empty() {
+        let size = SIZE * 1.2;
+        for l in wrap(business, (width / (size * 0.6)) as usize) {
+            ops.push(Op::Text { x: c.x0 + text_x, y: y + size, face: Face::MonoBold, size, text: l, colour: INK, spacing: 0.0 });
+            y += size * 1.35;
+        }
+        y += 2.0;
+    }
+    for (text, colour) in [(head.name.trim(), INK), (head.contact.trim(), SOFT)] {
+        if text.is_empty() {
+            continue;
+        }
+        for l in wrap(text, Col::cols(width)) {
+            ops.push(c.mono(text_x, y + baseline(0), &l, colour));
+            y += LH;
+        }
+    }
+    if !ops.is_empty() {
+        out.push(Block { h: logo_h.max(y) + 8.0, ops });
+    }
+    for (label, text) in [(&head.client_label, head.client.trim()), (&head.notes_label, head.notes.trim())] {
+        if text.is_empty() {
+            continue;
+        }
+        let label = format!("{}:", label.trim());
+        let indent = (label.chars().count() + 1) as f32 * CH;
+        let lines: Vec<String> = text.lines().flat_map(|p| wrap(p, Col::cols(c.w - indent))).collect();
+        for (i, l) in lines.iter().enumerate() {
+            let mut ops = Vec::new();
+            if i == 0 {
+                ops.push(c.mono(0.0, baseline(0), &label, SOFT));
+            }
+            // A blank line between paragraphs is space, never the first thing on a page.
+            if !l.is_empty() {
+                ops.push(c.mono(indent, baseline(0), l, INK));
+            }
+            out.push(Block { h: LH, ops });
+        }
+    }
+    if !out.is_empty() {
+        out.push(rule_block(c, 10.0));
+    }
+    out
+}
+
 /// The top of every page: the wordmark, when the check was made and "page/pages", over a rule.
 fn header(c: &Col, m: &ReceiptModel, page: usize, of: usize) -> Vec<Op> {
     let size = SIZE * 0.85;
@@ -440,7 +536,7 @@ fn extent(op: &Op) -> (f32, f32) {
         Op::Text { y, size, .. } => (y - size, y + size * 0.3),
         Op::Line { y1, y2, .. } => (y1.min(*y2), y1.max(*y2)),
         Op::Rect { y, h, .. } => (*y, y + h),
-        Op::Wordmark { y, h, .. } => (*y, y + h),
+        Op::Wordmark { y, h, .. } | Op::Image { y, h, .. } => (*y, y + h),
         Op::Rotate { cy, .. } => (cy - 25.0, cy + 25.0),
     }
 }
@@ -521,13 +617,14 @@ fn place(blocks: Vec<Block>, top: f32, bottom: f32) -> Vec<Vec<(f32, Block)>> {
     laid
 }
 
-/// The receipt on pages of `size`: each page's ops in page coordinates (points from the top left),
-/// the header first.
-pub fn pages(m: &ReceiptModel, size: PageSize) -> Vec<Vec<Op>> {
+/// The receipt on pages of `size`, under the letterhead on page 1: each page's ops in page
+/// coordinates (points from the top left), the header first.
+pub fn pages(m: &ReceiptModel, size: PageSize, head: &Letterhead) -> Vec<Vec<Op>> {
     let (page_w, page_h) = size.points();
     let c = Col { x0: MARGIN, w: page_w - 2.0 * MARGIN };
     let (top, bottom) = (MARGIN + HEADER, page_h - MARGIN);
-    let laid = place(blocks(&c, m).into_iter().flat_map(|b| split(b, bottom - top)).collect(), top, bottom);
+    let all = letterhead_blocks(&c, head).into_iter().chain(blocks(&c, m));
+    let laid = place(all.flat_map(|b| split(b, bottom - top)).collect(), top, bottom);
     let of = laid.len();
     laid.into_iter()
         .enumerate()
@@ -627,6 +724,11 @@ pub(crate) mod tests {
     use fettle_receipt::{DetailGroup, DetailRow, Zone, receipt_for};
     use fettle_verdicts::Locale;
 
+    /// The receipt's pages with no letterhead (as before 1.1).
+    fn pages(m: &ReceiptModel, size: PageSize) -> Vec<Vec<Op>> {
+        super::pages(m, size, &Letterhead::default())
+    }
+
     pub(crate) fn dump_model(lang: Locale) -> ReceiptModel {
         receipt_for(&crate::store::tests::dump_report(), lang, Zone::Utc).expect("a receipt").1
     }
@@ -658,7 +760,7 @@ pub(crate) mod tests {
             Op::Text { y, .. } => *y,
             Op::Line { y1, y2, .. } => y1.max(*y2),
             Op::Rect { y, h, .. } => y + h,
-            Op::Wordmark { y, h, .. } => y + h,
+            Op::Wordmark { y, h, .. } | Op::Image { y, h, .. } => y + h,
             Op::Rotate { cy, .. } => cy + 25.0,
         }
     }
@@ -915,6 +1017,104 @@ pub(crate) mod tests {
         let laid = place(vec![ink(489.0), gap(), ink(100.0), gap(), ink(50.0), ink(70.0)], top, bottom);
         assert_eq!(laid.len(), 2);
         assert_eq!(laid[0].iter().filter(|(_, b)| b.ops.is_empty()).count(), 2);
+    }
+
+    fn full_letterhead() -> Letterhead {
+        Letterhead {
+            business: "Example Repairs Ltd".into(),
+            name: "Alex Sample".into(),
+            contact: "+00 000 000 000 · help@example.test".into(),
+            logo_png: Some(crate::print::logo::tests::png(400, 100)),
+            client: "Sample Client".into(),
+            notes: "Replaced the fan.
+Cleaned the dust out.".into(),
+            client_label: "Client".into(),
+            notes_label: "Notes".into(),
+        }
+    }
+
+    #[test]
+    fn an_empty_letterhead_prints_exactly_the_receipt() {
+        let blank = Letterhead { business: "  ".into(), name: "".into(), contact: "
+".into(), logo_png: None, client: " ".into(), notes: "
+ 
+".into(), client_label: "Client".into(), notes_label: "Notes".into() };
+        for (m, size) in [(dump_model(Locale::En), PageSize::A4), (dump_model(Locale::It), PageSize::Letter), (long_model(), PageSize::Custom(595.0, 500.0))] {
+            assert_eq!(super::pages(&m, size, &blank), pages(&m, size));
+        }
+        // Nothing comes between the header and the receipt's first line.
+        let m = dump_model(Locale::En);
+        assert!(matches!(&pages(&m, PageSize::A4)[0][3], Op::Text { text, .. } if *text == m.machine[0].label), "the machine's first label opens the page");
+    }
+
+    #[test]
+    fn a_letterhead_goes_on_page_one_above_the_receipt() {
+        let m = long_model();
+        let head = full_letterhead();
+        let (plain, with) = (pages(&m, PageSize::A4), super::pages(&m, PageSize::A4, &head));
+        let first = texts(&with[0]);
+        for t in ["Example Repairs Ltd", "Alex Sample", "+00 000 000 000 · help@example.test", "Client:", "Sample Client", "Notes:", "Replaced the fan.", "Cleaned the dust out."] {
+            assert!(first.iter().any(|f| f == t), "{t:?} on page 1: {first:?}");
+        }
+        for page in &with[1..] {
+            let t = texts(page);
+            assert!(!t.iter().any(|t| t.contains("Example Repairs") || t.contains("Sample Client")), "{t:?}");
+            assert!(!page.iter().any(|op| matches!(op, Op::Image { .. })));
+        }
+        // The logo: left, at most 18 mm high, its shape kept (4:1).
+        let Some(Op::Image { x, y, w, h, .. }) = with[0].iter().find(|op| matches!(op, Op::Image { .. })) else { panic!("no logo") };
+        assert!((x - MARGIN).abs() < 0.1 && *y >= MARGIN + HEADER - 0.1, "{x} {y}");
+        assert!(*h <= 51.0 + 0.01 && (w / h - 4.0).abs() < 0.01, "{w} × {h}");
+        // The business sits right of the logo.
+        let at = |page: &[Op], text: &str| page.iter().find_map(|op| match op { Op::Text { x, y, text: t, .. } if t == text => Some((*x, *y)), _ => None });
+        assert!(at(&with[0], "Example Repairs Ltd").unwrap().0 > x + w);
+        // The receipt starts lower down.
+        let summary = &m.machine[0].label;
+        assert!(at(&with[0], summary).unwrap().1 > at(&plain[0], summary).unwrap().1 + 80.0);
+        for (i, page) in with.iter().enumerate() {
+            for op in page {
+                assert!(lowest(op) <= 841.89 - MARGIN + 0.5, "page {i}: {op:?} below the margin");
+            }
+            for (left, right) in page.iter().filter_map(right_edge) {
+                assert!(left >= MARGIN - 0.5 && right <= 595.28 - MARGIN + 0.5, "page {i}: {left}..{right}");
+            }
+        }
+    }
+
+    #[test]
+    fn only_the_fields_filled_in_are_printed() {
+        let m = dump_model(Locale::It);
+        let head = Letterhead { client: "Rossi".into(), client_label: "Cliente".into(), notes_label: "Note".into(), ..Letterhead::default() };
+        let first = texts(&super::pages(&m, PageSize::A4, &head)[0]);
+        assert!(first.contains(&"Cliente:".to_string()) && first.contains(&"Rossi".to_string()), "{first:?}");
+        assert!(!first.contains(&"Note:".to_string()));
+        let logo_only = Letterhead { logo_png: Some(crate::print::logo::tests::png(100, 100)), ..Letterhead::default() };
+        let page = &super::pages(&m, PageSize::A4, &logo_only)[0];
+        assert!(page.iter().any(|op| matches!(op, Op::Image { w, h, .. } if (*w - 51.0).abs() < 0.01 && (*h - 51.0).abs() < 0.01)));
+        // A logo that doesn't read prints as none.
+        let broken = Letterhead { logo_png: Some(b"not a png".to_vec()), ..Letterhead::default() };
+        assert_eq!(super::pages(&m, PageSize::A4, &broken), pages(&m, PageSize::A4));
+    }
+
+    #[test]
+    fn long_notes_run_on_to_the_next_page() {
+        let m = dump_model(Locale::En);
+        let words: Vec<String> = (0..1500).map(|i| format!("n{i}")).collect();
+        let head = Letterhead { notes: words.join(" "), notes_label: "Notes".into(), ..full_letterhead() };
+        let with = super::pages(&m, PageSize::A4, &head);
+        assert!(with.len() > pages(&m, PageSize::A4).len(), "{} pages", with.len());
+        let (_, h) = PageSize::A4.points();
+        for (i, page) in with.iter().enumerate() {
+            assert!(page.iter().any(|op| matches!(op, Op::Wordmark { .. })), "page {i}: the header");
+            for op in page {
+                assert!(lowest(op) <= h - MARGIN + 0.5, "page {i}: {op:?} below the margin");
+            }
+        }
+        let printed: std::collections::HashSet<String> = with.iter().flat_map(|p| texts(p)).flat_map(|t| t.split_whitespace().map(String::from).collect::<Vec<_>>()).collect();
+        for w in &words {
+            assert!(printed.contains(w), "{w} is missing");
+        }
+        assert!(texts(with.last().unwrap()).contains(&m.meta.footer), "the footer still ends it");
     }
 
     #[test]

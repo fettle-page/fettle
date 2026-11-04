@@ -18,7 +18,7 @@ export function checkChangelog(entries: Release[]): void {
 
 export const releases: Release[] = [
   {
-    version: "1.0.7",
+    version: "1.1.0",
     date: null,
     notes: {
       en: [

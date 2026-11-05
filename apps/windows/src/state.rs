@@ -524,11 +524,16 @@ impl State {
         vec![Effect::SaveCheckNotes { id, client: entry.client.clone(), notes: entry.notes.clone() }]
     }
 
-    /// Saves a check in the list (and on this PC).
+    /// Saves a check in the list (and on this PC). The list keeps ten: a check that drops off is no
+    /// longer opened or compared.
     fn remember(&mut self, check: SavedCheck) -> Effect {
         let mut checks = vec![check.clone()];
         checks.append(&mut self.checks);
         self.checks = crate::store::tidy_checks(checks);
+        if self.opened_check().is_none() {
+            self.opened = None;
+        }
+        self.drop_stale_compare();
         Effect::AddCheck(Box::new(check))
     }
 
@@ -541,6 +546,8 @@ impl State {
             effects.push(self.remember(checked.saved()));
         }
         self.current = Some(checked);
+        // The check this one replaces may have been compared without being saved.
+        self.drop_stale_compare();
         if self.settings.show_private {
             effects.push(Effect::LoadPrivate);
         }
@@ -1666,6 +1673,22 @@ mod tests {
         s.update(Event::CompareWithPrevious);
         s.update(Event::Back);
         assert_eq!(s.panel, Panel::Main);
+    }
+
+    #[test]
+    fn a_check_that_drops_off_the_list_ends_its_comparison() {
+        // Ten saved checks; the oldest is compared, then a new check pushes it off the list.
+        let ats: Vec<String> = (0..10).map(|d| format!("2026-10-{:02}T10:00:00Z", d + 10)).collect();
+        let mut s = State::default();
+        s.update(Event::Loaded { settings: Settings::default(), checks: ats.iter().map(|at| saved(&report(at))).collect(), links: vec![], has_logo: false });
+        s.update(Event::Open(Panel::Checks));
+        s.update(Event::CompareChecks(ats[0].clone(), ats[1].clone()));
+        assert_eq!(s.panel, Panel::Compare);
+        // A Deep check finishing meanwhile adds a check.
+        s.update(Event::DeepAsked);
+        s.update(Event::DeepFinished(Ok(report("2026-10-25T10:00:00Z")), 1.0));
+        assert!(!s.checks.iter().any(|c| c.id() == ats[0]), "trimmed");
+        assert_eq!((s.panel, s.compare.clone()), (Panel::Main, None));
     }
 
     #[test]

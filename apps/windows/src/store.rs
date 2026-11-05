@@ -334,8 +334,13 @@ impl Store for FileStore {
         f()
     }
 
+    /// One over 2 MB isn't read at all: Fettle never saves one that big.
     fn load_logo(&self) -> Option<Vec<u8>> {
-        std::fs::read(self.dir.join(LOGO)).ok().filter(|b| !b.is_empty())
+        let path = self.dir.join(LOGO);
+        if std::fs::metadata(&path).ok()?.len() > crate::print::logo::MAX_BYTES as u64 {
+            return None;
+        }
+        std::fs::read(path).ok().filter(|b| !b.is_empty())
     }
 
     fn save_logo(&self, png: &[u8]) {
@@ -687,6 +692,18 @@ pub(crate) mod tests {
         assert!(dir.join("logo.png").exists());
         store.clear_logo();
         assert_eq!(store.load_logo(), None);
+    }
+
+    #[test]
+    fn a_logo_file_over_2_mb_is_not_read() {
+        let dir = temp_dir();
+        let store = FileStore::new(dir.to_path_buf());
+        std::fs::create_dir_all(&*dir).unwrap();
+        let file = std::fs::File::create(dir.join("logo.png")).unwrap();
+        // Only its length is set: it says too big before a byte is read.
+        file.set_len(crate::print::logo::MAX_BYTES as u64 + 1).unwrap();
+        drop(file);
+        assert!(store.load_logo().is_none());
     }
 
     #[test]

@@ -189,7 +189,7 @@ impl Fettle {
     pub fn new(deps: Deps) -> Result<Fettle, slint::PlatformError> {
         let window = AppWindow::new()?;
         window.global::<Copy>().on_tr(|key, lang| copy::any(&key, Locale::from_tag(&lang)).into());
-        let loaded = Event::Loaded { settings: deps.store.load_settings(), checks: deps.store.load_checks(), links: deps.store.load_links((deps.now_ms)()), has_logo: deps.store.load_logo().is_some() };
+        let loaded = Event::Loaded { settings: deps.store.load_settings(), checks: deps.store.load_checks(), links: deps.store.load_links((deps.now_ms)()), has_logo: deps.store.load_logo().and_then(crate::print::logo::readable).is_some() };
         let inner = Rc::new(Inner { window, deps, state: RefCell::new(State::default()), queue: Arc::default(), pumping: RefCell::new(false), private: RefCell::new(None), view_cache: RefCell::default(), preview: RefCell::new(None), checking: Default::default(), _ticker: slint::Timer::default(), _scheme: slint::Timer::default() });
         APP.with(|a| *a.borrow_mut() = Rc::downgrade(&inner));
         let app = Fettle(inner);

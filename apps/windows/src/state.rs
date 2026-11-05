@@ -528,6 +528,21 @@ impl State {
         Effect::AddCheck(Box::new(check))
     }
 
+    /// A check finished: this run's check now, with these Client and Notes for its printout.
+    fn finished(&mut self, report: Report, seconds: f64, client: String, notes: String) -> Vec<Effect> {
+        self.scan = Scan::Done;
+        let checked = Checked { report, seconds, client, notes };
+        let mut effects = Vec::new();
+        if self.settings.remember {
+            effects.push(self.remember(checked.saved()));
+        }
+        self.current = Some(checked);
+        if self.settings.show_private {
+            effects.push(Effect::LoadPrivate);
+        }
+        effects
+    }
+
     /// A newer version to offer: only with updates on.
     pub fn update_note(&self) -> Option<&crate::update::Latest> {
         self.update.latest.as_ref().filter(|l| self.settings.updates && crate::update::newer(&l.version, crate::update::CURRENT))
@@ -578,19 +593,7 @@ impl State {
                 }
                 vec![]
             }
-            Event::Finished(Ok(report), seconds) => {
-                self.scan = Scan::Done;
-                let checked = Checked { report, seconds, client: String::new(), notes: String::new() };
-                let mut effects = Vec::new();
-                if self.settings.remember {
-                    effects.push(self.remember(checked.saved()));
-                }
-                self.current = Some(checked);
-                if self.settings.show_private {
-                    effects.push(Effect::LoadPrivate);
-                }
-                effects
-            }
+            Event::Finished(Ok(report), seconds) => self.finished(report, seconds, String::new(), String::new()),
             Event::Finished(Err(problem), _) => {
                 // A failed re-check keeps this run's receipt and says so above it; with no receipt
                 // yet, the problem shows on the first screen (with the last receipt, if any).
@@ -782,7 +785,9 @@ impl State {
             // Shown like any check, in this window.
             Event::DeepFinished(Ok(report), seconds) => {
                 self.clear_for_a_new_check();
-                let mut effects = self.update(Event::Finished(Ok(report), seconds));
+                // It follows this run's check, so it keeps its Client and Notes (the printout too).
+                let (client, notes) = self.current.as_ref().map(|c| (c.client.clone(), c.notes.clone())).unwrap_or_default();
+                let mut effects = self.finished(report, seconds, client, notes);
                 // The print preview open meanwhile shows the quick receipt: Print would print the new one.
                 if self.panel == Panel::Preview {
                     effects.push(Effect::RenderPreview);
@@ -1614,6 +1619,21 @@ mod tests {
         assert_eq!(s.update(Event::CopyComparison), vec![Effect::CopyComparison]);
         s.update(Event::Exported(Some("export.copied")));
         assert_eq!(s.export, Some("export.copied"));
+    }
+
+    #[test]
+    fn a_deep_check_keeps_the_client_and_notes_of_the_check_it_follows() {
+        let mut s = with_checks(&[]);
+        s.update(Event::SetClient("Mario Rossi".into()));
+        s.update(Event::SetNotes("Fan cleaned".into()));
+        s.update(Event::DeepAsked);
+        let mut deep = report("2026-10-09T11:00:00Z");
+        deep.elevated = true;
+        let effects = s.update(Event::DeepFinished(Ok(deep.clone()), 1.2));
+        assert_eq!(s.shown_notes(), ("Mario Rossi", "Fan cleaned"));
+        let entry = SavedCheck { report: deep, client: "Mario Rossi".into(), notes: "Fan cleaned".into() };
+        assert!(effects.contains(&Effect::AddCheck(Box::new(entry))), "{effects:?}");
+        assert_eq!((s.checks[0].client.as_str(), s.checks[0].notes.as_str()), ("Mario Rossi", "Fan cleaned"));
     }
 
     #[test]

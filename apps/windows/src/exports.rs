@@ -282,10 +282,10 @@ mod tests {
 
     #[test]
     fn the_letterhead_comes_from_settings_and_the_check_with_labels_in_the_language() {
-        let tech = crate::state::Technician { business: "Example Repairs".into(), name: "Alex".into(), contact: "help@example.test".into() };
+        let tech = crate::state::Technician { business: "Example Repairs".into(), name: "Alex".into(), contact: "help@example.com".into() };
         let png = crate::print::logo::tests::png(20, 10);
         let head = letterhead(&tech, ("Sample Client", "Fan replaced"), Some(png.clone()), Locale::It);
-        assert_eq!((head.business.as_str(), head.name.as_str(), head.contact.as_str()), ("Example Repairs", "Alex", "help@example.test"));
+        assert_eq!((head.business.as_str(), head.name.as_str(), head.contact.as_str()), ("Example Repairs", "Alex", "help@example.com"));
         assert_eq!((head.client.as_str(), head.notes.as_str()), ("Sample Client", "Fan replaced"));
         assert_eq!((head.client_label.as_str(), head.notes_label.as_str()), ("Cliente", "Note"));
         assert_eq!(head.logo_png, Some(png));

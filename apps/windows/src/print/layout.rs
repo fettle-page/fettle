@@ -1023,7 +1023,7 @@ pub(crate) mod tests {
         Letterhead {
             business: "Example Repairs Ltd".into(),
             name: "Alex Sample".into(),
-            contact: "+00 000 000 000 · help@example.test".into(),
+            contact: "+00 000 000 000 · help@example.com".into(),
             logo_png: Some(crate::print::logo::tests::png(400, 100)),
             client: "Sample Client".into(),
             notes: "Replaced the fan.
@@ -1053,7 +1053,7 @@ Cleaned the dust out.".into(),
         let head = full_letterhead();
         let (plain, with) = (pages(&m, PageSize::A4), super::pages(&m, PageSize::A4, &head));
         let first = texts(&with[0]);
-        for t in ["Example Repairs Ltd", "Alex Sample", "+00 000 000 000 · help@example.test", "Client:", "Sample Client", "Notes:", "Replaced the fan.", "Cleaned the dust out."] {
+        for t in ["Example Repairs Ltd", "Alex Sample", "+00 000 000 000 · help@example.com", "Client:", "Sample Client", "Notes:", "Replaced the fan.", "Cleaned the dust out."] {
             assert!(first.iter().any(|f| f == t), "{t:?} on page 1: {first:?}");
         }
         for page in &with[1..] {

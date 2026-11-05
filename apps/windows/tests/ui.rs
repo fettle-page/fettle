@@ -560,7 +560,7 @@ fn print_sends_the_receipt_to_the_printer() {
 fn print_puts_the_technicians_details_on_the_page() {
     let dir = temp_dir();
     let store = FileStore::new(dir.to_path_buf());
-    let technician = fettle_windows::state::Technician { business: "Example Repairs".into(), name: "Alex Sample".into(), contact: "help@example.test".into() };
+    let technician = fettle_windows::state::Technician { business: "Example Repairs".into(), name: "Alex Sample".into(), contact: "help@example.com".into() };
     store.save_settings(&fettle_windows::state::Settings { technician: technician.clone(), ..Default::default() });
     let printer = Rc::new(FakePrinter::default());
     let p = printer.clone();
@@ -571,7 +571,7 @@ fn print_puts_the_technicians_details_on_the_page() {
     press(&h.app, "Stampa…");
     let heads = printer.1.borrow();
     let head = heads.first().expect("printed");
-    assert_eq!((head.business.as_str(), head.name.as_str(), head.contact.as_str()), ("Example Repairs", "Alex Sample", "help@example.test"));
+    assert_eq!((head.business.as_str(), head.name.as_str(), head.contact.as_str()), ("Example Repairs", "Alex Sample", "help@example.com"));
     assert_eq!((head.client_label.as_str(), head.notes_label.as_str()), ("Cliente", "Note"));
     assert_eq!(head.logo_png, None, "no logo chosen");
 }

@@ -217,6 +217,8 @@ pub struct State {
     /// The two checks being compared (their ids, older first when chosen that way). The comparison
     /// itself is made where it's shown.
     pub compare: Option<(String, String)>,
+    /// Where Back goes from the comparison: My checks when it was opened from there, else Main.
+    pub compare_from: Panel,
     /// A logo for printouts is saved (the app reads the PNG when it needs it).
     pub has_logo: bool,
     /// Why the last logo chosen can't be used (an app string key), until the next try, a logo that
@@ -385,6 +387,7 @@ impl Default for State {
             checks: Vec::new(),
             opened: None,
             compare: None,
+            compare_from: Panel::Main,
             has_logo: false,
             logo_problem: None,
             settings: Settings::default(),
@@ -491,6 +494,7 @@ impl State {
             return;
         }
         self.compare = Some((a, b));
+        self.compare_from = if self.panel == Panel::Checks { Panel::Checks } else { Panel::Main };
         self.panel = Panel::Compare;
         // The receipt's last message doesn't follow into the comparison.
         self.export = None;
@@ -628,8 +632,12 @@ impl State {
                 if !self.share_busy {
                     if self.panel == Panel::Compare {
                         self.compare = None;
+                        // The comparison's Copied. doesn't follow back to the receipt.
+                        self.export = None;
+                        self.panel = self.compare_from;
+                    } else {
+                        self.panel = Panel::Main;
                     }
-                    self.panel = Panel::Main;
                 }
                 vec![]
             }
@@ -1634,6 +1642,30 @@ mod tests {
         let entry = SavedCheck { report: deep, client: "Mario Rossi".into(), notes: "Fan cleaned".into() };
         assert!(effects.contains(&Effect::AddCheck(Box::new(entry))), "{effects:?}");
         assert_eq!((s.checks[0].client.as_str(), s.checks[0].notes.as_str()), ("Mario Rossi", "Fan cleaned"));
+    }
+
+    #[test]
+    fn leaving_a_comparison_clears_its_message() {
+        let mut s = with_checks(&["2026-10-05T10:00:00Z"]);
+        s.update(Event::CompareWithPrevious);
+        s.update(Event::CopyComparison);
+        s.update(Event::Exported(Some("export.copied")));
+        s.update(Event::Back);
+        assert_eq!((s.panel, s.export), (Panel::Main, None), "the receipt's dock doesn't say Copied.");
+    }
+
+    #[test]
+    fn back_from_a_comparison_goes_where_it_was_opened() {
+        let mut s = with_checks(&["2026-10-01T10:00:00Z", "2026-10-05T10:00:00Z"]);
+        s.update(Event::Open(Panel::Checks));
+        s.update(Event::CompareChecks("2026-10-01T10:00:00Z".into(), "2026-10-05T10:00:00Z".into()));
+        s.update(Event::Back);
+        assert_eq!((s.panel, s.compare.clone()), (Panel::Checks, None));
+        // From the result's "Compare with the previous check", back to the receipt.
+        s.update(Event::Back);
+        s.update(Event::CompareWithPrevious);
+        s.update(Event::Back);
+        assert_eq!(s.panel, Panel::Main);
     }
 
     #[test]

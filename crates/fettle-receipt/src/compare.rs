@@ -91,7 +91,7 @@ pub fn compare(a: &Report, b: &Report, locale: Locale, zone: Zone) -> Result<Com
     let groups: Vec<CompareGroup> = SECTIONS
         .into_iter()
         .filter_map(|section| {
-            let mut rows = verdict_rows(section, &before, &after);
+            let mut rows = verdict_rows(section, (&before, &old.facts), (&after, &new.facts));
             rows.extend(fact_rows(section, &old.facts, &new.facts, locale));
             (!rows.is_empty()).then(|| CompareGroup { section, title: ui(&format!("section.{}", section.key()), locale, &[]), rows })
         })
@@ -154,27 +154,75 @@ fn rank(level: Level) -> Option<u8> {
     }
 }
 
-fn verdict_rows(section: SectionId, before: &ReceiptModel, after: &ReceiptModel) -> Vec<CompareRow> {
-    let lines = |m: &'_ ReceiptModel| m.sections.iter().filter(|s| s.id == section).flat_map(|s| s.lines.clone()).collect::<Vec<ModelLine>>();
-    let (old, new) = (lines(before), lines(after));
-    // A fine line or a note appearing or going away (a disk added, a restart nudge gone) is neither.
-    let mild = |l: &ModelLine| matches!(l.level, Level::Fine | Level::Info);
+/// A verdict line with the list position in its id ("disk-1-wear", "gpu-0") swapped for what the
+/// thing is, so a disk Windows lists in another place still meets its own lines.
+struct Keyed {
+    id: String,
+    /// The disk or graphics card the line is about, if any.
+    thing: Option<String>,
+    line: ModelLine,
+}
+
+/// Per list position, an identity for each item: its key, and which of the items with that key
+/// it is (two identical disks pair in order, as `pair` does).
+fn identities<T, K: PartialEq + std::fmt::Debug>(items: &[T], key: impl Fn(&T) -> K) -> Vec<String> {
+    let keys: Vec<K> = items.iter().map(key).collect();
+    keys.iter().enumerate().map(|(i, k)| format!("{k:?}#{}", keys[..i].iter().filter(|x| *x == k).count())).collect()
+}
+
+fn keyed(section: SectionId, model: &ReceiptModel, facts: &Facts) -> Vec<Keyed> {
+    let disks = data(&facts.storage).map(|s| identities(&s.disks, |d| (d.model.clone(), d.size_bytes, d.bus))).unwrap_or_default();
+    let gpus = data(&facts.graphics).map(|g| identities(&g.adapters, |x| x.name.clone())).unwrap_or_default();
+    let rekey = |id: &str| -> Option<(String, String)> {
+        let (prefix, ids) = [("disk-", &disks), ("gpu-", &gpus)].into_iter().find(|(p, _)| id.starts_with(p))?;
+        let rest = &id[prefix.len()..];
+        let digits = rest.find(|c: char| !c.is_ascii_digit()).unwrap_or(rest.len());
+        let tail = &rest[digits..];
+        if digits == 0 || !(tail.is_empty() || tail.starts_with('-')) {
+            return None;
+        }
+        let thing = format!("{prefix}{}", ids.get(rest[..digits].parse::<usize>().ok()?)?);
+        Some((format!("{thing}{tail}"), thing))
+    };
+    model
+        .sections
+        .iter()
+        .filter(|s| s.id == section)
+        .flat_map(|s| s.lines.iter())
+        .map(|l| match rekey(&l.id) {
+            Some((id, thing)) => Keyed { id, thing: Some(thing), line: l.clone() },
+            None => Keyed { id: l.id.clone(), thing: None, line: l.clone() },
+        })
+        .collect()
+}
+
+fn verdict_rows(section: SectionId, (before, old_facts): (&ReceiptModel, &Facts), (after, new_facts): (&ReceiptModel, &Facts)) -> Vec<CompareRow> {
+    let (old, new) = (keyed(section, before, old_facts), keyed(section, after, new_facts));
+    // Whether `side` couldn't check what `l` is about: the whole section, or that disk or card.
+    let section_check = format!("{}-check", section.key());
+    let unchecked = |side: &[Keyed], l: &Keyed| side.iter().any(|o| o.line.level == Level::CouldntCheck && (o.id == section_check || (l.thing.is_some() && o.thing == l.thing)));
+    // A line on one side only. A fine line or a note appearing or going away (a disk added, a
+    // restart nudge gone) is neither; so is anything one of the two checks couldn't check, which
+    // says nothing about the PC.
+    let one_sided = |l: &Keyed, other: &[Keyed], moved: Change| {
+        if matches!(l.line.level, Level::Fine | Level::Info | Level::CouldntCheck) || unchecked(other, l) { Change::Neutral } else { moved }
+    };
     let mut rows = Vec::new();
     for b in &old {
         match new.iter().find(|a| a.id == b.id) {
-            Some(a) if a.level != b.level => {
-                let change = match (rank(b.level), rank(a.level)) {
+            Some(a) if a.line.level != b.line.level => {
+                let change = match (rank(b.line.level), rank(a.line.level)) {
                     (Some(x), Some(y)) => direction(x, y, false),
                     _ => Change::Neutral,
                 };
-                row(&mut rows, a.headline.clone(), b.level_text.clone(), a.level_text.clone(), change);
+                row(&mut rows, a.line.headline.clone(), b.line.level_text.clone(), a.line.level_text.clone(), change);
             }
             Some(_) => {}
-            None => row(&mut rows, b.headline.clone(), b.level_text.clone(), DASH.into(), if mild(b) { Change::Neutral } else { Change::Better }),
+            None => row(&mut rows, b.line.headline.clone(), b.line.level_text.clone(), DASH.into(), one_sided(b, &new, Change::Better)),
         }
     }
     for a in new.iter().filter(|a| !old.iter().any(|b| b.id == a.id)) {
-        row(&mut rows, a.headline.clone(), DASH.into(), a.level_text.clone(), if mild(a) { Change::Neutral } else { Change::Worse });
+        row(&mut rows, a.line.headline.clone(), DASH.into(), a.line.level_text.clone(), one_sided(a, &old, Change::Worse));
     }
     rows
 }

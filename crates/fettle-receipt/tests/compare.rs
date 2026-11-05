@@ -172,6 +172,59 @@ fn changes_serialize_in_lowercase() {
     assert_eq!(serde_json::to_value([Change::Better, Change::Worse, Change::Neutral]).unwrap(), json!(["better", "worse", "neutral"]));
 }
 
+/// A made-up hard drive on SATA; `smart` is what a Deep check reads (a Quick check reads none).
+fn sata_disk(smart: Option<Value>) -> Value {
+    let mut d = json!({ "model": "Example HDD 2TB", "bus": "sata", "media": "hdd", "size_bytes": 2000398934016u64 });
+    if let Some(s) = smart {
+        d["smart"] = s;
+    }
+    d
+}
+
+#[test]
+fn what_one_check_couldnt_check_is_neither_better_nor_worse() {
+    // A Deep check finds pending sectors; the Quick check after it can't read the drive's health.
+    let mut deep = base(BEFORE, 5);
+    deep["facts"]["storage"]["data"]["disks"] = json!([sata_disk(Some(json!({ "pending_sectors": 3, "reallocated_sectors": 0, "offline_uncorrectable": 0 })))]);
+    let mut quick = base(AFTER, 5);
+    quick["elevated"] = json!(false);
+    quick["facts"]["storage"]["data"]["disks"] = json!([sata_disk(None)]);
+    let c = en(&report(deep.clone()), &report(quick));
+    let rows = group(&c, SectionId::Storage);
+    let gone = rows.iter().find(|r| r.before == "Act soon").unwrap_or_else(|| panic!("{rows:?}"));
+    assert_eq!(gone.change, Change::Neutral, "{rows:?}");
+    let unchecked = rows.iter().find(|r| r.after == "Couldn't check").unwrap_or_else(|| panic!("{rows:?}"));
+    assert_eq!(unchecked.change, Change::Neutral, "{rows:?}");
+
+    // Nor when the whole section couldn't be read the second time.
+    let mut failed = base(AFTER, 5);
+    failed["facts"]["storage"] = json!({ "check": { "status": "failed" } });
+    let rows = group(&en(&report(deep), &report(failed)), SectionId::Storage);
+    assert!(rows.iter().all(|r| r.change == Change::Neutral), "{rows:?}");
+    assert!(rows.iter().any(|r| r.before == "Act soon"), "{rows:?}");
+}
+
+#[test]
+fn disks_and_graphics_cards_pair_by_what_they_are_not_where_windows_lists_them() {
+    // The SSD wears the same both times; the hard drive was swapped for a new SSD, and Windows now
+    // lists the new one first. The two graphics cards swapped places too.
+    let worn = json!({ "model": "Example SSD 1TB", "bus": "nvme", "media": "ssd", "size_bytes": 1000204886016u64,
+        "nvme": { "percentage_used": 85, "temperature_c": 41, "media_errors": 0, "critical_warning": 0, "available_spare_pct": 100, "available_spare_threshold_pct": 10 } });
+    let new = json!({ "model": "Example SSD 2TB", "bus": "sata", "media": "ssd", "size_bytes": 2000398934016u64, "smart": { "reallocated_sectors": 0, "pending_sectors": 0, "offline_uncorrectable": 0 } });
+    let old_driver = json!({ "name": "Example Graphics 100", "driver_version": "31.0.101.1000", "driver_date": "2024-01-01" });
+    let fine_driver = json!({ "name": "Example Graphics 200", "driver_version": "32.0.15.1000", "driver_date": "2026-09-01" });
+    let mut before = base(BEFORE, 5);
+    before["facts"]["storage"]["data"]["disks"] = json!([worn, sata_disk(Some(json!({ "pending_sectors": 0, "reallocated_sectors": 0, "offline_uncorrectable": 0 })))]);
+    before["facts"]["graphics"]["data"]["adapters"] = json!([old_driver, fine_driver]);
+    let mut after = base(AFTER, 5);
+    after["facts"]["storage"]["data"]["disks"] = json!([new, worn]);
+    after["facts"]["graphics"]["data"]["adapters"] = json!([fine_driver, old_driver]);
+    let c = en(&report(before), &report(after));
+    let storage = group(&c, SectionId::Storage);
+    assert!(!storage.iter().any(|r| r.before == "Keep an eye on it" || r.after == "Keep an eye on it"), "the worn SSD didn't change: {storage:?}");
+    assert_eq!(group(&c, SectionId::Graphics), vec![], "neither card changed");
+}
+
 #[test]
 fn the_text_copy_lists_each_change() {
     let c = en(&report(base(BEFORE, 41)), &report(base(AFTER, 9)));

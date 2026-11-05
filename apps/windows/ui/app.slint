@@ -549,7 +549,10 @@ export component AppWindow inherits Window {
                                 y: (parent.height - self.height) / 2;
                                 horizontal-stretch: 0;
                                 quiet: true;
-                                text: Copy.tr("title.settings", Copy.lang);
+                                // Just the gear when My checks or the links share the header: in Italian
+                                // "Impostazioni" would squeeze the title out. Screen readers still hear it.
+                                text: root.checks.length > 0 || root.links.length > 0 ? "" : Copy.tr("title.settings", Copy.lang);
+                                label: Copy.tr("title.settings", Copy.lang);
                                 icon: "M15.2 12 A3.2 3.2 0 1 1 8.8 12 A3.2 3.2 0 1 1 15.2 12 Z M12 2.8 L12 5.2 M12 18.8 L12 21.2 M2.8 12 L5.2 12 M18.8 12 L21.2 12 M5.5 5.5 L7.2 7.2 M16.8 16.8 L18.5 18.5 M5.5 18.5 L7.2 16.8 M16.8 7.2 L18.5 5.5";
                                 clicked => {
                                     root.open-settings();

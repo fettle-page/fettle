@@ -271,7 +271,8 @@ export component Button inherits Rectangle {
                 commands: root.icon;
             }
         }
-        Text {
+        // An icon-only button (Settings beside My checks and the links) has no text, and no gap for it.
+        if root.text != "": Text {
             text: root.text;
             font-family: Theme.text;
             font-size: 13px;

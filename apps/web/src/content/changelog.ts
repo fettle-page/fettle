@@ -19,7 +19,7 @@ export function checkChangelog(entries: Release[]): void {
 export const releases: Release[] = [
   {
     version: "1.1.0",
-    date: null,
+    date: "2026-11-05",
     notes: {
       en: [
         "The app now keeps your last 10 checks on this PC, under My checks, where you can open or delete each one. Remember my checks in Settings turns it off.",

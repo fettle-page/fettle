@@ -174,7 +174,7 @@
   "past.close": "Close this check",
   "result.compare_previous": "Compare with the previous check",
   "printout.kicker": "For the printout",
-  "printout.hint": "Only on printouts and PDFs: never in Copy, saved JSON or shared links.",
+  "printout.hint": "Only on printouts, PDFs and the print preview: never in Copy, saved JSON or shared links.",
   "compare.view_title": "Before and after",
   "compare.intro": "Only what changed between the two checks is listed, the older one first.",
   "compare.copy": "Copy as text",

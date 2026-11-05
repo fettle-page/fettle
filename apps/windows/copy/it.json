@@ -174,7 +174,7 @@
   "past.close": "Chiudi questo controllo",
   "result.compare_previous": "Confronta con il controllo precedente",
   "printout.kicker": "Per la stampa",
-  "printout.hint": "Solo su stampe e PDF: mai in Copia, nei JSON salvati o nei link condivisi.",
+  "printout.hint": "Solo su stampe, PDF e anteprima di stampa: mai in Copia, nei JSON salvati o nei link condivisi.",
   "compare.view_title": "Prima e dopo",
   "compare.intro": "Ci sono solo le cose cambiate tra i due controlli, dal più vecchio al più recente.",
   "compare.copy": "Copia come testo",

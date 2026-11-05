@@ -28,6 +28,7 @@ export const releases: Release[] = [
         "The website can now open a report you saved from the app as JSON and show its receipt, on the new Open a saved report page. Your browser reads the file on your computer: it isn't uploaded.",
         "The share server now uses an updated version of the library that checks uploaded reports, which fixes a way an oversized report could make it use too much memory.",
         "The app's update check now uses an updated TLS library and list of certificates, so it no longer trusts a few certificates that have been withdrawn.",
+        "The app now uses an updated version of the library that reads formatted text in its window, which fixes two ways specially crafted text could make it very slow.",
       ],
       it: [
         "L'app ora conserva i tuoi ultimi 10 controlli su questo PC, in I miei controlli, dove puoi aprirli o eliminarli uno per uno. Si disattiva con Ricorda i miei controlli nelle Impostazioni.",
@@ -36,6 +37,7 @@ export const releases: Release[] = [
         "Il sito ora può aprire un report salvato dall'app in JSON e mostrarne lo scontrino, nella nuova pagina Apri un report salvato. Il browser legge il file sul tuo computer: non viene caricato.",
         "Il server di condivisione ora usa una versione aggiornata della libreria che controlla i report caricati, che corregge un modo in cui un report troppo grande poteva fargli usare troppa memoria.",
         "Il controllo degli aggiornamenti dell'app ora usa una libreria TLS e un elenco di certificati aggiornati, così non si fida più di alcuni certificati che sono stati revocati.",
+        "L'app ora usa una versione aggiornata della libreria che legge il testo formattato nella sua finestra, che corregge due modi in cui un testo costruito ad arte poteva renderla molto lenta.",
       ],
     },
   },

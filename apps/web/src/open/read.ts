@@ -15,8 +15,10 @@ type Receipts = Pick<Brain, "receiptFor">;
 const fail = (error: OpenError): Opened => ({ ok: false, error });
 const isObject = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null && !Array.isArray(v);
 
-/** `load` gives the brain; it runs only for a file that is a report (the wasm is fetched then). */
-export async function openFile(file: Blob, locale: Locale, zone: Zone, load: () => Promise<Receipts>): Promise<Opened> {
+/** `load` gives the brain; it runs only for a file that is a report (the wasm is fetched then).
+ * `zoneAt` gives the viewer's offset at the report's own time, so a summer report read in winter
+ * shows the hour it was made, as the app does. */
+export async function openFile(file: Blob, locale: Locale, zoneAt: (at: Date) => Zone, load: () => Promise<Receipts>): Promise<Opened> {
   if (file.size > MAX_FILE_BYTES) return fail("not_fettle");
   let text: string;
   try {
@@ -42,7 +44,7 @@ export async function openFile(file: Blob, locale: Locale, zone: Zone, load: () 
     return fail("offline");
   }
   try {
-    return { ok: true, model: brain.receiptFor(parsed.report, locale, zone).model };
+    return { ok: true, model: brain.receiptFor(parsed.report, locale, zoneAt(new Date(parsed.report.collected_at))).model };
   } catch {
     return fail("unreadable");
   }

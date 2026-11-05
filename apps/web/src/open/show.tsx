@@ -33,7 +33,7 @@ function viewStyles(): Promise<void> {
 
 /** Draws the file's receipt into `target`, replacing any earlier one; the error otherwise. */
 export async function show(file: Blob, locale: Locale, target: HTMLElement): Promise<OpenError | null> {
-  const opened = await openFile(file, locale, { offsetMinutes: -new Date().getTimezoneOffset() }, load);
+  const opened = await openFile(file, locale, (at) => ({ offsetMinutes: -at.getTimezoneOffset() }), load);
   if (!opened.ok) return opened.error;
   await viewStyles();
   root ??= createRoot(target);

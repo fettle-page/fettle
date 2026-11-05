@@ -8,7 +8,7 @@ import { openText } from "../src/open/copy.ts";
 const sampleText = readFileSync(new URL("../src/content/sample-report.json", import.meta.url), "utf8");
 const sample = () => JSON.parse(sampleText);
 const file = (text: string) => new Blob([text], { type: "application/json" });
-const zone = { offsetMinutes: 60 };
+const zone = () => ({ offsetMinutes: 60 });
 const load = async () => brain;
 
 describe("opening a saved report", () => {
@@ -19,6 +19,18 @@ describe("opening a saved report", () => {
     expect(opened.model.locale).toBe("it");
     expect(opened.model.sections.length).toBeGreaterThan(0);
     expect(opened.model.meta.when).toBe("07/10/2026 08:12");
+  });
+
+  it("shows the time with the offset in force when the report was made, not today's", async () => {
+    // 7 October is summer time in Italy (+120); opened in winter (+60) it must still say 09:12.
+    const seen: string[] = [];
+    const italy = (at: Date) => {
+      seen.push(at.toISOString());
+      return { offsetMinutes: at.getUTCMonth() >= 3 && at.getUTCMonth() <= 9 ? 120 : 60 };
+    };
+    const opened = await openFile(file(sampleText), "it", italy, load);
+    expect(seen).toEqual([new Date(sample().collected_at).toISOString()]);
+    expect(opened.ok && opened.model.meta.when).toBe("07/10/2026 09:12");
   });
 
   it("reads a report saved with nulls for absent fields, as the app writes them", async () => {

@@ -22,11 +22,17 @@ export const releases: Release[] = [
     date: null,
     notes: {
       en: [
+        "The app now keeps your last 10 checks on this PC, under My checks, where you can open or delete each one. Remember my checks in Settings turns it off.",
+        "Two checks can be compared: tick them in My checks, or use Compare with the previous check after a new one. Only what changed is listed, each change marked better or worse, and Copy as text puts it on the clipboard.",
+        "Printouts and PDFs can carry your business name, your name, a contact line and a logo, set in Settings, plus a client and notes for each check. They appear only on paper, never in copies, saved JSON or shared links.",
         "The website can now open a report you saved from the app as JSON and show its receipt, on the new Open a saved report page. Your browser reads the file on your computer: it isn't uploaded.",
         "The share server now uses an updated version of the library that checks uploaded reports, which fixes a way an oversized report could make it use too much memory.",
         "The app's update check now uses an updated TLS library and list of certificates, so it no longer trusts a few certificates that have been withdrawn.",
       ],
       it: [
+        "L'app ora conserva i tuoi ultimi 10 controlli su questo PC, in I miei controlli, dove puoi aprirli o eliminarli uno per uno. Si disattiva con Ricorda i miei controlli nelle Impostazioni.",
+        "Si possono confrontare due controlli: spuntali in I miei controlli, oppure usa Confronta con il controllo precedente dopo uno nuovo. Ci sono solo le cose cambiate, ognuna segnata come meglio o peggio, e Copia come testo le mette negli appunti.",
+        "Stampe e PDF possono riportare il nome della tua attività, il tuo nome, un contatto e un logo, da impostare nelle Impostazioni, più un cliente e delle note per ogni controllo. Compaiono solo su carta, mai nelle copie, nei JSON salvati o nei link condivisi.",
         "Il sito ora può aprire un report salvato dall'app in JSON e mostrarne lo scontrino, nella nuova pagina Apri un report salvato. Il browser legge il file sul tuo computer: non viene caricato.",
         "Il server di condivisione ora usa una versione aggiornata della libreria che controlla i report caricati, che corregge un modo in cui un report troppo grande poteva fargli usare troppa memoria.",
         "Il controllo degli aggiornamenti dell'app ora usa una libreria TLS e un elenco di certificati aggiornati, così non si fida più di alcuni certificati che sono stati revocati.",

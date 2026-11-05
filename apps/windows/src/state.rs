@@ -219,6 +219,9 @@ pub struct State {
     pub compare: Option<(String, String)>,
     /// A logo for printouts is saved (the app reads the PNG when it needs it).
     pub has_logo: bool,
+    /// Why the last logo chosen can't be used (an app string key), until the next try, a logo that
+    /// works, or Settings opening again.
+    pub logo_problem: Option<&'static str>,
     pub settings: Settings,
     pub share_busy: bool,
     /// The dock's last export message (an app string key), cleared by the next action.
@@ -315,6 +318,12 @@ pub enum Event {
     /// A logo for printouts, already prepared as a PNG.
     SetLogo(Vec<u8>),
     RemoveLogo,
+    /// "Choose…" beside the logo: Windows' open dialog.
+    ChooseLogo,
+    /// The picture chosen can't be the logo (an app string key says why).
+    LogoRefused(&'static str),
+    /// Copy the comparison shown as text.
+    CopyComparison,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -331,6 +340,10 @@ pub enum Effect {
     SaveCheckNotes { id: String, client: String, notes: String },
     SaveLogo(Vec<u8>),
     ClearLogo,
+    /// Ask for a picture, make it ready (`print::logo::prepare`) and answer SetLogo or LogoRefused.
+    ChooseLogo,
+    /// Copy the comparison of `State::compared` as text.
+    CopyComparison,
     SaveSettings(Settings),
     /// Run the Deep check: the elevated helper's scan, merged with the user's own.
     DeepCheck,
@@ -373,6 +386,7 @@ impl Default for State {
             opened: None,
             compare: None,
             has_logo: false,
+            logo_problem: None,
             settings: Settings::default(),
             share_busy: false,
             export: None,
@@ -478,11 +492,18 @@ impl State {
         }
         self.compare = Some((a, b));
         self.panel = Panel::Compare;
+        // The receipt's last message doesn't follow into the comparison.
+        self.export = None;
     }
 
     /// Sets the Client or Notes of the receipt shown; saved with its entry when it has one.
     fn set_notes(&mut self, client: Option<String>, notes: Option<String>) -> Vec<Effect> {
         let Some(id) = self.opened_check().map(|c| c.id().to_string()).or(self.current.as_ref().map(|c| c.report.collected_at.clone())) else { return vec![] };
+        // Leaving a field always says so; only a change is saved.
+        let (now_client, now_notes) = self.shown_notes();
+        if client.as_ref().is_none_or(|c| c == now_client) && notes.as_ref().is_none_or(|n| n == now_notes) {
+            return vec![];
+        }
         let apply = |c: &mut String, n: &mut String| {
             if let Some(v) = &client {
                 *c = v.clone();
@@ -587,6 +608,9 @@ impl State {
                     self.share = ShareStatus::Editing;
                     self.share_note = None;
                 }
+                if panel == Panel::Settings {
+                    self.logo_problem = None;
+                }
                 self.panel = panel;
                 if panel == Panel::Links {
                     self.links_status = None;
@@ -663,6 +687,9 @@ impl State {
             Event::SetClient(client) => self.set_notes(Some(client), None),
             Event::SetNotes(notes) => self.set_notes(None, Some(notes)),
             Event::SetTechnician(technician) => {
+                if technician == self.settings.technician {
+                    return vec![];
+                }
                 self.settings.technician = technician;
                 vec![self.save_settings()]
             }
@@ -671,7 +698,23 @@ impl State {
                     return vec![];
                 }
                 self.has_logo = true;
+                self.logo_problem = None;
                 vec![Effect::SaveLogo(png)]
+            }
+            Event::ChooseLogo => {
+                self.logo_problem = None;
+                vec![Effect::ChooseLogo]
+            }
+            Event::LogoRefused(key) => {
+                self.logo_problem = Some(key);
+                vec![]
+            }
+            Event::CopyComparison => {
+                if self.compared().is_none() {
+                    return vec![];
+                }
+                self.export = None;
+                vec![Effect::CopyComparison]
             }
             Event::RemoveLogo => {
                 self.has_logo = false;
@@ -1548,5 +1591,46 @@ mod tests {
         assert!(!s.has_logo);
         s.update(Event::Loaded { settings: Settings::default(), checks: vec![], links: vec![], has_logo: true });
         assert!(s.has_logo);
+    }
+
+    #[test]
+    fn a_field_left_unchanged_writes_nothing() {
+        // Leaving a field always says so; only a change is saved.
+        let mut s = with_checks(&[]);
+        assert_eq!(s.update(Event::SetClient(String::new())), vec![]);
+        assert_eq!(s.update(Event::SetNotes(String::new())), vec![]);
+        assert_eq!(s.update(Event::SetClient("Mario Rossi".into())).len(), 1);
+        assert_eq!(s.update(Event::SetClient("Mario Rossi".into())), vec![]);
+        assert_eq!(s.update(Event::SetTechnician(Technician::default())), vec![]);
+    }
+
+    #[test]
+    fn a_comparison_is_copied_as_text() {
+        let mut s = with_checks(&["2026-10-05T10:00:00Z"]);
+        assert_eq!(s.update(Event::CopyComparison), vec![], "nothing compared yet");
+        s.update(Event::Exported(Some("export.saved")));
+        s.update(Event::CompareWithPrevious);
+        assert_eq!(s.export, None, "the receipt's last message doesn't follow into the comparison");
+        assert_eq!(s.update(Event::CopyComparison), vec![Effect::CopyComparison]);
+        s.update(Event::Exported(Some("export.copied")));
+        assert_eq!(s.export, Some("export.copied"));
+    }
+
+    #[test]
+    fn a_logo_that_cant_be_used_says_why_until_the_next_try() {
+        let mut s = State::default();
+        s.update(Event::Open(Panel::Settings));
+        assert_eq!(s.update(Event::ChooseLogo), vec![Effect::ChooseLogo]);
+        s.update(Event::LogoRefused("settings.logo.e.type"));
+        assert_eq!((s.logo_problem, s.has_logo), (Some("settings.logo.e.type"), false));
+        s.update(Event::ChooseLogo);
+        assert_eq!(s.logo_problem, None, "a new try starts clean");
+        s.update(Event::LogoRefused("settings.logo.e.too_big"));
+        s.update(Event::SetLogo(vec![1]));
+        assert_eq!((s.logo_problem, s.has_logo), (None, true));
+        s.update(Event::LogoRefused("settings.logo.e.too_big"));
+        s.update(Event::Back);
+        s.update(Event::Open(Panel::Settings));
+        assert_eq!(s.logo_problem, None, "gone when Settings opens again");
     }
 }

@@ -29,3 +29,22 @@ export struct ReceiptData {
 }
 // A section on the blank receipt: what it will look at, and whether its sources have finished.
 export struct BlankSection { title: string, hint: string, done: bool }
+// A saved check in My checks: its id (when it was made), its date and time, Quick or Deep, its
+// summary line, and what a screen reader says for each of its controls.
+export struct CheckRow { id: string, when: string, kind: string, summary: string, open-label: string, delete-label: string, tick-label: string }
+// Before and after, on the mat: a changed value ("label · before → after") and whether it got
+// "better", "worse" or neither ("neutral"), with the word to print beside it.
+export struct SlipRow { label: string, before: string, after: string, change: string, word: string }
+export struct SlipGroup { title: string, rows: [SlipRow] }
+export struct SlipData {
+    title: string,
+    before-label: string,
+    after-label: string,
+    before: string,
+    after: string,
+    summary-before: string,
+    summary-after: string,
+    different-pc: string,
+    nothing-changed: string,
+    groups: [SlipGroup],
+}

@@ -3,7 +3,7 @@
 
 use crate::copy::t;
 use crate::state::{Deep, MainView, Mat, Panel, PrivateCard, PrivateKind, ShareStatus, State, ThemeChoice};
-use crate::{AppWindow, Copy, Group, Hint, Line, LinkRow, ReceiptData, Row, Section, TabRef, TabRow, Theme, sections};
+use crate::{AppWindow, CheckRow, Copy, Group, Hint, Line, LinkRow, ReceiptData, Row, Section, SlipData, SlipGroup, SlipRow, TabRef, TabRow, Theme, sections};
 use fettle_facts::Report;
 use fettle_receipt::{DetailRow, ReceiptModel, Zone};
 use fettle_verdicts::{Locale, Param, Receipt, fmt};
@@ -20,6 +20,10 @@ pub struct Cache {
     links: String,
     private: String,
     preview: String,
+    checks: String,
+    slip: String,
+    notes: String,
+    technician: String,
 }
 
 /// The print preview's pages, drawn when it opens and dropped when it closes.
@@ -62,6 +66,70 @@ fn strings(items: Vec<String>) -> ModelRc<SharedString> {
 fn receipt_of(report: &Report, lang: Locale, ctx: &Ctx) -> Option<(Receipt, ReceiptModel)> {
     let at = fmt::parse_rfc3339(&report.collected_at)?;
     fettle_receipt::receipt_for(report, lang, Zone::Offset((ctx.zone)(at))).ok()
+}
+
+/// Two checks before and after, both stamped in the time zone of the newer one (the engine takes one).
+pub fn comparison(a: &Report, b: &Report, lang: Locale, zone: &dyn Fn(i64) -> i32) -> Option<fettle_receipt::Comparison> {
+    let at = [a, b].iter().filter_map(|r| fmt::parse_rfc3339(&r.collected_at)).max()?;
+    fettle_receipt::compare(a, b, lang, Zone::Offset(zone(at))).ok()
+}
+
+/// The comparison as the slip on the mat draws it: better and worse each with its word.
+fn slip_of(c: &fettle_receipt::Comparison) -> SlipData {
+    use fettle_receipt::Change;
+    let groups = c.groups.iter().map(|g| SlipGroup {
+        title: g.title.clone().into(),
+        rows: model(
+            g.rows
+                .iter()
+                .map(|r| SlipRow {
+                    label: r.label.clone().into(),
+                    before: r.before.clone().into(),
+                    after: r.after.clone().into(),
+                    change: level_key(r.change).into(),
+                    word: match r.change {
+                        Change::Better => c.labels.better.clone(),
+                        Change::Worse => c.labels.worse.clone(),
+                        Change::Neutral => String::new(),
+                    }
+                    .into(),
+                })
+                .collect(),
+        ),
+    });
+    SlipData {
+        title: c.labels.title.clone().into(),
+        before_label: c.labels.before.clone().into(),
+        after_label: c.labels.after.clone().into(),
+        before: c.before.clone().into(),
+        after: c.after.clone().into(),
+        summary_before: c.summary_before.clone().into(),
+        summary_after: c.summary_after.clone().into(),
+        different_pc: c.different_pc.clone().unwrap_or_default().into(),
+        nothing_changed: c.nothing_changed.clone().unwrap_or_default().into(),
+        groups: model(groups.collect()),
+    }
+}
+
+/// My checks' rows: when, Quick or Deep, the summary, and a name for each control.
+fn check_rows(s: &State, lang: Locale, ctx: &Ctx) -> Vec<CheckRow> {
+    s.checks
+        .iter()
+        .filter_map(|c| {
+            let (_, m) = receipt_of(&c.report, lang, ctx)?;
+            let when = m.meta.when.clone();
+            let label = |key: &str| SharedString::from(t(key, lang, &[("when", when.clone().into())]));
+            Some(CheckRow {
+                id: c.id().into(),
+                kind: t(if c.report.elevated { "checks.deep" } else { "checks.quick" }, lang, &[]).into(),
+                summary: m.summary.clone().into(),
+                open_label: label("checks.open_label"),
+                delete_label: label("checks.delete_label"),
+                tick_label: label("checks.tick_label"),
+                when: when.into(),
+            })
+        })
+        .collect()
 }
 
 /// Whole calendar days between the check and now, where the viewer is. Never negative.
@@ -249,7 +317,6 @@ pub fn apply(w: &AppWindow, s: &State, ctx: &Ctx, cache: &mut Cache) {
             Panel::Share => "share",
             Panel::Links => "links",
             Panel::Preview => "preview",
-            // Not drawn yet (1.1's UI comes next).
             Panel::Checks => "checks",
             Panel::Compare => "compare",
             Panel::Main => match main {
@@ -265,8 +332,8 @@ pub fn apply(w: &AppWindow, s: &State, ctx: &Ctx, cache: &mut Cache) {
         match s.mat() {
             Mat::Blank => "blank",
             Mat::Live => "live",
-            // Faded too, until the mat has its own label for a past check.
-            Mat::Last | Mat::Past => "last",
+            Mat::Last => "last",
+            Mat::Past => "past",
         }
         .into(),
     );
@@ -300,6 +367,41 @@ pub fn apply(w: &AppWindow, s: &State, ctx: &Ctx, cache: &mut Cache) {
     } else {
         w.set_back_title(SharedString::new());
     }
+    // A saved check opened from My checks: its own label, with its date and time.
+    if let (Mat::Past, Some((_, m))) = (s.mat(), &past) {
+        w.set_last_top(t("stamp.saved", lang, &[]).into());
+        w.set_last_bottom(m.meta.when.clone().into());
+    }
+
+    // My checks, and before and after.
+    changed(&mut cache.checks, format!("{}|{}", lang.code(), s.checks.iter().map(|c| c.id()).collect::<Vec<_>>().join(",")), || w.set_checks(model(check_rows(s, lang, ctx))));
+    w.set_checks_label(t("title.checks", lang, &[("count", Param::Int(s.checks.len() as i64))]).into());
+    w.set_can_compare_previous(s.previous_check().is_some());
+    let compared = s.compare.as_ref().filter(|_| s.compared().is_some());
+    changed(&mut cache.slip, compared.map(|(a, b)| format!("{}|{a}|{b}", lang.code())).unwrap_or_default(), || {
+        let Some((a, b)) = s.compared() else { return };
+        w.set_slip(match comparison(a, b, lang, ctx.zone) {
+            Some(c) => slip_of(&c),
+            None => SlipData { title: t("compare.view_title", lang, &[]).into(), nothing_changed: t("compare.failed", lang, &[]).into(), ..SlipData::default() },
+        });
+    });
+
+    // What the printout's fields hold: set only when the receipt shown or what's saved for it
+    // changes, so a field being typed in is never overwritten.
+    let shown_id = s.opened_check().map(|c| c.id()).or(s.current.as_ref().map(|c| c.report.collected_at.as_str())).unwrap_or("");
+    let (client, notes) = s.shown_notes();
+    changed(&mut cache.notes, format!("{shown_id}\u{1}{client}\u{1}{notes}"), || {
+        w.set_client(client.into());
+        w.set_notes(notes.into());
+    });
+    let tech = &s.settings.technician;
+    changed(&mut cache.technician, format!("{}\u{1}{}\u{1}{}", tech.business, tech.name, tech.contact), || {
+        w.set_tech_business(tech.business.clone().into());
+        w.set_tech_name(tech.name.clone().into());
+        w.set_tech_contact(tech.contact.clone().into());
+    });
+    w.set_has_logo(s.has_logo);
+    w.set_logo_problem(s.logo_problem.map(|k| t(k, lang, &[])).unwrap_or_default().into());
 
     // After a check: the answer, the Deep check when it would show more, the numbers.
     if let Some((checked, (receipt, m))) = &current {
@@ -364,8 +466,16 @@ pub fn apply(w: &AppWindow, s: &State, ctx: &Ctx, cache: &mut Cache) {
     w.set_links_checking(s.checking_links);
 
     // The status bar: what happened, which Windows, and the shortcuts that work right now.
+    let local_date = |report: &Report| {
+        let at = fmt::parse_rfc3339(&report.collected_at).unwrap_or(0);
+        fmt::date_long(&fmt::utc_day(at + i64::from((ctx.zone)(at)) * 60_000), lang)
+    };
     let (items, hints) = match (main, &current, &last) {
         (MainView::Checking, _, _) => (vec![t("status.checking", lang, &[])], vec![]),
+        (MainView::Past, _, _) if s.opened_check().is_some() => {
+            let report = &s.opened_check().expect("a saved check").report;
+            ([Some(t("status.saved", lang, &[("date", local_date(report).into())])), windows_of(report)].into_iter().flatten().collect(), vec![hint("Ctrl P", t("export.print", lang, &[]))])
+        }
         (MainView::Result, Some((c, _)), _) => {
             let secs = seconds(c.seconds, lang);
             let key = if c.report.elevated { "status.deep_time" } else { "status.quick_time" };
@@ -374,12 +484,7 @@ pub fn apply(w: &AppWindow, s: &State, ctx: &Ctx, cache: &mut Cache) {
                 vec![hint("Ctrl R", t("scan.again", lang, &[])), hint("Ctrl P", t("export.print", lang, &[]))],
             )
         }
-        (_, _, Some((report, _))) => {
-            let at = fmt::parse_rfc3339(&report.collected_at).unwrap_or(0);
-            let local = at + i64::from((ctx.zone)(at)) * 60_000;
-            let date = fmt::date_long(&fmt::utc_day(local), lang);
-            ([Some(t("status.last", lang, &[("date", date.into())])), windows_of(report)].into_iter().flatten().collect(), vec![hint("Enter", t("scan.again", lang, &[]))])
-        }
+        (_, _, Some((report, _))) => ([Some(t("status.last", lang, &[("date", local_date(report).into())])), windows_of(report)].into_iter().flatten().collect(), vec![hint("Enter", t("scan.again", lang, &[]))]),
         _ => (vec![t("status.ready", lang, &[])], vec![hint("Enter", t("home.button", lang, &[]))]),
     };
     w.set_status_items(strings(items));

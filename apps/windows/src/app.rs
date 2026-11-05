@@ -25,9 +25,11 @@ pub trait Background {
     fn spawn(&self, job: Job);
 }
 
-/// Windows' save dialog, owned by the app's window. None when cancelled.
+/// Windows' save and open dialogs, owned by the app's window. None when cancelled.
 pub trait Dialogs {
     fn save(&self, owner: &slint::Window, suggested: &str, filters: &[(String, Vec<String>)]) -> Option<std::path::PathBuf>;
+    /// A file to open (the logo for printouts).
+    fn open(&self, owner: &slint::Window, filters: &[(String, Vec<String>)]) -> Option<std::path::PathBuf>;
 }
 
 pub trait Clipboard {
@@ -150,6 +152,16 @@ fn read_private() -> PrivateCard {
     }
     #[cfg(not(windows))]
     PrivateCard::default()
+}
+
+/// A picture chosen as the logo, made ready to keep: one over 2 MB is refused before it's read.
+fn read_logo(path: &std::path::Path) -> Result<Vec<u8>, &'static str> {
+    let size = std::fs::metadata(path).map_err(|_| crate::print::logo::UNREADABLE)?.len();
+    if size > crate::print::logo::MAX_BYTES as u64 {
+        return Err(crate::print::logo::TOO_BIG);
+    }
+    let bytes = std::fs::read(path).map_err(|_| crate::print::logo::UNREADABLE)?;
+    crate::print::logo::prepare(&bytes)
 }
 
 struct Inner {
@@ -286,6 +298,22 @@ impl Fettle {
             Effect::ReloadChecks => self.post_now(Event::ChecksLoaded(store.load_checks())),
             Effect::SaveCheckNotes { id, client, notes } => store.set_check_notes(&id, &client, &notes),
             Effect::SaveLogo(png) => store.save_logo(&png),
+            Effect::ChooseLogo => {
+                let filters = [(copy::t("settings.logo.filter", self.lang(), &[]), vec!["png".to_string(), "jpg".to_string(), "jpeg".to_string()])];
+                let Some(path) = self.0.deps.dialogs.open(self.0.window.window(), &filters) else { return };
+                self.post_now(match read_logo(&path) {
+                    Ok(png) => Event::SetLogo(png),
+                    Err(key) => Event::LogoRefused(key),
+                });
+            }
+            Effect::CopyComparison => {
+                let text = {
+                    let state = self.0.state.borrow();
+                    state.compared().and_then(|(a, b)| view::comparison(a, b, self.lang(), &*self.0.deps.zone)).map(|c| fettle_receipt::compare_markdown(&c))
+                };
+                let copied = text.is_some_and(|t| self.0.deps.clipboard.set_text(&t));
+                self.post_now(Event::Exported(Some(if copied { "export.copied" } else { "export.failed" })));
+            }
             Effect::ClearLogo => store.clear_logo(),
             Effect::SaveSettings(settings) => store.save_settings(&settings),
             Effect::LoadPrivate => {
@@ -501,6 +529,25 @@ impl Fettle {
         w.on_delete_link(move |id| o(Event::DeleteLink(id.to_string())));
         w.on_check_links(send(Event::CheckLinks));
         w.on_back(send(Event::Back));
+        w.on_open_checks(send(Event::Open(Panel::Checks)));
+        w.on_close_check(send(Event::CloseCheck));
+        w.on_compare_previous(send(Event::CompareWithPrevious));
+        w.on_copy_comparison(send(Event::CopyComparison));
+        w.on_choose_logo(send(Event::ChooseLogo));
+        w.on_remove_logo(send(Event::RemoveLogo));
+        let o = on.clone();
+        w.on_open_check(move |id| o(Event::OpenCheck(id.to_string())));
+        let o = on.clone();
+        w.on_delete_check(move |id| o(Event::DeleteCheck(id.to_string())));
+        let o = on.clone();
+        w.on_compare_checks(move |a, b| o(Event::CompareChecks(a.to_string(), b.to_string())));
+        // Sent when a field is left (the state saves only a change).
+        let o = on.clone();
+        w.on_client_edited(move |v| o(Event::SetClient(v.to_string())));
+        let o = on.clone();
+        w.on_notes_edited(move |v| o(Event::SetNotes(v.to_string())));
+        let o = on.clone();
+        w.on_technician_edited(move |business, name, contact| o(Event::SetTechnician(crate::state::Technician { business: business.to_string(), name: name.to_string(), contact: contact.to_string() })));
         let o = on.clone();
         w.on_theme_chosen(move |v| {
             o(Event::SetTheme(match v.as_str() {

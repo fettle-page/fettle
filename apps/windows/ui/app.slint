@@ -6,10 +6,10 @@ import "fonts/bricolage-text-800.ttf";
 import "fonts/fettle-mono-400.ttf";
 import "fonts/fettle-mono-600.ttf";
 import { Theme, Copy } from "theme.slint";
-import { Row, Group, Line, Section, TabRow, ReceiptData, BlankSection } from "data.slint";
-import { Receipt, BlankReceipt, Wordmark } from "receipt.slint";
-import { Icon, PrimaryButton, Button, HomePanel, CheckingPanel, Progress, ResultPanel, SettingsPanel, Focusable } from "panels.slint";
-import { ShareView, LinksView, LinkRow } from "views.slint";
+import { Row, Group, Line, Section, TabRow, ReceiptData, BlankSection, CheckRow, SlipData, SlipGroup, SlipRow } from "data.slint";
+import { Receipt, BlankReceipt, Wordmark, ComparisonSlip } from "receipt.slint";
+import { Icon, PrimaryButton, Button, HomePanel, CheckingPanel, Progress, ResultPanel, PastPanel, SettingsPanel, Focusable } from "panels.slint";
+import { ShareView, LinksView, LinkRow, ChecksView, PrintoutFields } from "views.slint";
 
 export { Theme, Copy }
 
@@ -138,12 +138,46 @@ export component AppWindow inherits Window {
     background: Theme.chrome;
     default-font-family: Theme.text;
 
-    // What the mat shows: "blank" (first time and during a check), "live" (this check's receipt)
-    // or "last" (the last receipt, faded).
+    // What the mat shows: "blank" (first time and during a check), "live" (this check's receipt),
+    // "last" (the last receipt, faded) or "past" (a saved check opened from My checks, faded).
     in property <string> mat: "blank";
-    // What the side panel shows: "home", "checking", "result", "settings", "share", "links" or
-    // "preview".
+    // What the side panel shows: "home", "checking", "result", "past", "settings", "share",
+    // "links", "checks", "compare" or "preview".
     in-out property <string> view: "home";
+    // My checks, and "My checks · 3" for screen readers (the header shows an icon and the count).
+    in property <[CheckRow]> checks;
+    in property <string> checks-label;
+    callback open-checks();
+    callback open-check(string);
+    callback delete-check(string);
+    callback compare-checks(string, string);
+    callback close-check();
+    // Before and after: the slip on the mat, and whether this check has an earlier one to compare.
+    in property <SlipData> slip;
+    in property <bool> can-compare-previous;
+    callback compare-previous();
+    callback copy-comparison();
+    // The printout's Client and Notes for the receipt shown, as typed: saved when a field is left
+    // (or before Print, Save, Copy and Share), never per keystroke.
+    in-out property <string> client;
+    in-out property <string> notes;
+    callback client-edited(string);
+    callback notes-edited(string);
+    // Your details on printouts, as typed, and the logo.
+    in-out property <string> tech-business;
+    in-out property <string> tech-name;
+    in-out property <string> tech-contact;
+    in property <bool> has-logo;
+    in property <string> logo-problem;
+    callback technician-edited(string, string, string);
+    callback choose-logo();
+    callback remove-logo();
+    // What the fields hold goes to the app (which saves only a change).
+    function commit-fields() {
+        client-edited(client);
+        notes-edited(notes);
+        technician-edited(tech-business, tech-name, tech-contact);
+    }
     in property <ReceiptData> receipt;
     in property <bool> printed: true;
     in property <bool> open-all;
@@ -207,7 +241,9 @@ export component AppWindow inherits Window {
     in-out property <string> share-expiry: "30d";
     in-out property <bool> share-locked;
     in-out property <string> share-password;
-    property <bool> in-view: view == "settings" || view == "share" || view == "links" || view == "preview";
+    property <bool> in-view: view == "settings" || view == "share" || view == "links" || view == "checks" || view == "compare" || view == "preview";
+    // A receipt is shown that Print, Save, Copy and Share act on: this check's, or a saved one.
+    property <bool> on-receipt: view == "result" || view == "past";
 
     callback check();
     callback run-deep();
@@ -240,6 +276,8 @@ export component AppWindow inherits Window {
         Palette.color-scheme = Theme.dark ? ColorScheme.dark : ColorScheme.light;
     }
     changed view => {
+        // A field left by changing views is saved like one left any other way.
+        commit-fields();
         if !in-view {
             keys.focus();
         }
@@ -277,27 +315,35 @@ export component AppWindow inherits Window {
         KeyBinding {
             keys: @keys(Control + P);
             // From the receipt it opens the preview; in the preview it prints.
-            enabled: root.view == "result" || root.view == "preview";
+            enabled: root.on-receipt || root.view == "preview";
             activated => {
                 if root.view == "preview" {
                     root.print-confirmed();
                 } else {
+                    root.commit-fields();
                     root.print-asked();
                 }
             }
         }
         KeyBinding {
             keys: @keys(Control + S);
-            enabled: root.view == "result";
+            enabled: root.on-receipt;
             activated => {
+                root.commit-fields();
                 root.save-asked();
             }
         }
+        // Esc leaves a view; a saved check closes like one.
         KeyBinding {
             keys: @keys(Escape);
-            enabled: root.in-view;
+            enabled: root.in-view || root.view == "past";
             activated => {
-                root.back();
+                if root.view == "past" {
+                    root.commit-fields();
+                    root.close-check();
+                } else {
+                    root.back();
+                }
             }
         }
 
@@ -355,14 +401,19 @@ export component AppWindow inherits Window {
                             // The paper's torn top (7 px) stays up in the slit: it's still in the printer.
                             y: -7px;
                             width: 372px;
-                            height: root.mat == "blank" ? blank.height : sheet.height;
+                            height: root.view == "compare" ? slip.height : root.mat == "blank" ? blank.height : sheet.height;
                             blank := BlankReceipt {
-                                visible: root.mat == "blank";
+                                visible: root.mat == "blank" && root.view != "compare";
                                 machine: root.blank-machine;
                                 sections: root.blank-sections;
                             }
+                            // Before and after comes out of the printer in place of the receipt.
+                            slip := ComparisonSlip {
+                                visible: root.view == "compare";
+                                data: root.slip;
+                            }
                             Rectangle {
-                                visible: root.mat != "blank";
+                                visible: root.mat != "blank" && root.view != "compare";
                                 y: root.fed ? 0 : -parent.height - 20px;
                                 height: sheet.height;
                                 animate y {
@@ -372,7 +423,7 @@ export component AppWindow inherits Window {
                                 sheet := Receipt {
                                     data: root.receipt;
                                     printed: root.printed;
-                                    faded: root.mat == "last";
+                                    faded: root.mat == "last" || root.mat == "past";
                                     open-all: root.open-all;
                                 }
                             }
@@ -417,7 +468,7 @@ export component AppWindow inherits Window {
                     }
                     // The old receipt's label lies on the mat, under the printer beside the paper: it
                     // stays put while the receipt scrolls.
-                    if root.mat == "last" && root.view != "preview": MatLabel {
+                    if (root.mat == "last" || root.mat == "past") && root.view != "preview" && root.view != "compare": MatLabel {
                         x: scroll.x + (scroll.visible-width + 372px) / 2 + 16px;
                         y: slot.y + slot.height + 18px;
                         room: (scroll.visible-width - 372px) / 2 - 30px;
@@ -462,7 +513,7 @@ export component AppWindow inherits Window {
                                 }
                             }
                             Text {
-                                text: root.view == "settings" ? Copy.tr("title.settings", Copy.lang) : root.view == "share" ? Copy.tr("share.title", Copy.lang) : root.view == "links" ? Copy.tr("links.title", Copy.lang) : root.view == "preview" ? Copy.tr("preview.title", Copy.lang) : Copy.tr("title.context", Copy.lang);
+                                text: root.view == "settings" ? Copy.tr("title.settings", Copy.lang) : root.view == "share" ? Copy.tr("share.title", Copy.lang) : root.view == "links" ? Copy.tr("links.title", Copy.lang) : root.view == "checks" ? Copy.tr("checks.title", Copy.lang) : root.view == "compare" ? Copy.tr("compare.view_title", Copy.lang) : root.view == "preview" ? Copy.tr("preview.title", Copy.lang) : Copy.tr("title.context", Copy.lang);
                                 font-family: root.in-view ? Theme.display : Theme.mono;
                                 font-size: root.in-view ? 18px : 12px;
                                 font-weight: root.in-view ? 800 : 400;
@@ -470,6 +521,18 @@ export component AppWindow inherits Window {
                                 vertical-alignment: center;
                                 horizontal-stretch: 1;
                                 overflow: elide;
+                            }
+                            if !root.in-view && root.view != "checking" && root.checks.length > 0: Button {
+                                y: (parent.height - self.height) / 2;
+                                horizontal-stretch: 0;
+                                quiet: true;
+                                text: root.checks.length;
+                                label: root.checks-label;
+                                // A receipt with a torn foot, and its lines.
+                                icon: "M6 3 L18 3 L18 21 L15 19 L12 21 L9 19 L6 21 Z M9.5 8 L14.5 8 M9.5 12 L14.5 12";
+                                clicked => {
+                                    root.open-checks();
+                                }
                             }
                             if !root.in-view && root.view != "checking" && root.links.length > 0: Button {
                                 y: (parent.height - self.height) / 2;
@@ -532,12 +595,54 @@ export component AppWindow inherits Window {
                                     number-rows: root.number-rows;
                                     private-shown: root.private-shown;
                                     private-rows: root.private-rows;
+                                    can-compare: root.can-compare-previous;
                                     again => {
                                         root.check();
                                     }
                                     run-deep => {
                                         root.run-deep();
                                     }
+                                    compare-previous => {
+                                        root.compare-previous();
+                                    }
+                                }
+                                if root.view == "past": PastPanel {
+                                    when: root.receipt.when;
+                                    summary: root.receipt.summary;
+                                    close => {
+                                        root.commit-fields();
+                                        root.close-check();
+                                    }
+                                }
+                                if root.on-receipt: PrintoutFields {
+                                    client <=> root.client;
+                                    notes <=> root.notes;
+                                    client-done => {
+                                        root.client-edited(root.client);
+                                    }
+                                    notes-done => {
+                                        root.notes-edited(root.notes);
+                                    }
+                                }
+                                if root.view == "checks": ChecksView {
+                                    checks: root.checks;
+                                    open(id) => {
+                                        root.open-check(id);
+                                    }
+                                    delete(id) => {
+                                        root.delete-check(id);
+                                    }
+                                    compare(a, b) => {
+                                        root.compare-checks(a, b);
+                                    }
+                                }
+                                if root.view == "compare": Text {
+                                    text: Copy.tr("compare.intro", Copy.lang);
+                                    font-family: Theme.text;
+                                    font-size: 14px;
+                                    font-weight: 500;
+                                    color: Theme.chrome-soft;
+                                    wrap: word-wrap;
                                 }
                                 if root.view == "share": ShareView {
                                     status: root.share-status;
@@ -608,6 +713,20 @@ export component AppWindow inherits Window {
                                     updates: root.updates;
                                     update-every: root.update-every;
                                     version: root.version;
+                                    business <=> root.tech-business;
+                                    name <=> root.tech-name;
+                                    contact <=> root.tech-contact;
+                                    has-logo: root.has-logo;
+                                    logo-problem: root.logo-problem;
+                                    technician-done => {
+                                        root.technician-edited(root.tech-business, root.tech-name, root.tech-contact);
+                                    }
+                                    choose-logo => {
+                                        root.choose-logo();
+                                    }
+                                    remove-logo => {
+                                        root.remove-logo();
+                                    }
                                     theme-chosen(v) => {
                                         root.theme-chosen(v);
                                     }
@@ -629,7 +748,7 @@ export component AppWindow inherits Window {
                                 }
                             }
                         }
-                        if root.view == "home" || root.view == "result" || root.view == "share" || root.view == "preview": Rectangle {
+                        if root.view == "home" || root.on-receipt || root.view == "share" || root.view == "compare" || root.view == "preview": Rectangle {
                             height: 1px;
                             background: Theme.chrome-line;
                         }
@@ -700,16 +819,46 @@ export component AppWindow inherits Window {
                                 horizontal-alignment: center;
                             }
                         }
-                        if root.view == "result": VerticalLayout {
+                        // Before and after: copy it as text, with the same message line as the receipt's.
+                        if root.view == "compare": VerticalLayout {
                             vertical-stretch: 0;
                             padding-top: 16px;
                             padding-left: 26px;
                             padding-right: 26px;
                             padding-bottom: 20px;
                             spacing: 10px;
+                            Button {
+                                text: Copy.tr("compare.copy", Copy.lang);
+                                icon: "M9 9 L20 9 L20 20 L9 20 Z M5 15 L4 15 L4 4 L15 4 L15 5";
+                                clicked => {
+                                    root.copy-comparison();
+                                }
+                            }
+                            if root.dock-status != "": Text {
+                                text: root.dock-status;
+                                accessible-role: text;
+                                accessible-label: root.dock-status;
+                                accessible-live-region: polite;
+                                font-family: Theme.mono;
+                                font-size: 12px;
+                                font-weight: 600;
+                                color: Theme.accent;
+                                horizontal-alignment: center;
+                                wrap: word-wrap;
+                            }
+                        }
+                        if root.on-receipt: VerticalLayout {
+                            vertical-stretch: 0;
+                            padding-top: 16px;
+                            padding-left: 26px;
+                            padding-right: 26px;
+                            padding-bottom: 20px;
+                            spacing: 10px;
+                            // Each first hands over what the printout's fields hold, so it goes with them.
                             PrimaryButton {
                                 text: Copy.tr("share.button", Copy.lang);
                                 clicked => {
+                                    root.commit-fields();
                                     root.open-share();
                                 }
                             }
@@ -720,6 +869,7 @@ export component AppWindow inherits Window {
                                     text: Copy.tr("export.print", Copy.lang);
                                     icon: "M7 9 L7 3 L17 3 L17 9 M7 17 L4 17 L4 9 L20 9 L20 17 L17 17 M7 14 L17 14 L17 21 L7 21 Z";
                                     clicked => {
+                                        root.commit-fields();
                                         root.print-asked();
                                     }
                                 }
@@ -728,6 +878,7 @@ export component AppWindow inherits Window {
                                     text: Copy.tr("export.json", Copy.lang);
                                     icon: "M12 4 L12 15 M7.5 10.5 L12 15 L16.5 10.5 M5 20 L19 20";
                                     clicked => {
+                                        root.commit-fields();
                                         root.save-asked();
                                     }
                                 }
@@ -736,6 +887,7 @@ export component AppWindow inherits Window {
                                     text: Copy.tr("export.copy", Copy.lang);
                                     icon: "M9 9 L20 9 L20 20 L9 20 Z M5 15 L4 15 L4 4 L15 4 L15 5";
                                     clicked => {
+                                        root.commit-fields();
                                         root.copy-asked();
                                     }
                                 }

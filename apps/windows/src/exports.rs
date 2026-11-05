@@ -21,6 +21,13 @@ impl Dialogs for RealDialogs {
         }
         dialog.save_file()
     }
+    fn open(&self, owner: &slint::Window, filters: &[(String, Vec<String>)]) -> Option<PathBuf> {
+        let mut dialog = rfd::FileDialog::new().set_parent(&owner.window_handle());
+        for (name, extensions) in filters {
+            dialog = dialog.add_filter(name, extensions);
+        }
+        dialog.pick_file()
+    }
 }
 
 /// Windows' print dialog and GDI, from the same layout as the PDF.

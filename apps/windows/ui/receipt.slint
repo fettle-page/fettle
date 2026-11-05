@@ -1,7 +1,7 @@
 // The Fettle receipt, drawn natively: a thermal till roll about 42 characters wide (receipt.css).
 import { Theme, Copy } from "theme.slint";
 import { Focusable } from "panels.slint";
-import { Row, Group, Line, Section, ReceiptData, BlankSection } from "data.slint";
+import { Row, Group, Line, Section, ReceiptData, BlankSection, SlipData, SlipRow } from "data.slint";
 
 export global Paper {
     // 13 px type and its line height: one size drives everything, as on the web.
@@ -528,6 +528,197 @@ export component Receipt inherits Rectangle {
                 ink: data.tone == "some" || data.tone == "attention" ? Theme.stamp-red : data.tone == "partial" ? Theme.ink-soft : Theme.paper-green;
                 small-ink: data.tone == "some" || data.tone == "attention" ? Theme.accent-ink : self.ink;
             }
+        }
+        end := Rectangle { height: 0; }
+    }
+}
+
+// Better or worse beside a changed value: the word is the signal, colour only reinforces it.
+component ChangeTag inherits Rectangle {
+    in property <string> change;
+    in property <string> text;
+    property <color> ink: change == "better" ? Theme.paper-green : Theme.accent-ink;
+    width: label.preferred-width + 12px;
+    height: 18px;
+    border-radius: 2px;
+    border-width: 1.5px;
+    border-color: ink;
+    label := Text {
+        text: root.text.to-uppercase();
+        font-family: Theme.mono;
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.9px;
+        color: root.ink;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+    }
+}
+
+// "Drive C: free space" with better or worse beside it, then "12% → 45%" across the paper (the
+// arrow drawn: the trimmed fonts have none).
+component SlipLine inherits VerticalLayout {
+    in property <SlipRow> item;
+    padding-top: 4px;
+    padding-bottom: 4px;
+    HorizontalLayout {
+        spacing: 12px;
+        RText {
+            text: item.label;
+            horizontal-stretch: 1;
+        }
+        VerticalLayout {
+            alignment: start;
+            padding-top: 2px;
+            if item.change != "neutral": ChangeTag {
+                change: item.change;
+                text: item.word;
+            }
+        }
+    }
+    HorizontalLayout {
+        spacing: 6px;
+        RText {
+            text: item.before;
+            color: Theme.ink-soft;
+            horizontal-stretch: 0;
+            max-width: 160px;
+        }
+        VerticalLayout {
+            alignment: start;
+            Rectangle {
+                width: 14px;
+                height: Paper.size * Paper.lh;
+                Path {
+                    width: 12px;
+                    height: 8px;
+                    y: (parent.height - 8px) / 2 + 1px;
+                    viewbox-width: 12;
+                    viewbox-height: 8;
+                    commands: "M0 4 L11 4 M7.5 0.5 L11 4 L7.5 7.5";
+                    stroke: Theme.ink-soft;
+                    stroke-width: 1.4px;
+                    fill: transparent;
+                }
+            }
+        }
+        RText {
+            text: item.after;
+            horizontal-stretch: 1;
+        }
+    }
+}
+
+// Before and after, on the mat: two saved checks as a slip in the receipt's style. Only what
+// changed is on it.
+export component ComparisonSlip inherits Rectangle {
+    in property <SlipData> data;
+    accessible-role: groupbox;
+    accessible-label: data.title;
+    width: 372px;
+    // As tall as what's printed on it, as the receipt is.
+    height: end.y + 33px;
+    PaperSheet {
+        width: parent.width;
+        height: parent.height;
+    }
+    VerticalLayout {
+        x: 0;
+        y: 0;
+        width: parent.width;
+        height: 100000px;
+        alignment: start;
+        padding-top: 25px;
+        padding-left: 22px;
+        padding-right: 22px;
+        padding-bottom: 33px;
+        HorizontalLayout {
+            alignment: space-between;
+            Wordmark { height: 19px; }
+            Text {
+                text: data.title.to-uppercase();
+                font-family: Theme.mono;
+                font-size: 12px;
+                font-weight: 600;
+                letter-spacing: 1.9px;
+                color: Theme.ink-soft;
+                vertical-alignment: bottom;
+            }
+        }
+        // Built through a one-item list so wrapped summaries are measured at their real width (see
+        // the receipt's summary).
+        for _ in 1: VerticalLayout {
+            padding-top: 16px;
+            padding-bottom: 14px;
+            spacing: 14px;
+            VerticalLayout {
+                spacing: 3px;
+                Text {
+                    text: (data.before-label + " · " + data.before).to-uppercase();
+                    font-family: Theme.mono;
+                    font-size: 11px;
+                    font-weight: 600;
+                    letter-spacing: 1.3px;
+                    color: Theme.ink-soft;
+                }
+                Text {
+                    text: data.summary-before;
+                    font-family: Theme.display;
+                    font-size: 19px;
+                    font-weight: 800;
+                    letter-spacing: -0.4px;
+                    color: Theme.ink-soft;
+                    wrap: word-wrap;
+                }
+            }
+            VerticalLayout {
+                spacing: 3px;
+                Text {
+                    text: (data.after-label + " · " + data.after).to-uppercase();
+                    font-family: Theme.mono;
+                    font-size: 11px;
+                    font-weight: 600;
+                    letter-spacing: 1.3px;
+                    color: Theme.accent-ink;
+                }
+                Text {
+                    text: data.summary-after;
+                    font-family: Theme.display;
+                    font-size: 24px;
+                    font-weight: 800;
+                    letter-spacing: -0.6px;
+                    color: Theme.ink;
+                    wrap: word-wrap;
+                }
+            }
+        }
+        Dashes { }
+        if data.different-pc != "": VerticalLayout {
+            padding-top: 14px;
+            Rectangle {
+                DashedBox {
+                    width: parent.width;
+                    height: parent.height;
+                    tint: Theme.ink-soft;
+                }
+                VerticalLayout {
+                    padding: 10px;
+                    RText { text: data.different-pc; }
+                }
+            }
+        }
+        if data.nothing-changed != "": VerticalLayout {
+            padding-top: 18px;
+            RText { text: data.nothing-changed; }
+        }
+        for g in data.groups: VerticalLayout {
+            padding-top: 18px;
+            SectionHead { title: g.title; }
+            for r in g.rows: SlipLine { item: r; }
+        }
+        VerticalLayout {
+            padding-top: 14px;
+            Dashes { }
         }
         end := Rectangle { height: 0; }
     }

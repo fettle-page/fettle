@@ -309,9 +309,9 @@ fn turning_remember_off_deletes_the_stored_check() {
     h.background.run_all(&h.app);
     assert_eq!(FileStore::new(dir.to_path_buf()).load_checks().len(), 1);
     press(&h.app, "Settings");
-    assert_eq!(checked(&h.app, "Remember the last check on this PC"), Some(true));
-    press(&h.app, "Remember the last check on this PC");
-    assert_eq!(checked(&h.app, "Remember the last check on this PC"), Some(false));
+    assert_eq!(checked(&h.app, "Remember my checks"), Some(true));
+    press(&h.app, "Remember my checks");
+    assert_eq!(checked(&h.app, "Remember my checks"), Some(false));
     assert!(!dir.join("checks.json").exists());
 }
 
@@ -383,12 +383,19 @@ fn settings_survive_a_restart() {
 struct FakeDialogs {
     answer: RefCell<Option<PathBuf>>,
     asked: RefCell<Vec<String>>,
+    /// The file the open dialog picks (None: cancelled), and the file types it was asked for.
+    pick: RefCell<Option<PathBuf>>,
+    opened: RefCell<Vec<Vec<String>>>,
 }
 
 impl Dialogs for FakeDialogs {
     fn save(&self, _owner: &slint::Window, suggested: &str, _filters: &[(String, Vec<String>)]) -> Option<PathBuf> {
         self.asked.borrow_mut().push(suggested.to_string());
         self.answer.borrow().clone()
+    }
+    fn open(&self, _owner: &slint::Window, filters: &[(String, Vec<String>)]) -> Option<PathBuf> {
+        self.opened.borrow_mut().push(filters.iter().flat_map(|(_, e)| e.clone()).collect());
+        self.pick.borrow().clone()
     }
 }
 
@@ -890,7 +897,7 @@ fn every_control_has_a_name_for_screen_readers() {
     // Every view, checked once it's open: the receipt, Settings, Share (before and after a link is
     // made), My shared links and the print preview.
     names_everything("the receipt");
-    for (press_first, view) in [("Settings", "Settings"), ("Back", "the receipt again"), ("Share a link", "Share"), ("Create the link", "Share, link made"), ("Back", "the receipt"), ("Shared links · 1", "My shared links"), ("Back", "the receipt"), ("Print", "the print preview")] {
+    for (press_first, view) in [("Settings", "Settings"), ("Back", "the receipt again"), ("Share a link", "Share"), ("Create the link", "Share, link made"), ("Back", "the receipt"), ("Shared links · 1", "My shared links"), ("Back", "the receipt"), ("My checks · 1", "My checks"), ("Open the check of 06/10/2026 12:30", "the receipt"), ("Print", "the print preview")] {
         press(&h.app, press_first);
         h.background.run_all(&h.app);
         names_everything(view);
@@ -962,7 +969,7 @@ fn arrow_keys_move_between_the_numbers_tabs() {
 fn tabbing_follows_the_reading_order_and_space_toggles_a_switch() {
     let h = harness(Locale::En);
     press(&h.app, "Settings");
-    let remember = || ElementHandle::find_by_accessible_label(h.app.window(), "Remember the last check on this PC").next().unwrap().accessible_checked();
+    let remember = || ElementHandle::find_by_accessible_label(h.app.window(), "Remember my checks").next().unwrap().accessible_checked();
     assert_eq!(remember(), Some(true));
     // Opening Settings puts the keyboard on Back; then the four themes, the three languages, Remember.
     for _ in 0..8 {
@@ -1486,4 +1493,161 @@ fn the_main_buttons_white_text_is_readable_in_every_theme() {
         let ratio = contrast(slint::Color::from_rgb_u8(255, 255, 255), theme.get_btn());
         assert!(ratio >= 4.5, "{choice}: {ratio:.2}");
     }
+}
+
+// ---- My checks, before and after, and the printout's details ----
+
+/// Two checks saved on this PC before this run: a tired laptop on 1 October, then the workstation
+/// dump on 5 October (10:00 where the tests' viewer is, UTC+2).
+fn saved_checks_dir() -> Scratch {
+    let dir = temp_dir();
+    let at = |mut r: Report, when: &str| {
+        r.collected_at = when.into();
+        fettle_windows::store::SavedCheck::new(r)
+    };
+    FileStore::new(dir.to_path_buf()).save_checks(&[at(dump_report(), "2026-10-05T08:00:00Z"), at(tired_report(), "2026-10-01T08:00:00Z")]);
+    dir
+}
+
+fn enabled(app: &Fettle, label: &str) -> Option<bool> {
+    ElementHandle::find_by_accessible_label(app.window(), label).next().and_then(|e| e.accessible_enabled())
+}
+
+fn text_input(app: &Fettle, label: &str) -> ElementHandle {
+    ElementHandle::find_by_accessible_label(app.window(), label).find(|e| e.accessible_role() == Some(i_slint_backend_testing::AccessibleRole::TextInput)).unwrap_or_else(|| panic!("no field labelled {label:?}"))
+}
+
+#[test]
+fn my_checks_lists_the_saved_checks_and_opens_one_on_the_mat() {
+    let clipboard = Rc::new(FakeClipboard::default());
+    let c = clipboard.clone();
+    let h = harness_with(Locale::En, saved_checks_dir(), move |deps| deps.clipboard = c);
+    press(&h.app, "My checks · 2");
+    assert!(has(&h.app, "05/10/2026 10:00") && has(&h.app, "01/10/2026 10:00"), "each with its date and time");
+    press(&h.app, "Open the check of 01/10/2026 10:00");
+    // Faded on the mat with its own label, and the dock acts on it.
+    assert!(has(&h.app, "Saved check · 01/10/2026 10:00"), "its own label on the mat");
+    press(&h.app, "Copy");
+    let tired = fettle_receipt::receipt_for(&tired_report(), Locale::En, fettle_receipt::Zone::Offset(120)).unwrap().1;
+    assert!(clipboard.0.borrow().as_deref().is_some_and(|t| t.contains(&tired.summary)), "the saved check was copied");
+    press(&h.app, "Close this check");
+    assert!(!has(&h.app, "Saved check · 01/10/2026 10:00"));
+    assert!(has(&h.app, "Last check · 4 days ago"), "back to the first screen");
+}
+
+#[test]
+fn a_saved_check_can_be_deleted_from_my_checks() {
+    let dir = saved_checks_dir();
+    let h = harness_in(Locale::En, dir.clone());
+    press(&h.app, "My checks · 2");
+    press(&h.app, "Delete the check of 01/10/2026 10:00");
+    assert!(!has(&h.app, "01/10/2026 10:00"));
+    assert_eq!(FileStore::new(dir.to_path_buf()).load_checks().len(), 1, "gone from this PC too");
+}
+
+#[test]
+fn ticking_two_checks_compares_them_on_a_slip_and_copy_copies_the_text() {
+    let clipboard = Rc::new(FakeClipboard::default());
+    let c = clipboard.clone();
+    let h = harness_with(Locale::En, saved_checks_dir(), move |deps| deps.clipboard = c);
+    // Tall enough for the whole slip: the testing backend finds only what's on screen.
+    h.app.window().window().set_size(slint::LogicalSize::new(1240.0, 3000.0));
+    press(&h.app, "My checks · 2");
+    assert_eq!(enabled(&h.app, "Compare the two ticked checks"), Some(false), "two are needed");
+    press(&h.app, "Tick the check of 05/10/2026 10:00 to compare it");
+    assert_eq!(enabled(&h.app, "Compare the two ticked checks"), Some(false));
+    press(&h.app, "Tick the check of 01/10/2026 10:00 to compare it");
+    assert_eq!(checked(&h.app, "Tick the check of 01/10/2026 10:00 to compare it"), Some(true));
+    assert_eq!(enabled(&h.app, "Compare the two ticked checks"), Some(true));
+    press(&h.app, "Compare the two ticked checks");
+    // The slip: before and after, and a changed row with its value after.
+    let mut before = tired_report();
+    before.collected_at = "2026-10-01T08:00:00Z".into();
+    let mut after = dump_report();
+    after.collected_at = "2026-10-05T08:00:00Z".into();
+    let expected = fettle_receipt::compare(&before, &after, Locale::En, fettle_receipt::Zone::Offset(120)).unwrap();
+    assert!(has(&h.app, "Before and after"), "the slip");
+    let row = &expected.groups[0].rows[0];
+    assert!(has(&h.app, &row.label) && has(&h.app, &row.after), "{row:?}");
+    press(&h.app, "Copy as text");
+    assert_eq!(clipboard.0.borrow().clone(), Some(fettle_receipt::compare_markdown(&expected)));
+    assert_eq!(dock_status(&h.app), "Copied. Paste it where you're asking for help.");
+    press(&h.app, "Back");
+    assert!(!has(&h.app, "Copy as text"));
+}
+
+#[test]
+fn after_a_check_it_can_be_compared_with_the_previous_one() {
+    let h = harness_in(Locale::En, saved_checks_dir());
+    press(&h.app, "Check again");
+    h.background.run_all(&h.app);
+    press(&h.app, "Compare with the previous check");
+    assert!(has(&h.app, "Copy as text"), "the comparison is open");
+}
+
+/// The client saved with this run's check in checks.json.
+fn saved_client(dir: &std::path::Path) -> String {
+    FileStore::new(dir.to_path_buf()).load_checks().first().map(|c| c.client.clone()).unwrap_or_default()
+}
+
+#[test]
+fn the_client_is_saved_when_the_field_is_left_never_per_keystroke() {
+    let dir = temp_dir();
+    let h = harness_in(Locale::En, dir.clone());
+    h.app.window().window().set_size(slint::LogicalSize::new(1240.0, 3000.0));
+    press(&h.app, "Check this PC");
+    h.background.run_all(&h.app);
+    let field = text_input(&h.app, "Client");
+    click(&h.app, &field);
+    field.set_accessible_value("Mario Rossi");
+    assert_eq!(saved_client(&dir), "", "nothing saved while typing");
+    key(&h.app, slint::platform::Key::Return);
+    assert_eq!(saved_client(&dir), "Mario Rossi", "saved on Enter");
+    assert!(has(&h.app, "Share a link"), "Enter in the field doesn't start a new check");
+}
+
+#[test]
+fn the_technicians_details_are_saved_from_settings() {
+    let dir = temp_dir();
+    let h = harness_in(Locale::En, dir.clone());
+    h.app.window().window().set_size(slint::LogicalSize::new(1240.0, 3000.0));
+    press(&h.app, "Settings");
+    let field = text_input(&h.app, "Business name");
+    click(&h.app, &field);
+    field.set_accessible_value("Example Repairs");
+    key(&h.app, slint::platform::Key::Return);
+    assert_eq!(FileStore::new(dir.to_path_buf()).load_settings().technician.business, "Example Repairs");
+    // Leaving Settings keeps what was typed in another field too.
+    let field = text_input(&h.app, "Your name");
+    click(&h.app, &field);
+    field.set_accessible_value("Alex Sample");
+    press(&h.app, "Back");
+    i_slint_backend_testing::mock_elapsed_time(std::time::Duration::from_millis(50));
+    assert_eq!(FileStore::new(dir.to_path_buf()).load_settings().technician.name, "Alex Sample");
+}
+
+#[test]
+fn a_logo_is_chosen_in_settings_and_a_wrong_file_says_why() {
+    let dir = temp_dir();
+    std::fs::create_dir_all(&dir).unwrap();
+    let dialogs = Rc::new(FakeDialogs::default());
+    let d = dialogs.clone();
+    let h = harness_with(Locale::En, dir.child("store"), move |deps| deps.dialogs = d);
+    h.app.window().window().set_size(slint::LogicalSize::new(1240.0, 3000.0));
+    press(&h.app, "Settings");
+    let text = dir.join("notes.txt");
+    std::fs::write(&text, "not a picture").unwrap();
+    *dialogs.pick.borrow_mut() = Some(text);
+    press(&h.app, "Choose a logo");
+    assert_eq!(dialogs.opened.borrow()[0], ["png", "jpg", "jpeg"]);
+    assert!(has(&h.app, "Choose a PNG or JPEG picture for the logo."));
+    let png = dir.join("logo.png");
+    image::RgbaImage::from_pixel(40, 20, image::Rgba([31, 106, 69, 255])).save(&png).unwrap();
+    *dialogs.pick.borrow_mut() = Some(png);
+    press(&h.app, "Choose a logo");
+    assert!(!has(&h.app, "Choose a PNG or JPEG picture for the logo."), "a new try starts clean");
+    assert!(has(&h.app, "A logo is saved."));
+    assert!(FileStore::new(dir.join("store")).load_logo().is_some());
+    press(&h.app, "Remove the logo");
+    assert!(has(&h.app, "No logo."));
 }

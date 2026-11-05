@@ -57,6 +57,113 @@ export component Focusable inherits FocusScope {
     }
 }
 
+export component FieldLabel inherits Text {
+    text: label.to-uppercase();
+    in property <string> label;
+    font-family: Theme.mono;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 1.5px;
+    color: Theme.chrome-soft;
+}
+
+// A one-line field: typed into (the password) or read-only and selectable (the links).
+export component Field inherits Rectangle {
+    in property <string> label;
+    in property <bool> read-only;
+    in property <bool> password;
+    in-out property <string> text;
+    // Editing ended: Enter, or the field lost the keyboard. Never per keystroke.
+    callback done();
+    height: 36px;
+    border-radius: 5px;
+    border-width: 1px;
+    border-color: input.has-focus ? Theme.accent : Theme.chrome-line;
+    background: Theme.chrome-card;
+    input := TextInput {
+        x: 10px;
+        width: parent.width - 20px;
+        height: parent.height;
+        text <=> root.text;
+        read-only: root.read-only;
+        input-type: root.password ? InputType.password : InputType.text;
+        single-line: true;
+        vertical-alignment: center;
+        font-family: Theme.mono;
+        font-size: 13px;
+        color: Theme.chrome-ink;
+        selection-background-color: Theme.btn;
+        selection-foreground-color: #FFFFFF;
+        accessible-label: root.label;
+        accepted => {
+            root.done();
+        }
+        changed has-focus => {
+            if !self.has-focus {
+                root.done();
+            }
+        }
+        // Esc in a field belongs to the field: it shouldn't throw away what was typed.
+        key-pressed(event) => {
+            if event.text == Key.Escape {
+                return accept;
+            }
+            reject
+        }
+    }
+}
+
+// A box to tick (two saved checks to compare): the whole box toggles it.
+export component Tick inherits Rectangle {
+    in property <string> label;
+    in property <bool> checked;
+    callback toggled();
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    border-width: checked ? 0 : 1.5px;
+    border-color: Theme.chrome-soft;
+    background: checked ? Theme.btn : touch.has-hover ? Theme.chrome-hover : transparent;
+    accessible-role: checkbox;
+    accessible-label: label;
+    accessible-checkable: true;
+    accessible-checked: checked;
+    accessible-action-default => {
+        toggled();
+    }
+    focus := Focusable {
+        activate => {
+            root.toggled();
+        }
+    }
+    touch := TouchArea {
+        mouse-cursor: pointer;
+        clicked => {
+            focus.focus();
+            root.toggled();
+        }
+    }
+    if checked: Path {
+        width: 12px;
+        height: 10px;
+        viewbox-width: 12;
+        viewbox-height: 10;
+        commands: "M1 5 L4.5 8.5 L11 1.5";
+        stroke: #FFFFFF;
+        stroke-width: 2px;
+        fill: transparent;
+    }
+    if focus.ring: Rectangle {
+        x: -3px;
+        y: -3px;
+        width: parent.width + 6px;
+        height: parent.height + 6px;
+        border-radius: 6px;
+        border-width: 2px;
+        border-color: Theme.accent;
+    }
+}
+
 export component PrimaryButton inherits Rectangle {
     in property <string> text;
     in property <bool> enabled: true;
@@ -441,8 +548,11 @@ export component ResultPanel inherits VerticalLayout {
     // The privacy switch's card: empty when the switch is off.
     in property <bool> private-shown;
     in property <[Row]> private-rows;
+    // An earlier saved check exists: offer the before and after.
+    in property <bool> can-compare;
     callback again();
     callback run-deep();
+    callback compare-previous();
     spacing: 28px;
     VerticalLayout {
         Kicker {
@@ -464,6 +574,18 @@ export component ResultPanel inherits VerticalLayout {
                 enabled: !root.deep-asking;
                 clicked => {
                     root.again();
+                }
+            }
+        }
+        if can-compare: HorizontalLayout {
+            alignment: start;
+            padding-top: 8px;
+            Button {
+                text: Copy.tr("result.compare_previous", Copy.lang);
+                icon: "M4 8 L16 8 M12 4 L16 8 L12 12 M20 16 L8 16 M12 12 L8 16 L12 20";
+                enabled: !root.deep-asking;
+                clicked => {
+                    root.compare-previous();
                 }
             }
         }
@@ -560,6 +682,38 @@ export component ResultPanel inherits VerticalLayout {
                     wrap: word-wrap;
                     horizontal-stretch: 1;
                 }
+            }
+        }
+    }
+}
+
+// A saved check opened from My checks: its receipt lies faded on the mat; Print, Save, Copy and
+// Share act on it until it's closed.
+export component PastPanel inherits VerticalLayout {
+    in property <string> when;
+    in property <string> summary;
+    callback close();
+    Kicker {
+        text: Copy.tr("stamp.saved", Copy.lang);
+        aside: when;
+    }
+    Title {
+        text: summary;
+        font-size: 26px;
+        letter-spacing: -0.65px;
+    }
+    VerticalLayout {
+        padding-top: 10px;
+        Body { text: Copy.tr("past.note", Copy.lang); }
+    }
+    HorizontalLayout {
+        alignment: start;
+        padding-top: 14px;
+        Button {
+            text: Copy.tr("past.close", Copy.lang);
+            icon: "M6 6 L18 18 M18 6 L6 18";
+            clicked => {
+                root.close();
             }
         }
     }
@@ -732,6 +886,15 @@ export component SettingsPanel inherits VerticalLayout {
     // How often the update check asks: hourly, daily or weekly.
     in property <string> update-every;
     in property <string> version;
+    // Your details on printouts, as typed (saved when a field is left), and the logo.
+    in-out property <string> business;
+    in-out property <string> name;
+    in-out property <string> contact;
+    in property <bool> has-logo;
+    in property <string> logo-problem;
+    callback technician-done();
+    callback choose-logo();
+    callback remove-logo();
     callback theme-chosen(string);
     callback lang-chosen(string);
     callback remember-toggled(bool);
@@ -768,6 +931,7 @@ export component SettingsPanel inherits VerticalLayout {
         Kicker { text: Copy.tr("settings.privacy", Copy.lang); }
         Switch {
             text: Copy.tr("settings.remember", Copy.lang);
+            hint: Copy.tr("settings.remember_hint", Copy.lang);
             on: root.remember;
             toggled(v) => {
                 root.remember-toggled(v);
@@ -779,6 +943,100 @@ export component SettingsPanel inherits VerticalLayout {
             on: root.show-private;
             toggled(v) => {
                 root.private-toggled(v);
+            }
+        }
+    }
+    VerticalLayout {
+        spacing: 10px;
+        Kicker { text: Copy.tr("settings.technician", Copy.lang); }
+        Body {
+            text: Copy.tr("settings.technician_hint", Copy.lang);
+            font-size: 13px;
+        }
+        VerticalLayout {
+            padding-top: 4px;
+            spacing: 6px;
+            FieldLabel { label: Copy.tr("settings.business", Copy.lang); }
+            Field {
+                label: Copy.tr("settings.business", Copy.lang);
+                text <=> root.business;
+                done => {
+                    root.technician-done();
+                }
+            }
+        }
+        VerticalLayout {
+            spacing: 6px;
+            FieldLabel { label: Copy.tr("settings.name", Copy.lang); }
+            Field {
+                label: Copy.tr("settings.name", Copy.lang);
+                text <=> root.name;
+                done => {
+                    root.technician-done();
+                }
+            }
+        }
+        VerticalLayout {
+            spacing: 6px;
+            FieldLabel { label: Copy.tr("settings.contact", Copy.lang); }
+            Field {
+                label: Copy.tr("settings.contact", Copy.lang);
+                text <=> root.contact;
+                done => {
+                    root.technician-done();
+                }
+            }
+        }
+        VerticalLayout {
+            padding-top: 4px;
+            spacing: 6px;
+            FieldLabel { label: Copy.tr("settings.logo", Copy.lang); }
+            HorizontalLayout {
+                spacing: 8px;
+                Text {
+                    text: root.has-logo ? Copy.tr("settings.logo.saved", Copy.lang) : Copy.tr("settings.logo.none", Copy.lang);
+                    font-family: Theme.text;
+                    font-size: 14px;
+                    font-weight: 500;
+                    color: Theme.chrome-ink;
+                    vertical-alignment: center;
+                    horizontal-stretch: 1;
+                    wrap: word-wrap;
+                }
+                Button {
+                    horizontal-stretch: 0;
+                    text: Copy.tr("settings.logo.choose", Copy.lang);
+                    label: Copy.tr("settings.logo.choose_label", Copy.lang);
+                    clicked => {
+                        root.choose-logo();
+                    }
+                }
+                if root.has-logo: Button {
+                    horizontal-stretch: 0;
+                    text: Copy.tr("settings.logo.remove", Copy.lang);
+                    label: Copy.tr("settings.logo.remove_label", Copy.lang);
+                    clicked => {
+                        root.remove-logo();
+                    }
+                }
+            }
+            Text {
+                text: Copy.tr("settings.logo.hint", Copy.lang);
+                font-family: Theme.mono;
+                font-size: 12.5px;
+                color: Theme.chrome-soft;
+                wrap: word-wrap;
+            }
+            if root.logo-problem != "": Text {
+                text: root.logo-problem;
+                accessible-role: text;
+                accessible-label: root.logo-problem;
+                accessible-live-region: assertive;
+                font-family: Theme.mono;
+                font-size: 13px;
+                font-weight: 600;
+                color: Theme.accent;
+                wrap: word-wrap;
             }
         }
     }

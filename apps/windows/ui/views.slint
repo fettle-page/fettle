@@ -1,8 +1,9 @@
 // The side panel's views opened from the header or the dock: Share this receipt, My shared links.
 import { Theme, Copy } from "theme.slint";
 import { ScrollView } from "std-widgets.slint";
-import { Kicker, Button, Choice, Switch, Focusable } from "panels.slint";
+import { Kicker, Button, Choice, Switch, Focusable, Field, FieldLabel, Tick } from "panels.slint";
 import { Marks } from "receipt.slint";
+import { CheckRow } from "data.slint";
 
 export struct LinkRow { id: string, url: string, until: string }
 
@@ -20,52 +21,6 @@ component Hint inherits Text {
     font-size: 12.5px;
     color: Theme.chrome-soft;
     wrap: word-wrap;
-}
-
-component FieldLabel inherits Text {
-    text: label.to-uppercase();
-    in property <string> label;
-    font-family: Theme.mono;
-    font-size: 11px;
-    font-weight: 600;
-    letter-spacing: 1.5px;
-    color: Theme.chrome-soft;
-}
-
-// A one-line field: typed into (the password) or read-only and selectable (the links).
-export component Field inherits Rectangle {
-    in property <string> label;
-    in property <bool> read-only;
-    in property <bool> password;
-    in-out property <string> text;
-    height: 36px;
-    border-radius: 5px;
-    border-width: 1px;
-    border-color: input.has-focus ? Theme.accent : Theme.chrome-line;
-    background: Theme.chrome-card;
-    input := TextInput {
-        x: 10px;
-        width: parent.width - 20px;
-        height: parent.height;
-        text <=> root.text;
-        read-only: root.read-only;
-        input-type: root.password ? InputType.password : InputType.text;
-        single-line: true;
-        vertical-alignment: center;
-        font-family: Theme.mono;
-        font-size: 13px;
-        color: Theme.chrome-ink;
-        selection-background-color: Theme.btn;
-        selection-foreground-color: #FFFFFF;
-        accessible-label: root.label;
-        // Esc in a field belongs to the field: it shouldn't throw away what was typed.
-        key-pressed(event) => {
-            if event.text == Key.Escape {
-                return accept;
-            }
-            reject
-        }
-    }
 }
 
 // A small button on the paper ticket: ink on paper in every theme.
@@ -500,4 +455,161 @@ export component LinksView inherits VerticalLayout {
         accessible-label: status;
         accessible-live-region: polite;
     }
+}
+
+// "My checks": the checks saved on this PC, newest first, each with Open and Delete. Ticking two
+// offers Compare.
+export component ChecksView inherits VerticalLayout {
+    in property <[CheckRow]> checks;
+    callback open(string);
+    callback delete(string);
+    callback compare(string, string);
+    // The two ticked checks (ids), in the order they were ticked.
+    property <string> first;
+    property <string> second;
+    property <bool> two: first != "" && second != "";
+    // A third tick replaces the older of the two.
+    function tick(id: string) {
+        if id == first {
+            first = second;
+            second = "";
+        } else if id == second {
+            second = "";
+        } else if first == "" {
+            first = id;
+        } else if second == "" {
+            second = id;
+        } else {
+            first = second;
+            second = id;
+        }
+    }
+    function untick(id: string) {
+        if id == first || id == second {
+            tick(id);
+        }
+    }
+    spacing: 16px;
+    if checks.length == 0: Body { text: Copy.tr("checks.none", Copy.lang); }
+    if checks.length > 0: Hint { text: Copy.tr("checks.intro", Copy.lang); }
+    if checks.length > 1: HorizontalLayout {
+        spacing: 12px;
+        Hint {
+            text: Copy.tr("checks.tick", Copy.lang);
+            vertical-alignment: center;
+            horizontal-stretch: 1;
+        }
+        Button {
+            horizontal-stretch: 0;
+            text: Copy.tr("checks.compare", Copy.lang);
+            label: Copy.tr("checks.compare_label", Copy.lang);
+            icon: "M4 8 L16 8 M12 4 L16 8 L12 12 M20 16 L8 16 M12 12 L8 16 L12 20";
+            enabled: root.two;
+            clicked => {
+                root.compare(root.first, root.second);
+            }
+        }
+    }
+    for c in checks: VerticalLayout {
+        spacing: 10px;
+        HorizontalLayout {
+            spacing: 12px;
+            VerticalLayout {
+                alignment: start;
+                padding-top: 1px;
+                Tick {
+                    label: c.tick-label;
+                    checked: c.id == root.first || c.id == root.second;
+                    toggled => {
+                        root.tick(c.id);
+                    }
+                }
+            }
+            VerticalLayout {
+                horizontal-stretch: 1;
+                spacing: 4px;
+                Text {
+                    text: c.when;
+                    font-family: Theme.mono;
+                    font-size: 13px;
+                    font-weight: 600;
+                    color: Theme.chrome-ink;
+                }
+                Text {
+                    text: c.summary;
+                    font-family: Theme.text;
+                    font-size: 14px;
+                    font-weight: 800;
+                    color: Theme.chrome-ink;
+                    wrap: word-wrap;
+                }
+                HorizontalLayout {
+                    spacing: 8px;
+                    padding-top: 2px;
+                    Hint {
+                        text: c.kind;
+                        vertical-alignment: center;
+                        horizontal-stretch: 1;
+                    }
+                    Button {
+                        horizontal-stretch: 0;
+                        text: Copy.tr("checks.open", Copy.lang);
+                        // Which check: a screen reader would otherwise hear the same "Open" for each.
+                        label: c.open-label;
+                        clicked => {
+                            root.open(c.id);
+                        }
+                    }
+                    Button {
+                        horizontal-stretch: 0;
+                        text: Copy.tr("checks.delete", Copy.lang);
+                        label: c.delete-label;
+                        clicked => {
+                            root.untick(c.id);
+                            root.delete(c.id);
+                        }
+                    }
+                }
+            }
+        }
+        Rectangle {
+            height: 1px;
+            background: Theme.chrome-line;
+        }
+    }
+}
+
+// "For the printout": the client and notes printed with the receipt shown. Each is saved when its
+// field is left, never per keystroke.
+export component PrintoutFields inherits VerticalLayout {
+    in-out property <string> client;
+    in-out property <string> notes;
+    callback client-done();
+    callback notes-done();
+    padding-top: 28px;
+    spacing: 10px;
+    Kicker { text: Copy.tr("printout.kicker", Copy.lang); }
+    VerticalLayout {
+        spacing: 6px;
+        FieldLabel { label: Copy.tr("print.client", Copy.lang); }
+        Field {
+            label: Copy.tr("print.client", Copy.lang);
+            text <=> root.client;
+            done => {
+                root.client-done();
+            }
+        }
+    }
+    VerticalLayout {
+        spacing: 6px;
+        FieldLabel { label: Copy.tr("print.notes", Copy.lang); }
+        Field {
+            label: Copy.tr("print.notes", Copy.lang);
+            text <=> root.notes;
+            done => {
+                root.notes-done();
+            }
+        }
+    }
+    Hint { text: Copy.tr("printout.hint", Copy.lang); }
 }

@@ -40,7 +40,7 @@ fn group(c: &Comparison, section: SectionId) -> Vec<CompareRow> {
 }
 
 fn en(a: &Report, b: &Report) -> Comparison {
-    compare(a, b, Locale::En, Zone::Utc).expect("comparison")
+    compare(a, b, Locale::En, |_| Zone::Utc).expect("comparison")
 }
 
 #[test]
@@ -153,17 +153,17 @@ fn the_order_of_the_arguments_does_not_matter() {
 fn a_bad_scan_time_is_refused() {
     let mut bad = base(BEFORE, 5);
     bad["collected_at"] = json!("garbage");
-    assert!(compare(&report(bad), &report(base(AFTER, 5)), Locale::En, Zone::Utc).is_err());
+    assert!(compare(&report(bad), &report(base(AFTER, 5)), Locale::En, |_| Zone::Utc).is_err());
 }
 
 #[test]
 fn italian_uses_italian_words() {
-    let c = compare(&report(base(BEFORE, 41)), &report(base(AFTER, 9)), Locale::It, Zone::Utc).expect("comparison");
+    let c = compare(&report(base(BEFORE, 41)), &report(base(AFTER, 9)), Locale::It, |_| Zone::Utc).expect("comparison");
     assert_eq!((c.labels.title.as_str(), c.labels.before.as_str(), c.labels.after.as_str()), ("Prima e dopo", "Prima", "Dopo"));
     let startup = c.groups.iter().find(|g| g.section == SectionId::Startup).expect("startup");
     assert_eq!(startup.title, "Avvio");
     assert!(startup.rows.iter().any(|r| r.before == "Da tenere d'occhio" && r.after == "A posto"), "{:?}", startup.rows);
-    let same = compare(&report(base(BEFORE, 5)), &report(base(AFTER, 5)), Locale::It, Zone::Utc).expect("comparison");
+    let same = compare(&report(base(BEFORE, 5)), &report(base(AFTER, 5)), Locale::It, |_| Zone::Utc).expect("comparison");
     assert_eq!(same.nothing_changed.as_deref(), Some("Non è cambiato niente tra questi due controlli."));
 }
 
@@ -223,6 +223,15 @@ fn disks_and_graphics_cards_pair_by_what_they_are_not_where_windows_lists_them()
     let storage = group(&c, SectionId::Storage);
     assert!(!storage.iter().any(|r| r.before == "Keep an eye on it" || r.after == "Keep an eye on it"), "the worn SSD didn't change: {storage:?}");
     assert_eq!(group(&c, SectionId::Graphics), vec![], "neither card changed");
+}
+
+#[test]
+fn each_check_keeps_the_time_offset_of_its_own_day() {
+    // Rome: +2 in summer, +1 from the last Sunday of October.
+    let winter_from = fettle_verdicts::fmt::parse_rfc3339("2026-10-25T01:00:00Z").unwrap();
+    let rome = |at: i64| Zone::Offset(if at < winter_from { 120 } else { 60 });
+    let c = compare(&report(base("2026-08-01T09:00:00Z", 5)), &report(base(AFTER, 5)), Locale::En, rome).expect("comparison");
+    assert_eq!((c.before.as_str(), c.after.as_str()), ("01/08/2026 11:00", "03/11/2026 18:30"));
 }
 
 #[test]

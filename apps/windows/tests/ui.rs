@@ -1565,7 +1565,7 @@ fn ticking_two_checks_compares_them_on_a_slip_and_copy_copies_the_text() {
     before.collected_at = "2026-10-01T08:00:00Z".into();
     let mut after = dump_report();
     after.collected_at = "2026-10-05T08:00:00Z".into();
-    let expected = fettle_receipt::compare(&before, &after, Locale::En, fettle_receipt::Zone::Offset(120)).unwrap();
+    let expected = fettle_receipt::compare(&before, &after, Locale::En, |_| fettle_receipt::Zone::Offset(120)).unwrap();
     assert!(has(&h.app, "Before and after"), "the slip");
     let row = &expected.groups[0].rows[0];
     assert!(has(&h.app, &row.label) && has(&h.app, &row.after), "{row:?}");

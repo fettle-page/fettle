@@ -68,10 +68,9 @@ fn receipt_of(report: &Report, lang: Locale, ctx: &Ctx) -> Option<(Receipt, Rece
     fettle_receipt::receipt_for(report, lang, Zone::Offset((ctx.zone)(at))).ok()
 }
 
-/// Two checks before and after, both stamped in the time zone of the newer one (the engine takes one).
+/// Two checks before and after, each stamped with the offset of its own day, as its receipt is.
 pub fn comparison(a: &Report, b: &Report, lang: Locale, zone: &dyn Fn(i64) -> i32) -> Option<fettle_receipt::Comparison> {
-    let at = [a, b].iter().filter_map(|r| fmt::parse_rfc3339(&r.collected_at)).max()?;
-    fettle_receipt::compare(a, b, lang, Zone::Offset(zone(at))).ok()
+    fettle_receipt::compare(a, b, lang, |at| Zone::Offset(zone(at))).ok()
 }
 
 /// The comparison as the slip on the mat draws it: better and worse each with its word.

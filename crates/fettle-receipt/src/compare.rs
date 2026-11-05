@@ -77,17 +77,19 @@ const DASH: &str = "—";
 const SECTIONS: [SectionId; 7] = [SectionId::Storage, SectionId::Battery, SectionId::Memory, SectionId::Windows, SectionId::Startup, SectionId::Graphics, SectionId::System];
 
 /// Compares two checks; whichever was collected first is "before", whatever order they come in.
-/// Refuses a scan time that doesn't exist, as `receipt_for` does.
-pub fn compare(a: &Report, b: &Report, locale: Locale, zone: Zone) -> Result<Comparison, String> {
+/// `zone` gives the time zone for a scan time (ms since 1970), so each check is stamped with the
+/// offset of its own day, as its receipt is. Refuses a scan time that doesn't exist, as
+/// `receipt_for` does.
+pub fn compare(a: &Report, b: &Report, locale: Locale, zone: impl Fn(i64) -> Zone) -> Result<Comparison, String> {
     let time = |r: &Report| fmt::parse_rfc3339(&r.collected_at).ok_or_else(|| format!("not a valid scan time: {}", r.collected_at));
     let (ta, tb) = (time(a)?, time(b)?);
     // Same instant: the raw text decides, so the order of the arguments still doesn't matter.
-    let (old, new) = match ta.cmp(&tb).then_with(|| a.collected_at.cmp(&b.collected_at)) {
-        Ordering::Greater => (b, a),
-        _ => (a, b),
+    let ((old, t_old), (new, t_new)) = match ta.cmp(&tb).then_with(|| a.collected_at.cmp(&b.collected_at)) {
+        Ordering::Greater => ((b, tb), (a, ta)),
+        _ => ((a, ta), (b, tb)),
     };
-    let (_, before) = receipt_for(old, locale, zone)?;
-    let (_, after) = receipt_for(new, locale, zone)?;
+    let (_, before) = receipt_for(old, locale, zone(t_old))?;
+    let (_, after) = receipt_for(new, locale, zone(t_new))?;
     let groups: Vec<CompareGroup> = SECTIONS
         .into_iter()
         .filter_map(|section| {

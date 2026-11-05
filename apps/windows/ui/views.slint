@@ -461,6 +461,8 @@ export component LinksView inherits VerticalLayout {
 // offers Compare.
 export component ChecksView inherits VerticalLayout {
     in property <[CheckRow]> checks;
+    // Remember my checks: while it's off, the empty list says why and where to turn it on.
+    in property <bool> remember: true;
     callback open(string);
     callback delete(string);
     callback compare(string, string);
@@ -490,7 +492,7 @@ export component ChecksView inherits VerticalLayout {
         }
     }
     spacing: 16px;
-    if checks.length == 0: Body { text: Copy.tr("checks.none", Copy.lang); }
+    if checks.length == 0: Body { text: Copy.tr(remember ? "checks.none" : "checks.none_off", Copy.lang); }
     if checks.length > 0: Hint { text: Copy.tr("checks.intro", Copy.lang); }
     if checks.length > 1: HorizontalLayout {
         spacing: 12px;

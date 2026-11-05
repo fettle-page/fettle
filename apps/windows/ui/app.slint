@@ -626,6 +626,7 @@ export component AppWindow inherits Window {
                                 }
                                 if root.view == "checks": ChecksView {
                                     checks: root.checks;
+                                    remember: root.remember;
                                     open(id) => {
                                         root.open-check(id);
                                     }

@@ -102,6 +102,8 @@ fn run() -> Result<(), Stop> {
             });
         }
     }
+    // The saved checks, for opening one (past) or comparing the newest two (compare).
+    let saved: Vec<String> = deps.store.load_checks().iter().map(|c| c.id().to_string()).collect();
     let app = Fettle::new(deps)?;
     if let Some((width, height)) = dev.size {
         app.window().window().set_size(slint::LogicalSize::new(width, height));
@@ -117,6 +119,9 @@ fn run() -> Result<(), Stop> {
         let event = match panel {
             "share" => Event::Open(Panel::Share),
             "links" => Event::Open(Panel::Links),
+            "checks" => Event::Open(Panel::Checks),
+            "past" if !saved.is_empty() => Event::OpenCheck(saved[saved.len().min(2) - 1].clone()),
+            "compare" if saved.len() >= 2 => Event::CompareChecks(saved[1].clone(), saved[0].clone()),
             "preview" => Event::PrintAsked,
             "deep" if dev.report.is_some() => Event::DeepAsked,
             _ => Event::Open(Panel::Settings),

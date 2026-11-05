@@ -24,7 +24,8 @@ pub struct DevArgs {
     pub wait_ms: u64,
     pub check: bool,
     pub data: Option<String>,
-    /// A panel view to open at launch: settings, share, links or preview (after --dev-check).
+    /// A panel view to open at launch: settings, share, links, checks or preview (after --dev-check);
+    /// past opens the second saved check (or the only one), compare compares the newest two.
     pub open: Option<String>,
     /// A saved report the check reads instead of this PC.
     pub report: Option<String>,
